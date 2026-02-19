@@ -4,6 +4,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
 import {
   Select,
   SelectContent,
@@ -19,7 +20,7 @@ import {
 } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { Plus, Clock, Trash2 } from "lucide-react";
+import { Plus, Clock, Trash2, Calendar } from "lucide-react";
 import type { AvailabilityRule } from "@shared/schema";
 
 const DAYS = ["MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY", "SATURDAY", "SUNDAY"] as const;
@@ -31,6 +32,15 @@ const DAY_LABELS: Record<string, string> = {
   FRIDAY: "Friday",
   SATURDAY: "Saturday",
   SUNDAY: "Sunday",
+};
+const DAY_SHORT: Record<string, string> = {
+  MONDAY: "Mon",
+  TUESDAY: "Tue",
+  WEDNESDAY: "Wed",
+  THURSDAY: "Thu",
+  FRIDAY: "Fri",
+  SATURDAY: "Sat",
+  SUNDAY: "Sun",
 };
 
 const TIME_OPTIONS = Array.from({ length: 48 }, (_, i) => {
@@ -96,7 +106,7 @@ export default function AdminAvailability() {
   );
 
   return (
-    <div className="p-6 space-y-6 max-w-4xl mx-auto">
+    <div className="p-6 lg:p-8 space-y-8 max-w-4xl mx-auto">
       <div className="flex items-center justify-between gap-4 flex-wrap">
         <div>
           <h1 className="text-2xl font-semibold" data-testid="text-availability-title">Availability</h1>
@@ -113,7 +123,7 @@ export default function AdminAvailability() {
             <DialogHeader>
               <DialogTitle>Add Availability</DialogTitle>
             </DialogHeader>
-            <form onSubmit={handleSubmit} className="space-y-4">
+            <form onSubmit={handleSubmit} className="space-y-5">
               <div className="space-y-2">
                 <Label>Day of Week</Label>
                 <Select name="dayOfWeek" defaultValue="MONDAY">
@@ -171,7 +181,7 @@ export default function AdminAvailability() {
 
       {isLoading ? (
         <div className="space-y-3">
-          {Array.from({ length: 5 }).map((_, i) => (
+          {Array.from({ length: 7 }).map((_, i) => (
             <Card key={i}>
               <CardContent className="p-4">
                 <Skeleton className="h-5 w-full" />
@@ -180,31 +190,39 @@ export default function AdminAvailability() {
           ))}
         </div>
       ) : (
-        <div className="space-y-2">
-          {DAYS.map((day) => (
-            <Card key={day} data-testid={`card-day-${day.toLowerCase()}`}>
-              <CardContent className="p-4">
-                <div className="flex items-center justify-between gap-4">
-                  <div className="flex items-center gap-3 min-w-0">
-                    <span className="text-sm font-medium w-24 flex-shrink-0">
-                      {DAY_LABELS[day]}
+        <Card className="overflow-visible">
+          <CardContent className="p-0">
+            {DAYS.map((day, idx) => {
+              const dayRules = groupedRules[day];
+              const isWeekend = day === "SATURDAY" || day === "SUNDAY";
+              return (
+                <div
+                  key={day}
+                  className={`flex items-center gap-4 px-5 py-4 ${idx < DAYS.length - 1 ? "border-b" : ""}`}
+                  data-testid={`card-day-${day.toLowerCase()}`}
+                >
+                  <div className="w-14 flex-shrink-0">
+                    <span className={`text-sm font-medium ${isWeekend && dayRules.length === 0 ? "text-muted-foreground" : ""}`}>
+                      {DAY_SHORT[day]}
                     </span>
-                    {groupedRules[day].length === 0 ? (
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    {dayRules.length === 0 ? (
                       <span className="text-sm text-muted-foreground">Unavailable</span>
                     ) : (
                       <div className="flex items-center gap-2 flex-wrap">
-                        {groupedRules[day].map((rule) => (
+                        {dayRules.map((rule) => (
                           <div
                             key={rule.id}
-                            className="flex items-center gap-2 px-3 py-1.5 rounded-md bg-primary/10 text-sm"
+                            className="inline-flex items-center gap-2 px-3 py-1.5 rounded-md bg-primary/[0.06] dark:bg-primary/[0.12] text-sm"
                           >
-                            <Clock className="h-3 w-3 text-primary" />
-                            <span>
+                            <Clock className="h-3 w-3 text-primary flex-shrink-0" />
+                            <span className="text-[13px]">
                               {formatTime(rule.startTime)} - {formatTime(rule.endTime)}
                             </span>
                             <button
                               onClick={() => deleteMutation.mutate(rule.id)}
-                              className="text-muted-foreground hover:text-foreground"
+                              className="ml-1 text-muted-foreground/60 hover:text-foreground transition-colors"
                               data-testid={`button-delete-rule-${rule.id}`}
                             >
                               <Trash2 className="h-3 w-3" />
@@ -215,10 +233,10 @@ export default function AdminAvailability() {
                     )}
                   </div>
                 </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
+              );
+            })}
+          </CardContent>
+        </Card>
       )}
     </div>
   );

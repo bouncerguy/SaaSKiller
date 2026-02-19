@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { Save } from "lucide-react";
+import { Save, Globe, Palette, Building2, Image } from "lucide-react";
 import type { Tenant } from "@shared/schema";
 
 export default function AdminSettings() {
@@ -23,7 +23,7 @@ export default function AdminSettings() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/tenant"] });
-      toast({ title: "Settings updated" });
+      toast({ title: "Settings saved" });
     },
     onError: (err: Error) => {
       toast({ title: "Error", description: err.message, variant: "destructive" });
@@ -42,17 +42,17 @@ export default function AdminSettings() {
   };
 
   return (
-    <div className="p-6 space-y-6 max-w-3xl mx-auto">
+    <div className="p-6 lg:p-8 space-y-8 max-w-3xl mx-auto">
       <div>
         <h1 className="text-2xl font-semibold" data-testid="text-settings-title">Settings</h1>
         <p className="text-muted-foreground text-sm mt-1">
-          Configure your tenant branding and preferences
+          Configure your organization branding and preferences
         </p>
       </div>
 
       {isLoading ? (
         <Card>
-          <CardContent className="p-6 space-y-4">
+          <CardContent className="p-6 space-y-5">
             {Array.from({ length: 4 }).map((_, i) => (
               <div key={i} className="space-y-2">
                 <Skeleton className="h-4 w-24" />
@@ -62,12 +62,15 @@ export default function AdminSettings() {
           </CardContent>
         </Card>
       ) : (
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">Tenant Branding</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-6">
+          <Card className="overflow-visible">
+            <CardHeader className="pb-4">
+              <CardTitle className="text-base font-medium flex items-center gap-2">
+                <Building2 className="h-4 w-4 text-muted-foreground" />
+                Organization
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-5">
               <div className="space-y-2">
                 <Label htmlFor="name">Organization Name</Label>
                 <Input
@@ -79,7 +82,10 @@ export default function AdminSettings() {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="logoUrl">Logo URL</Label>
+                <Label htmlFor="logoUrl" className="flex items-center gap-1.5">
+                  <Image className="h-3.5 w-3.5 text-muted-foreground" />
+                  Logo URL
+                </Label>
                 <Input
                   id="logoUrl"
                   name="logoUrl"
@@ -88,6 +94,17 @@ export default function AdminSettings() {
                   data-testid="input-logo-url"
                 />
               </div>
+            </CardContent>
+          </Card>
+
+          <Card className="overflow-visible">
+            <CardHeader className="pb-4">
+              <CardTitle className="text-base font-medium flex items-center gap-2">
+                <Palette className="h-4 w-4 text-muted-foreground" />
+                Branding
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-5">
               <div className="space-y-2">
                 <Label htmlFor="brandColor">Brand Color</Label>
                 <div className="flex items-center gap-3">
@@ -95,17 +112,28 @@ export default function AdminSettings() {
                     type="color"
                     id="brandColor"
                     name="brandColor"
-                    defaultValue={tenant?.brandColor || "#1d4ed8"}
-                    className="w-10 h-10 rounded cursor-pointer border-0"
+                    defaultValue={tenant?.brandColor || "#5b4cdb"}
+                    className="w-10 h-10 rounded-md cursor-pointer border-0 bg-transparent"
                     data-testid="input-brand-color"
                   />
                   <Input
-                    defaultValue={tenant?.brandColor || "#1d4ed8"}
-                    className="flex-1"
+                    defaultValue={tenant?.brandColor || "#5b4cdb"}
+                    className="flex-1 font-mono text-sm"
                     readOnly
                   />
                 </div>
               </div>
+            </CardContent>
+          </Card>
+
+          <Card className="overflow-visible">
+            <CardHeader className="pb-4">
+              <CardTitle className="text-base font-medium flex items-center gap-2">
+                <Globe className="h-4 w-4 text-muted-foreground" />
+                Localization
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-5">
               <div className="space-y-2">
                 <Label htmlFor="timezone">Default Timezone</Label>
                 <Input
@@ -116,13 +144,14 @@ export default function AdminSettings() {
                   data-testid="input-timezone"
                 />
               </div>
-              <Button type="submit" disabled={updateMutation.isPending} data-testid="button-save-settings">
-                <Save className="h-4 w-4 mr-2" />
-                {updateMutation.isPending ? "Saving..." : "Save Settings"}
-              </Button>
-            </form>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+
+          <Button type="submit" disabled={updateMutation.isPending} data-testid="button-save-settings">
+            <Save className="h-4 w-4 mr-2" />
+            {updateMutation.isPending ? "Saving..." : "Save Settings"}
+          </Button>
+        </form>
       )}
     </div>
   );

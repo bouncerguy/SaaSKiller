@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -24,7 +24,7 @@ import {
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { Plus, Clock, Video, Phone, MapPin, Settings, Copy, ExternalLink } from "lucide-react";
+import { Plus, Clock, Video, Phone, MapPin, Settings, Copy, ExternalLink, Calendar } from "lucide-react";
 import type { EventType } from "@shared/schema";
 
 const locationIcons: Record<string, typeof Video> = {
@@ -100,7 +100,7 @@ export default function AdminEventTypes() {
       durationMinutes: parseInt(formData.get("durationMinutes") as string) || 30,
       locationType: formData.get("locationType") as string || "VIDEO",
       locationValue: formData.get("locationValue") as string || undefined,
-      color: formData.get("color") as string || "#1d4ed8",
+      color: formData.get("color") as string || "#5b4cdb",
     };
 
     if (editingEvent) {
@@ -117,8 +117,8 @@ export default function AdminEventTypes() {
   };
 
   return (
-    <div className="p-6 space-y-6 max-w-5xl mx-auto">
-      <div className="flex items-center justify-between gap-4 flex-wrap">
+    <div className="p-6 lg:p-8 space-y-8 max-w-5xl mx-auto">
+      <div className="flex items-center justify-between gap-4 flex-wrap" data-testid="header-event-types">
         <div>
           <h1 className="text-2xl font-semibold" data-testid="text-event-types-title">Event Types</h1>
           <p className="text-muted-foreground text-sm mt-1">
@@ -148,11 +148,11 @@ export default function AdminEventTypes() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {Array.from({ length: 4 }).map((_, i) => (
             <Card key={i}>
-              <CardContent className="p-5">
+              <CardContent className="p-6">
                 <div className="space-y-3">
-                  <Skeleton className="h-5 w-32" />
-                  <Skeleton className="h-4 w-48" />
-                  <Skeleton className="h-4 w-24" />
+                  <Skeleton className="h-5 w-36" />
+                  <Skeleton className="h-4 w-52" />
+                  <Skeleton className="h-4 w-28" />
                 </div>
               </CardContent>
             </Card>
@@ -160,10 +160,15 @@ export default function AdminEventTypes() {
         </div>
       ) : eventTypes?.length === 0 ? (
         <Card>
-          <CardContent className="flex flex-col items-center justify-center py-12">
-            <Clock className="h-12 w-12 text-muted-foreground mb-3" />
-            <p className="text-muted-foreground" data-testid="text-no-event-types">
-              No event types yet. Create your first one!
+          <CardContent className="flex flex-col items-center justify-center py-16">
+            <div className="w-14 h-14 rounded-full bg-muted flex items-center justify-center mb-4">
+              <Calendar className="h-7 w-7 text-muted-foreground" />
+            </div>
+            <p className="text-sm font-medium" data-testid="text-no-event-types">
+              No event types yet
+            </p>
+            <p className="text-xs text-muted-foreground mt-1">
+              Create your first event type to start accepting bookings
             </p>
           </CardContent>
         </Card>
@@ -172,54 +177,57 @@ export default function AdminEventTypes() {
           {eventTypes?.map((et) => {
             const LocationIcon = locationIcons[et.locationType] || Video;
             return (
-              <Card key={et.id} data-testid={`card-event-type-${et.id}`}>
-                <CardContent className="p-5">
+              <Card key={et.id} data-testid={`card-event-type-${et.id}`} className="overflow-visible">
+                <CardContent className="p-6">
                   <div className="flex items-start justify-between gap-3">
-                    <div className="flex items-start gap-3 min-w-0 flex-1">
+                    <div className="flex items-start gap-3.5 min-w-0 flex-1">
                       <div
-                        className="w-1 h-12 rounded-full flex-shrink-0 mt-0.5"
-                        style={{ backgroundColor: et.color || "#1d4ed8" }}
-                      />
+                        className="w-10 h-10 rounded-md flex items-center justify-center flex-shrink-0"
+                        style={{ backgroundColor: (et.color || "#5b4cdb") + "15" }}
+                      >
+                        <Calendar className="h-5 w-5" style={{ color: et.color || "#5b4cdb" }} />
+                      </div>
                       <div className="min-w-0 flex-1">
-                        <h3 className="font-medium text-sm truncate" data-testid={`text-event-title-${et.id}`}>
+                        <h3 className="font-medium text-[15px] truncate" data-testid={`text-event-title-${et.id}`}>
                           {et.title}
                         </h3>
                         {et.description && (
-                          <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">
+                          <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2 leading-relaxed">
                             {et.description}
                           </p>
                         )}
-                        <div className="flex items-center gap-3 mt-2 flex-wrap">
+                        <div className="flex items-center gap-3 mt-2.5 flex-wrap">
                           <span className="flex items-center gap-1 text-xs text-muted-foreground">
                             <Clock className="h-3 w-3" />
-                            {et.durationMinutes}m
+                            {et.durationMinutes} min
                           </span>
                           <span className="flex items-center gap-1 text-xs text-muted-foreground">
                             <LocationIcon className="h-3 w-3" />
                             {locationLabels[et.locationType]}
                           </span>
-                          <Badge variant={et.isActive ? "secondary" : "outline"} className="text-xs">
+                          <Badge
+                            variant={et.isActive ? "secondary" : "outline"}
+                            className="text-[11px]"
+                          >
                             {et.isActive ? "Active" : "Inactive"}
                           </Badge>
                         </div>
                       </div>
                     </div>
-                    <div className="flex items-center gap-1 flex-shrink-0">
-                      <Switch
-                        checked={et.isActive}
-                        onCheckedChange={(checked) => toggleMutation.mutate({ id: et.id, isActive: checked })}
-                        data-testid={`switch-active-${et.id}`}
-                      />
-                    </div>
+                    <Switch
+                      checked={et.isActive}
+                      onCheckedChange={(checked) => toggleMutation.mutate({ id: et.id, isActive: checked })}
+                      data-testid={`switch-active-${et.id}`}
+                    />
                   </div>
-                  <div className="flex items-center gap-2 mt-3 pt-3 border-t flex-wrap">
+                  <div className="flex items-center gap-1 mt-4 pt-4 border-t flex-wrap" data-testid={`actions-event-${et.id}`}>
                     <Button
                       variant="ghost"
                       size="sm"
                       onClick={() => copyBookingLink(et.slug)}
                       data-testid={`button-copy-link-${et.id}`}
                     >
-                      <Copy className="h-3 w-3 mr-1" />
+                      <Copy className="h-3.5 w-3.5 mr-1.5" />
                       Copy Link
                     </Button>
                     <Button
@@ -228,7 +236,7 @@ export default function AdminEventTypes() {
                       onClick={() => window.open(`/book/default/${et.slug}`, "_blank")}
                       data-testid={`button-preview-${et.id}`}
                     >
-                      <ExternalLink className="h-3 w-3 mr-1" />
+                      <ExternalLink className="h-3.5 w-3.5 mr-1.5" />
                       Preview
                     </Button>
                     <Button
@@ -275,7 +283,7 @@ function EventTypeForm({
   isPending: boolean;
 }) {
   return (
-    <form onSubmit={onSubmit} className="space-y-4">
+    <form onSubmit={onSubmit} className="space-y-5">
       <div className="space-y-2">
         <Label htmlFor="title">Title</Label>
         <Input
@@ -299,7 +307,7 @@ function EventTypeForm({
       </div>
       <div className="grid grid-cols-2 gap-4">
         <div className="space-y-2">
-          <Label htmlFor="durationMinutes">Duration (minutes)</Label>
+          <Label htmlFor="durationMinutes">Duration</Label>
           <Select name="durationMinutes" defaultValue={String(defaultValues?.durationMinutes || 30)}>
             <SelectTrigger data-testid="select-duration">
               <SelectValue />
@@ -340,13 +348,13 @@ function EventTypeForm({
       </div>
       <div className="space-y-2">
         <Label htmlFor="color">Color</Label>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-3">
           <input
             type="color"
             id="color"
             name="color"
-            defaultValue={defaultValues?.color || "#1d4ed8"}
-            className="w-8 h-8 rounded cursor-pointer border-0"
+            defaultValue={defaultValues?.color || "#5b4cdb"}
+            className="w-9 h-9 rounded-md cursor-pointer border-0 bg-transparent"
             data-testid="input-color"
           />
           <span className="text-xs text-muted-foreground">Choose a color for this event type</span>

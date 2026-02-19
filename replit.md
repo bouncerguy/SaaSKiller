@@ -66,3 +66,13 @@ shared/
 
 ## Seed Data
 Default tenant "Acme Consulting" with 3 event types, weekday availability (9-12, 1-5), and 4 sample bookings.
+
+## Design System (Updated Feb 2026)
+- **Color palette**: Warm indigo primary (#5b4cdb / HSL 235 72% 55%), neutral grays for backgrounds
+- **Typography**: Inter font with -0.011em tracking, tighter heading tracking (-0.025em)
+- **Spacing**: Consistent 4/6/8px rhythm, generous whitespace, max-w containers for readability
+- **Components**: Shadcn UI exclusively - Cards, Buttons, Badges, Sidebar, Tabs, Dialogs
+- **Icons**: Lucide React throughout
+- **Dark mode**: Full dark mode support via CSS variables in :root/.dark
+- **Shadows**: Custom shadow scale from 2xs to 2xl for depth hierarchy
+- **Layout**: Sticky headers with z-[9999], backdrop-blur, flex-wrap on all flex rows

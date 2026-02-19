@@ -20,7 +20,7 @@ import PublicTenant from "@/pages/public-tenant";
 
 function AdminLayout({ children }: { children: React.ReactNode }) {
   const style = {
-    "--sidebar-width": "16rem",
+    "--sidebar-width": "15rem",
     "--sidebar-width-icon": "3rem",
   };
 
@@ -29,11 +29,11 @@ function AdminLayout({ children }: { children: React.ReactNode }) {
       <div className="flex h-screen w-full">
         <AppSidebar />
         <div className="flex flex-col flex-1 min-w-0">
-          <header className="flex items-center justify-between gap-2 p-2 border-b sticky top-0 bg-background z-50">
+          <header className="flex items-center justify-between gap-4 px-4 h-14 border-b sticky top-0 bg-background/80 backdrop-blur-lg z-[9999]">
             <SidebarTrigger data-testid="button-sidebar-toggle" />
             <ThemeToggle />
           </header>
-          <main className="flex-1 overflow-y-auto">
+          <main className="flex-1 overflow-y-auto bg-background">
             {children}
           </main>
         </div>
