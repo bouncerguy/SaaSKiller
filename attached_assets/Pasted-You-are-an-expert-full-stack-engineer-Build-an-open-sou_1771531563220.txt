@@ -1,0 +1,102 @@
+You are an expert full-stack engineer. Build an open-source, self-hostable Calendly-like scheduling application designed to be EMBEDDED inside another web platform (multi-tenant). The project name is "CalendaLite" and the admin UI is "Caladmin".
+
+PRIMARY GOALS
+1) Provide a Calendly-like scheduling engine: event types, availability rules, bookings, reschedule/cancel, confirmations.
+2) Embed-first: provide inline embed, popup modal, floating widget button, and iframe fallback embed.
+3) Multi-tenant and modular: can run standalone OR mount inside another app (as routes + components). Provide a clean integration contract.
+4) Auth: by default use RebLit/Replit authentication (whatever auth is available in this environment). Admin uses RebLit auth by default.
+   - In Caladmin, include a “Local Admin Login” button that switches to local auth mode (email+password) ONLY for admin, without breaking RebLit auth default.
+5) Open-source friendly: clear README, env vars, docker-compose, seeds, and test data.
+
+TECH STACK (use these choices unless blocked)
+- Next.js (App Router) + TypeScript
+- PostgreSQL + Prisma
+- Tailwind CSS
+- Background jobs: use a simple built-in queue (BullMQ + Redis if allowed) OR a lightweight cron-based worker if Redis not available.
+- Email: nodemailer (SMTP)
+- SMS: optional stub provider interface (do not require paid service)
+- Calendar sync: implement Google Calendar OAuth first + a generic “ICS/CalDAV-like” adapter interface (stubs ok)
+- Webhooks: outgoing webhooks for booking.created / booking.canceled / booking.rescheduled
+
+DATA MODEL (Prisma)
+Multi-tenant:
+- Tenant (id, name, slug, customDomain?, branding, settings)
+- User (id, tenantId, name, email, role: OWNER|ADMIN|MEMBER)
+- AuthAccount (for RebLit auth linkage)
+Scheduling:
+- EventType (id, tenantId, ownerUserId, slug, title, description, durationMinutes, locationType: IN_PERSON|PHONE|VIDEO|CUSTOM, locationValue, questionsJson, isActive)
+- AvailabilityRule (id, tenantId, userId, dayOfWeek, startTime, endTime, timezone, buffers: before/after, minNoticeMinutes)
+- BusyOverride (id, tenantId, userId, startAt, endAt, reason)
+- Booking (id, tenantId, eventTypeId, hostUserId, inviteeName, inviteeEmail, startAt, endAt, timezone, status: CONFIRMED|CANCELED, cancelReason?, rescheduleOfId?, createdAt)
+Integrations:
+- CalendarConnection (id, tenantId, userId, provider: GOOGLE|OUTLOOK|EXCHANGE|ICS, accessToken?, refreshToken?, expiresAt?, calendarId?, settingsJson)
+Automation:
+- Workflow (id, tenantId, eventTypeId?, trigger: BEFORE_START|AFTER_BOOKING|AFTER_END, offsetMinutes, channel: EMAIL|SMS, templateSubject?, templateBody)
+- WebhookEndpoint (id, tenantId, url, secret, eventsCsv)
+Admin local auth:
+- LocalAdminCredential (id, tenantId, email, passwordHash, isEnabled)
+
+KEY FEATURES TO IMPLEMENT (MVP)
+A) Public booking pages:
+- /t/[tenantSlug]/[eventTypeSlug]
+- Show event details, timezone selector, date picker, time slots.
+- Collect invitee name/email + answers to questionsJson.
+- Create booking; send confirmation email.
+- Links in email to cancel/reschedule.
+B) Availability engine:
+- Generate available slots from AvailabilityRule minus BusyOverride minus connected calendar busy blocks.
+- Buffer before/after, min notice, timezone correctness.
+C) Embed SDK:
+- Provide /embed.js that supports:
+  1) Inline embed into a div
+  2) Popup text link -> modal
+  3) Floating widget button -> modal
+- Provide iframe embed snippet as fallback.
+- Provide landing page embed: /t/[tenantSlug] lists active EventTypes and can be embedded.
+D) Caladmin:
+- Route group /admin (protected)
+- Dashboard: bookings list, event types, availability, workflows, integrations, webhooks, tenant branding
+- MUST use RebLit auth by default.
+- Add a visible “Local Admin Login” button that opens /admin/local-login.
+  - When local login is enabled for the tenant, allow email+password login for admin only.
+  - Otherwise show “Local admin login not enabled” with instructions to enable via an environment flag.
+E) Workflows:
+- Implement email reminders/follow-ups as jobs.
+- Triggers: AFTER_BOOKING (immediate), BEFORE_START (e.g. 24h), AFTER_END (e.g. 1h).
+- SMS channel is stubbed with a provider interface + console logger implementation.
+F) Integrations (MVP-level):
+- Google Calendar connection flow (OAuth) OR stub if OAuth not possible here.
+- If stubbed, still implement the interface and fake busy blocks so availability engine supports adapters.
+G) Security & tenant isolation:
+- Enforce tenantId on every query/mutation.
+- Signed tokens for cancel/reschedule links.
+- Rate limit booking endpoints lightly.
+
+INTEGRATION CONTRACT (for embedding into another app)
+- Expose a package-like folder /packages/calendalite-embed containing:
+  - <CalendaLiteWidget tenantSlug eventTypeSlug mode="inline|popup|floating" />
+  - Utility to generate embed snippets
+- Provide docs: how to mount routes under /schedule, how to pass tenant context, and how to use standalone mode with subdomain or path tenancy.
+
+UI REQUIREMENTS
+- Clean, minimal, fast.
+- Mobile-first booking flow.
+- Tenant branding (logo/color) applied to booking pages + embed modal.
+
+DELIVERABLES
+1) Complete codebase with scripts:
+   - dev, build, start, prisma migrate, seed
+2) docker-compose.yml for Postgres (+ Redis if used)
+3) README:
+   - Standalone setup
+   - Embedded setup (mounting routes/components)
+   - Auth modes (RebLit default + Local Admin optional)
+   - Embed snippets and SDK usage
+4) Seed data: one tenant, one user, 2 event types, sample availability, 2 workflows.
+
+IMPLEMENTATION NOTES
+- If RebLit/Replit auth APIs are available, use them. Otherwise implement a clean auth abstraction with a “RebLitAuthProvider” stub and “LocalAdminAuthProvider”.
+- Do not require any third-party paid services to run locally.
+- Keep the code modular so I can copy it into other platforms easily.
+
+Now generate the full project: file structure, Prisma schema, Next.js routes, UI pages, embed SDK, admin Caladmin, and README. Include reasonable comments and ensure it runs end-to-end in dev with seed data.
