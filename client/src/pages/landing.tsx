@@ -1,7 +1,7 @@
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Calendar, Clock, Code, Globe, Zap, Shield, ArrowRight, Check } from "lucide-react";
+import { Calendar, Clock, Code, Globe, Zap, Shield, ArrowRight, Check, Github } from "lucide-react";
 import { ThemeToggle } from "@/components/theme-toggle";
 
 const features = [
@@ -13,7 +13,7 @@ const features = [
   {
     icon: Clock,
     title: "Smart Availability",
-    desc: "Define your weekly schedule. The engine calculates open slots in real time.",
+    desc: "Define weekly schedules. The engine calculates open slots in real time.",
   },
   {
     icon: Globe,
@@ -28,20 +28,20 @@ const features = [
   {
     icon: Shield,
     title: "Multi-Tenant",
-    desc: "Built for teams with tenant isolation, branding, and role-based access.",
+    desc: "Built for platforms with tenant isolation, branding, and role-based access.",
   },
   {
     icon: Zap,
-    title: "Open Source",
-    desc: "Self-hostable and modular. Designed to integrate into your existing stack.",
+    title: "Self-Hostable",
+    desc: "Run it on your own infrastructure. No vendor lock-in, no external dependencies.",
   },
 ];
 
-const benefits = [
-  "Conflict-free booking with real-time availability",
-  "Custom branding and white-label support",
-  "Embeddable widgets for any website",
-  "No external dependencies required",
+const useCases = [
+  "Author websites with coaching session booking",
+  "Consultant platforms with discovery call scheduling",
+  "Small business sites with appointment management",
+  "Personal brands with event and session booking",
 ];
 
 export default function Landing() {
@@ -60,13 +60,13 @@ export default function Landing() {
           <div className="flex items-center gap-1 flex-wrap">
             <ThemeToggle />
             <Link href="/book/default">
-              <Button variant="ghost" size="sm" data-testid="button-book-demo">
-                Book Demo
+              <Button variant="ghost" size="sm" data-testid="button-live-demo">
+                Live Demo
               </Button>
             </Link>
             <Link href="/admin">
               <Button size="sm" data-testid="button-admin">
-                Admin
+                Admin Panel
                 <ArrowRight className="h-3.5 w-3.5 ml-1" />
               </Button>
             </Link>
@@ -81,27 +81,27 @@ export default function Landing() {
           <div className="relative max-w-3xl mx-auto text-center px-6 pt-24 pb-20">
             <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-primary/[0.08] dark:bg-primary/[0.15] text-primary text-xs font-medium mb-6">
               <Zap className="h-3 w-3" />
-              Open-source scheduling engine
+              Open-source scheduling for personal platforms
             </div>
             <h1 className="text-4xl sm:text-5xl md:text-[3.5rem] font-bold leading-[1.1]" data-testid="text-hero-title">
-              Scheduling made
+              The scheduling engine
               <br />
-              <span className="text-primary">beautifully simple</span>
+              <span className="text-primary">for your platform</span>
             </h1>
             <p className="mt-5 text-base sm:text-lg text-muted-foreground max-w-lg mx-auto leading-relaxed">
-              Create event types, set your availability, and let anyone book time with you.
-              Embeddable, self-hostable, and endlessly flexible.
+              Add booking and scheduling to any website. Built for authors, coaches, and
+              consultants who need a self-hosted calendar that just works.
             </p>
             <div className="mt-8 flex items-center gap-3 justify-center flex-wrap">
               <Link href="/book/default">
                 <Button size="lg" data-testid="button-try-booking">
-                  Try Booking Flow
+                  See It In Action
                   <ArrowRight className="h-4 w-4 ml-1.5" />
                 </Button>
               </Link>
               <Link href="/admin">
                 <Button variant="outline" size="lg" data-testid="button-open-admin">
-                  Open Admin
+                  Explore Admin
                 </Button>
               </Link>
             </div>
@@ -112,10 +112,10 @@ export default function Landing() {
           <div className="max-w-5xl mx-auto">
             <div className="text-center mb-14">
               <h2 className="text-2xl sm:text-3xl font-semibold" data-testid="text-features-title">
-                Everything you need to schedule
+                Everything your platform needs
               </h2>
               <p className="mt-3 text-muted-foreground max-w-md mx-auto">
-                A complete scheduling toolkit, from availability rules to embeddable widgets.
+                A complete scheduling toolkit you embed into your site, from availability rules to booking widgets.
               </p>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -139,13 +139,13 @@ export default function Landing() {
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
               <div>
                 <h2 className="text-2xl sm:text-3xl font-semibold">
-                  Built for reliability
+                  Built for personal platforms
                 </h2>
                 <p className="mt-3 text-muted-foreground leading-relaxed">
-                  Every booking is validated against your availability rules and checked for conflicts in real time. No double-bookings, no surprises.
+                  CalendaLite is designed to be the scheduling layer in websites you build for individuals and small companies. It handles availability, conflicts, timezones, and embeds so you can focus on the rest of the platform.
                 </p>
                 <ul className="mt-6 space-y-3">
-                  {benefits.map((b) => (
+                  {useCases.map((b) => (
                     <li key={b} className="flex items-start gap-3">
                       <div className="w-5 h-5 rounded-full bg-chart-2/10 dark:bg-chart-2/20 flex items-center justify-center flex-shrink-0 mt-0.5">
                         <Check className="h-3 w-3 text-chart-2" />
@@ -187,20 +187,20 @@ export default function Landing() {
 
         <section className="py-16 px-6 border-t">
           <div className="max-w-xl mx-auto text-center">
-            <h2 className="text-2xl font-semibold">Ready to get started?</h2>
+            <h2 className="text-2xl font-semibold">See how it works</h2>
             <p className="mt-3 text-muted-foreground">
-              Explore the booking flow or jump into the admin dashboard.
+              Try the public booking flow or explore the admin dashboard to see what your clients get.
             </p>
             <div className="mt-6 flex items-center gap-3 justify-center flex-wrap">
               <Link href="/book/default">
                 <Button size="lg" data-testid="button-cta-book">
-                  Try Booking Flow
+                  Public Booking Page
                   <ArrowRight className="h-4 w-4 ml-1.5" />
                 </Button>
               </Link>
               <Link href="/admin">
                 <Button variant="outline" size="lg" data-testid="button-cta-admin">
-                  Open Admin
+                  Admin Dashboard
                 </Button>
               </Link>
             </div>
@@ -217,7 +217,7 @@ export default function Landing() {
             <span className="text-sm font-medium">CalendaLite</span>
           </div>
           <p className="text-xs text-muted-foreground">
-            Open source scheduling engine
+            Open-source scheduling engine for personal platforms
           </p>
         </div>
       </footer>
