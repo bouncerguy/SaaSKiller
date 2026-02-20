@@ -1,7 +1,7 @@
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Calendar, Clock, Code, Globe, Zap, Shield, ArrowRight, Check, Github } from "lucide-react";
+import { Calendar, Clock, Code, Globe, Zap, Shield, ArrowRight, Check } from "lucide-react";
 import { ThemeToggle } from "@/components/theme-toggle";
 
 const features = [
