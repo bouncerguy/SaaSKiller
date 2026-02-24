@@ -6,6 +6,7 @@ import {
   CalendarCheck,
   Code,
   ExternalLink,
+  HelpCircle,
 } from "lucide-react";
 import { useLocation, Link } from "wouter";
 import {
@@ -32,6 +33,7 @@ const mainItems = [
 const toolItems = [
   { title: "Embed", url: "/admin/embed", icon: Code },
   { title: "Settings", url: "/admin/settings", icon: Settings },
+  { title: "Help & FAQ", url: "/admin/help", icon: HelpCircle },
 ];
 
 export function AppSidebar() {

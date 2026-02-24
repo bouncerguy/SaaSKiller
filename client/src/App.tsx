@@ -15,6 +15,7 @@ import AdminBookings from "@/pages/admin-bookings";
 import AdminAvailability from "@/pages/admin-availability";
 import AdminEmbed from "@/pages/admin-embed";
 import AdminSettings from "@/pages/admin-settings";
+import AdminHelp from "@/pages/admin-help";
 import PublicBooking from "@/pages/public-booking";
 import PublicTenant from "@/pages/public-tenant";
 
@@ -52,6 +53,7 @@ function AdminRouter() {
         <Route path="/admin/availability" component={AdminAvailability} />
         <Route path="/admin/embed" component={AdminEmbed} />
         <Route path="/admin/settings" component={AdminSettings} />
+        <Route path="/admin/help" component={AdminHelp} />
         <Route component={NotFound} />
       </Switch>
     </AdminLayout>
