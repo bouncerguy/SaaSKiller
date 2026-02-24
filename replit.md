@@ -64,6 +64,15 @@ shared/
 - availability_rules: id, tenantId, userId, dayOfWeek, startTime, endTime, timezone
 - bookings: id, tenantId, eventTypeId, hostUserId, inviteeName, inviteeEmail, startAt, endAt, timezone, status, cancelReason, notes, createdAt
 
+## Calendar Integration (ICS Feed)
+- Users can paste any public ICS/iCal feed URL in admin settings (Google Calendar, Outlook, Apple Calendar)
+- Backend fetches and parses the ICS feed, caches results for 5 minutes
+- Busy times from the external calendar are excluded from available slots
+- Booking creation also validates against ICS busy times to prevent conflicts
+- Test endpoint: POST /api/admin/calendar/test validates the ICS URL
+- No OAuth or API keys required - works with any standard ICS feed URL
+- Server utility: `server/ics-calendar.ts` handles fetch, parse, cache, and date filtering
+
 ## Seed Data
 Default tenant "Acme Consulting" with 3 event types, weekday availability (9-12, 1-5), and 4 sample bookings.
 

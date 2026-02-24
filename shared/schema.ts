@@ -14,6 +14,7 @@ export const tenants = pgTable("tenants", {
   logoUrl: text("logo_url"),
   brandColor: text("brand_color").default("#1d4ed8"),
   timezone: text("timezone").default("America/New_York"),
+  calendarIcsUrl: text("calendar_ics_url"),
 });
 
 export const insertTenantSchema = createInsertSchema(tenants).omit({ id: true });

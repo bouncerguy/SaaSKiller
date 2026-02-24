@@ -3,6 +3,7 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { z } from "zod";
 import type { AvailabilityRule } from "@shared/schema";
+import { fetchIcsEvents, getBusyRangesForDate, testIcsUrl } from "./ics-calendar";
 
 const DAY_MAP: Record<string, number> = {
   SUNDAY: 0, MONDAY: 1, TUESDAY: 2, WEDNESDAY: 3,
@@ -29,6 +30,7 @@ function generateTimeSlots(
   dateStr: string,
   durationMinutes: number,
   existingBookings: { startAt: Date; endAt: Date }[],
+  icsBusyRanges: { start: Date; end: Date }[] = [],
 ): string[] {
   const date = new Date(dateStr + "T00:00:00");
   const dayOfWeek = date.getDay();
@@ -60,13 +62,17 @@ function generateTimeSlots(
       slotEnd.setMinutes(slotEnd.getMinutes() + durationMinutes);
 
       if (slotStart > now) {
-        const hasConflict = existingBookings.some((booking) => {
+        const hasBookingConflict = existingBookings.some((booking) => {
           const bStart = new Date(booking.startAt);
           const bEnd = new Date(booking.endAt);
           return slotStart < bEnd && slotEnd > bStart;
         });
 
-        if (!hasConflict) {
+        const hasIcsConflict = icsBusyRanges.some((busy) => {
+          return slotStart < busy.end && slotEnd > busy.start;
+        });
+
+        if (!hasBookingConflict && !hasIcsConflict) {
           slots.push(slotTime);
         }
       }
@@ -149,10 +155,30 @@ export async function registerRoutes(
 
   app.patch("/api/admin/tenant", async (req, res) => {
     try {
+      const updateTenantSchema = z.object({
+        name: z.string().min(1).optional(),
+        brandColor: z.string().optional(),
+        timezone: z.string().optional(),
+        logoUrl: z.string().nullable().optional(),
+        calendarIcsUrl: z.string().url().nullable().optional(),
+      }).strict();
+
+      const parsed = updateTenantSchema.parse(req.body);
+
+      if (parsed.calendarIcsUrl) {
+        const url = new URL(parsed.calendarIcsUrl);
+        if (!["http:", "https:"].includes(url.protocol)) {
+          return res.status(400).json({ message: "Only http/https calendar URLs are supported" });
+        }
+      }
+
       const tenant = await getDefaultTenant();
-      const updated = await storage.updateTenant(tenant.id, req.body);
+      const updated = await storage.updateTenant(tenant.id, parsed);
       res.json(updated);
     } catch (e: any) {
+      if (e.name === "ZodError") {
+        return res.status(400).json({ message: e.errors[0]?.message || "Validation failed" });
+      }
       res.status(500).json({ message: e.message });
     }
   });
@@ -256,6 +282,20 @@ export async function registerRoutes(
     }
   });
 
+  app.post("/api/admin/calendar/test", async (req, res) => {
+    try {
+      const schema = z.object({ url: z.string().url("Please enter a valid URL") });
+      const { url } = schema.parse(req.body);
+      const result = await testIcsUrl(url);
+      res.json(result);
+    } catch (e: any) {
+      if (e.name === "ZodError") {
+        return res.status(400).json({ message: e.errors[0]?.message || "Invalid URL" });
+      }
+      res.status(500).json({ message: e.message });
+    }
+  });
+
   app.get("/api/public/:tenantSlug", async (req, res) => {
     try {
       const tenant = await storage.getTenantBySlug(req.params.tenantSlug);
@@ -306,7 +346,17 @@ export async function registerRoutes(
         tenant.id, user.id, dayStart, dayEnd,
       );
 
-      const slots = generateTimeSlots(rules, dateStr, eventType.durationMinutes, existingBookings);
+      let icsBusyRanges: { start: Date; end: Date }[] = [];
+      if (tenant.calendarIcsUrl) {
+        try {
+          const allEvents = await fetchIcsEvents(tenant.calendarIcsUrl);
+          icsBusyRanges = getBusyRangesForDate(allEvents, dateStr);
+        } catch (err) {
+          console.error("Failed to fetch ICS calendar:", err);
+        }
+      }
+
+      const slots = generateTimeSlots(rules, dateStr, eventType.durationMinutes, existingBookings, icsBusyRanges);
 
       res.json({ date: dateStr, slots });
     } catch (e: any) {
@@ -356,6 +406,19 @@ export async function registerRoutes(
 
       if (hasConflict) {
         return res.status(409).json({ message: "This time slot is no longer available" });
+      }
+
+      if (tenant.calendarIcsUrl) {
+        try {
+          const allEvents = await fetchIcsEvents(tenant.calendarIcsUrl);
+          const icsBusy = getBusyRangesForDate(allEvents, parsed.date);
+          const hasIcsConflict = icsBusy.some((busy) => startAt < busy.end && endAt > busy.start);
+          if (hasIcsConflict) {
+            return res.status(409).json({ message: "This time slot conflicts with an existing calendar event" });
+          }
+        } catch (err) {
+          console.error("Failed to check ICS calendar during booking:", err);
+        }
       }
 
       const booking = await storage.createBooking({
