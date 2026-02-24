@@ -138,7 +138,7 @@ export default function PublicTenant() {
         )}
 
         <p className="text-center text-xs text-muted-foreground pt-4" data-testid="text-powered-by">
-          Powered by <span className="font-medium">CalendaLite</span>
+          Powered by <span className="font-medium">Calendar Core</span>
         </p>
       </div>
     </div>

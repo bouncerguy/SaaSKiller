@@ -50,7 +50,7 @@ export function AppSidebar() {
             </div>
             <div>
               <h2 className="text-sm font-semibold leading-tight" data-testid="text-app-name">
-                CalendaLite
+                Calendar Core
               </h2>
               <p className="text-[11px] text-muted-foreground leading-tight">Admin</p>
             </div>

@@ -30,26 +30,26 @@ export default function AdminEmbed() {
   const tenantSlug = "default";
 
   const inlineSnippet = selectedEvent
-    ? `<div id="calendalite-inline"></div>
+    ? `<div id="calendar-core-inline"></div>
 <script src="${baseUrl}/embed.js"></script>
 <script>
-  CalendaLite.init({
+  CalendarCore.init({
     tenantSlug: "${tenantSlug}",
     eventTypeSlug: "${selectedEvent.slug}",
-    target: "#calendalite-inline",
+    target: "#calendar-core-inline",
     mode: "inline"
   });
 </script>`
     : "";
 
   const popupSnippet = selectedEvent
-    ? `<a href="#" id="calendalite-link">Schedule a meeting</a>
+    ? `<a href="#" id="calendar-core-link">Schedule a meeting</a>
 <script src="${baseUrl}/embed.js"></script>
 <script>
-  CalendaLite.init({
+  CalendarCore.init({
     tenantSlug: "${tenantSlug}",
     eventTypeSlug: "${selectedEvent.slug}",
-    trigger: "#calendalite-link",
+    trigger: "#calendar-core-link",
     mode: "popup"
   });
 </script>`
@@ -58,7 +58,7 @@ export default function AdminEmbed() {
   const floatingSnippet = selectedEvent
     ? `<script src="${baseUrl}/embed.js"></script>
 <script>
-  CalendaLite.init({
+  CalendarCore.init({
     tenantSlug: "${tenantSlug}",
     eventTypeSlug: "${selectedEvent.slug}",
     mode: "floating",

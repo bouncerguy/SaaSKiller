@@ -1,7 +1,7 @@
-# CalendaLite - Open Source Scheduling Engine
+# Calendar Core - Open Source Scheduling Engine
 
 ## Overview
-CalendaLite is a Calendly-like scheduling application with:
+Calendar Core is a Calendly-like scheduling application with:
 - **Public booking pages**: `/book/:tenantSlug/:eventSlug` - date/time picker, timezone selector, booking form
 - **Admin dashboard (Caladmin)**: `/admin` - manage event types, bookings, availability, embed snippets, settings
 - **Availability engine**: Generates time slots from availability rules minus existing bookings
