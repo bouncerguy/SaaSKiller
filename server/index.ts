@@ -67,6 +67,9 @@ app.use((req, res, next) => {
     console.error("Seed error (may be first run before schema push):", e);
   }
 
+  const { setupAuth } = await import("./auth");
+  setupAuth(app);
+
   await registerRoutes(httpServer, app);
 
   app.use((err: any, _req: Request, res: Response, next: NextFunction) => {

@@ -4,6 +4,8 @@ import { storage } from "./storage";
 import { z } from "zod";
 import type { AvailabilityRule } from "@shared/schema";
 import { fetchIcsEvents, getBusyRangesForDate, testIcsUrl } from "./ics-calendar";
+import { requireAuth, hashPassword } from "./auth";
+import passport from "passport";
 
 const DAY_MAP: Record<string, number> = {
   SUNDAY: 0, MONDAY: 1, TUESDAY: 2, WEDNESDAY: 3,
@@ -16,13 +18,6 @@ async function getDefaultTenant() {
   const tenant = await storage.getTenantBySlug(DEFAULT_TENANT_SLUG);
   if (!tenant) throw new Error("Default tenant not found");
   return tenant;
-}
-
-async function getDefaultUser(tenantId: string) {
-  const users = await storage.getUsersByTenant(tenantId);
-  const owner = users.find((u) => u.role === "OWNER") || users[0];
-  if (!owner) throw new Error("No user found for tenant");
-  return owner;
 }
 
 function generateTimeSlots(
@@ -139,21 +134,112 @@ const createAvailabilitySchema = z.object({
   timezone: z.string().default("America/New_York"),
 });
 
+const registerSchema = z.object({
+  name: z.string().min(1, "Name is required"),
+  email: z.string().email("Valid email is required"),
+  password: z.string().min(6, "Password must be at least 6 characters"),
+});
+
+const addTeamMemberSchema = z.object({
+  name: z.string().min(1, "Name is required"),
+  email: z.string().email("Valid email is required"),
+  password: z.string().min(6, "Password must be at least 6 characters"),
+  role: z.enum(["OWNER", "MEMBER"]).default("MEMBER"),
+});
+
+const updateTeamMemberSchema = z.object({
+  name: z.string().min(1).optional(),
+  email: z.string().email().optional(),
+  role: z.enum(["OWNER", "MEMBER"]).optional(),
+}).strict();
+
 export async function registerRoutes(
   httpServer: Server,
   app: Express,
 ): Promise<Server> {
 
-  app.get("/api/admin/tenant", async (_req, res) => {
+  app.post("/api/auth/register", async (req, res, next) => {
     try {
+      const parsed = registerSchema.parse(req.body);
+
+      const existing = await storage.getUserByEmail(parsed.email);
+      if (existing) {
+        return res.status(400).json({ message: "Email already registered" });
+      }
+
       const tenant = await getDefaultTenant();
+      const users = await storage.getUsersByTenant(tenant.id);
+      const role = users.length === 0 ? "OWNER" : "MEMBER";
+
+      if (users.length > 0 && (!req.isAuthenticated() || req.user?.role !== "OWNER")) {
+        return res.status(403).json({ message: "Only the account owner can register new users" });
+      }
+
+      const passwordHash = await hashPassword(parsed.password);
+      const user = await storage.createUser({
+        tenantId: tenant.id,
+        name: parsed.name,
+        email: parsed.email,
+        role,
+        passwordHash,
+      });
+
+      if (users.length === 0) {
+        req.login(
+          { id: user.id, tenantId: user.tenantId, name: user.name, email: user.email, role: user.role },
+          (err) => {
+            if (err) return next(err);
+            res.json({ id: user.id, name: user.name, email: user.email, role: user.role });
+          },
+        );
+      } else {
+        res.json({ id: user.id, name: user.name, email: user.email, role: user.role });
+      }
+    } catch (e: any) {
+      if (e.name === "ZodError") {
+        return res.status(400).json({ message: e.errors[0]?.message || "Validation failed" });
+      }
+      res.status(500).json({ message: e.message });
+    }
+  });
+
+  app.post("/api/auth/login", (req, res, next) => {
+    passport.authenticate("local", (err: any, user: Express.User | false, info: any) => {
+      if (err) return next(err);
+      if (!user) return res.status(401).json({ message: info?.message || "Invalid credentials" });
+
+      req.login(user, (loginErr) => {
+        if (loginErr) return next(loginErr);
+        res.json({ id: user.id, name: user.name, email: user.email, role: user.role });
+      });
+    })(req, res, next);
+  });
+
+  app.post("/api/auth/logout", (req, res) => {
+    req.logout((err) => {
+      if (err) return res.status(500).json({ message: "Logout failed" });
+      res.json({ message: "Logged out" });
+    });
+  });
+
+  app.get("/api/auth/user", (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ message: "Not authenticated" });
+    }
+    res.json(req.user);
+  });
+
+  app.get("/api/admin/tenant", requireAuth, async (req, res) => {
+    try {
+      const tenant = await storage.getTenant(req.user!.tenantId);
+      if (!tenant) return res.status(404).json({ message: "Tenant not found" });
       res.json(tenant);
     } catch (e: any) {
       res.status(500).json({ message: e.message });
     }
   });
 
-  app.patch("/api/admin/tenant", async (req, res) => {
+  app.patch("/api/admin/tenant", requireAuth, async (req, res) => {
     try {
       const updateTenantSchema = z.object({
         name: z.string().min(1).optional(),
@@ -172,8 +258,7 @@ export async function registerRoutes(
         }
       }
 
-      const tenant = await getDefaultTenant();
-      const updated = await storage.updateTenant(tenant.id, parsed);
+      const updated = await storage.updateTenant(req.user!.tenantId, parsed);
       res.json(updated);
     } catch (e: any) {
       if (e.name === "ZodError") {
@@ -183,25 +268,22 @@ export async function registerRoutes(
     }
   });
 
-  app.get("/api/admin/event-types", async (_req, res) => {
+  app.get("/api/admin/event-types", requireAuth, async (req, res) => {
     try {
-      const tenant = await getDefaultTenant();
-      const events = await storage.getEventTypesByTenant(tenant.id);
+      const events = await storage.getEventTypesByTenant(req.user!.tenantId);
       res.json(events);
     } catch (e: any) {
       res.status(500).json({ message: e.message });
     }
   });
 
-  app.post("/api/admin/event-types", async (req, res) => {
+  app.post("/api/admin/event-types", requireAuth, async (req, res) => {
     try {
       const parsed = createEventTypeSchema.parse(req.body);
-      const tenant = await getDefaultTenant();
-      const user = await getDefaultUser(tenant.id);
       const event = await storage.createEventType({
         ...parsed,
-        tenantId: tenant.id,
-        ownerUserId: user.id,
+        tenantId: req.user!.tenantId,
+        ownerUserId: req.user!.id,
       });
       res.json(event);
     } catch (e: any) {
@@ -212,28 +294,27 @@ export async function registerRoutes(
     }
   });
 
-  app.patch("/api/admin/event-types/:id", async (req, res) => {
+  app.patch("/api/admin/event-types/:id", requireAuth, async (req, res) => {
     try {
-      const updated = await storage.updateEventType(req.params.id, req.body);
+      const updated = await storage.updateEventType(req.params.id as string, req.body);
       res.json(updated);
     } catch (e: any) {
       res.status(500).json({ message: e.message });
     }
   });
 
-  app.get("/api/admin/bookings", async (_req, res) => {
+  app.get("/api/admin/bookings", requireAuth, async (req, res) => {
     try {
-      const tenant = await getDefaultTenant();
-      const bookingsList = await storage.getBookingsByTenant(tenant.id);
+      const bookingsList = await storage.getBookingsByTenant(req.user!.tenantId);
       res.json(bookingsList);
     } catch (e: any) {
       res.status(500).json({ message: e.message });
     }
   });
 
-  app.patch("/api/admin/bookings/:id/cancel", async (req, res) => {
+  app.patch("/api/admin/bookings/:id/cancel", requireAuth, async (req, res) => {
     try {
-      const updated = await storage.updateBooking(req.params.id, {
+      const updated = await storage.updateBooking(req.params.id as string, {
         status: "CANCELED",
         cancelReason: req.body.reason || "Canceled by admin",
       });
@@ -243,26 +324,22 @@ export async function registerRoutes(
     }
   });
 
-  app.get("/api/admin/availability", async (_req, res) => {
+  app.get("/api/admin/availability", requireAuth, async (req, res) => {
     try {
-      const tenant = await getDefaultTenant();
-      const user = await getDefaultUser(tenant.id);
-      const rules = await storage.getAvailabilityRules(tenant.id, user.id);
+      const rules = await storage.getAvailabilityRules(req.user!.tenantId, req.user!.id);
       res.json(rules);
     } catch (e: any) {
       res.status(500).json({ message: e.message });
     }
   });
 
-  app.post("/api/admin/availability", async (req, res) => {
+  app.post("/api/admin/availability", requireAuth, async (req, res) => {
     try {
       const parsed = createAvailabilitySchema.parse(req.body);
-      const tenant = await getDefaultTenant();
-      const user = await getDefaultUser(tenant.id);
       const rule = await storage.createAvailabilityRule({
         ...parsed,
-        tenantId: tenant.id,
-        userId: user.id,
+        tenantId: req.user!.tenantId,
+        userId: req.user!.id,
       });
       res.json(rule);
     } catch (e: any) {
@@ -273,16 +350,16 @@ export async function registerRoutes(
     }
   });
 
-  app.delete("/api/admin/availability/:id", async (req, res) => {
+  app.delete("/api/admin/availability/:id", requireAuth, async (req, res) => {
     try {
-      await storage.deleteAvailabilityRule(req.params.id);
+      await storage.deleteAvailabilityRule(req.params.id as string);
       res.json({ success: true });
     } catch (e: any) {
       res.status(500).json({ message: e.message });
     }
   });
 
-  app.post("/api/admin/calendar/test", async (req, res) => {
+  app.post("/api/admin/calendar/test", requireAuth, async (req, res) => {
     try {
       const schema = z.object({ url: z.string().url("Please enter a valid URL") });
       const { url } = schema.parse(req.body);
@@ -292,6 +369,96 @@ export async function registerRoutes(
       if (e.name === "ZodError") {
         return res.status(400).json({ message: e.errors[0]?.message || "Invalid URL" });
       }
+      res.status(500).json({ message: e.message });
+    }
+  });
+
+  app.get("/api/admin/team", requireAuth, async (req, res) => {
+    try {
+      if (req.user!.role !== "OWNER") {
+        return res.status(403).json({ message: "Only owners can manage team members" });
+      }
+      const members = await storage.getUsersByTenant(req.user!.tenantId);
+      const safeMembers = members.map(({ passwordHash, ...rest }) => rest);
+      res.json(safeMembers);
+    } catch (e: any) {
+      res.status(500).json({ message: e.message });
+    }
+  });
+
+  app.post("/api/admin/team", requireAuth, async (req, res) => {
+    try {
+      if (req.user!.role !== "OWNER") {
+        return res.status(403).json({ message: "Only owners can add team members" });
+      }
+
+      const parsed = addTeamMemberSchema.parse(req.body);
+
+      const existing = await storage.getUserByEmail(parsed.email);
+      if (existing) {
+        return res.status(400).json({ message: "Email already registered" });
+      }
+
+      const passwordHash = await hashPassword(parsed.password);
+      const user = await storage.createUser({
+        tenantId: req.user!.tenantId,
+        name: parsed.name,
+        email: parsed.email,
+        role: parsed.role,
+        passwordHash,
+      });
+
+      const { passwordHash: _, ...safeUser } = user;
+      res.json(safeUser);
+    } catch (e: any) {
+      if (e.name === "ZodError") {
+        return res.status(400).json({ message: e.errors[0]?.message || "Validation failed" });
+      }
+      res.status(500).json({ message: e.message });
+    }
+  });
+
+  app.patch("/api/admin/team/:id", requireAuth, async (req, res) => {
+    try {
+      if (req.user!.role !== "OWNER") {
+        return res.status(403).json({ message: "Only owners can update team members" });
+      }
+
+      const targetUser = await storage.getUser(req.params.id as string);
+      if (!targetUser || targetUser.tenantId !== req.user!.tenantId) {
+        return res.status(404).json({ message: "Team member not found" });
+      }
+
+      const parsed = updateTeamMemberSchema.parse(req.body);
+      const updated = await storage.updateUser(req.params.id as string, parsed);
+      const { passwordHash: _, ...safeUser } = updated;
+      res.json(safeUser);
+    } catch (e: any) {
+      if (e.name === "ZodError") {
+        return res.status(400).json({ message: e.errors[0]?.message || "Validation failed" });
+      }
+      res.status(500).json({ message: e.message });
+    }
+  });
+
+  app.delete("/api/admin/team/:id", requireAuth, async (req, res) => {
+    try {
+      if (req.user!.role !== "OWNER") {
+        return res.status(403).json({ message: "Only owners can remove team members" });
+      }
+
+      const targetUser = await storage.getUser(req.params.id as string);
+      if (!targetUser || targetUser.tenantId !== req.user!.tenantId) {
+        return res.status(404).json({ message: "Team member not found" });
+      }
+
+      if ((req.params.id as string) === req.user!.id) {
+        return res.status(400).json({ message: "Cannot remove yourself" });
+      }
+
+      await storage.deleteUser(req.params.id as string);
+      res.json({ success: true });
+    } catch (e: any) {
       res.status(500).json({ message: e.message });
     }
   });

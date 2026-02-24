@@ -7,8 +7,11 @@ import {
   Code,
   ExternalLink,
   HelpCircle,
+  Users,
+  LogOut,
 } from "lucide-react";
 import { useLocation, Link } from "wouter";
+import { useAuth } from "@/hooks/use-auth";
 import {
   Sidebar,
   SidebarContent,
@@ -28,6 +31,7 @@ const mainItems = [
   { title: "Event Types", url: "/admin/event-types", icon: Calendar },
   { title: "Bookings", url: "/admin/bookings", icon: CalendarCheck },
   { title: "Availability", url: "/admin/availability", icon: Clock },
+  { title: "Team", url: "/admin/team", icon: Users, ownerOnly: true },
 ];
 
 const toolItems = [
@@ -38,9 +42,14 @@ const toolItems = [
 
 export function AppSidebar() {
   const [location] = useLocation();
+  const { user, logout } = useAuth();
 
   const isActive = (url: string) =>
     url === "/admin" ? location === "/admin" : location.startsWith(url);
+
+  const visibleMainItems = mainItems.filter(
+    (item) => !item.ownerOnly || user?.role === "OWNER",
+  );
 
   return (
     <Sidebar>
@@ -65,7 +74,7 @@ export function AppSidebar() {
           <SidebarGroupLabel>Scheduling</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              {mainItems.map((item) => (
+              {visibleMainItems.map((item) => (
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton asChild isActive={isActive(item.url)}>
                     <Link href={item.url} data-testid={`link-nav-${item.title.toLowerCase().replace(/\s/g, "-")}`}>
@@ -96,7 +105,7 @@ export function AppSidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>
-      <SidebarFooter className="p-3">
+      <SidebarFooter className="p-3 space-y-1">
         <SidebarMenu>
           <SidebarMenuItem>
             <SidebarMenuButton asChild>
@@ -107,6 +116,26 @@ export function AppSidebar() {
             </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>
+        {user && (
+          <>
+            <SidebarSeparator />
+            <div className="px-2 py-1.5">
+              <p className="text-xs font-medium truncate" data-testid="text-sidebar-user-name">{user.name}</p>
+              <p className="text-[11px] text-muted-foreground truncate" data-testid="text-sidebar-user-email">{user.email}</p>
+            </div>
+            <SidebarMenu>
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  onClick={() => logout()}
+                  data-testid="button-logout"
+                >
+                  <LogOut className="h-4 w-4" />
+                  <span>Sign Out</span>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            </SidebarMenu>
+          </>
+        )}
       </SidebarFooter>
     </Sidebar>
   );

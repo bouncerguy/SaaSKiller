@@ -2,6 +2,7 @@ import { storage } from "./storage";
 import { db } from "./db";
 import { tenants } from "@shared/schema";
 import { eq } from "drizzle-orm";
+import bcrypt from "bcryptjs";
 
 export async function seedDatabase() {
   const existing = await db.select().from(tenants).where(eq(tenants.slug, "default"));
@@ -20,12 +21,14 @@ export async function seedDatabase() {
     logoUrl: null,
   });
 
+  const passwordHash = await bcrypt.hash("password123", 10);
+
   const user = await storage.createUser({
     tenantId: tenant.id,
     name: "Alex Johnson",
     email: "alex@acmeconsulting.com",
     role: "OWNER",
-    passwordHash: null,
+    passwordHash,
   });
 
   const quickChat = await storage.createEventType({
@@ -168,4 +171,5 @@ export async function seedDatabase() {
   });
 
   console.log("Seed data created successfully!");
+  console.log("Default login: alex@acmeconsulting.com / password123");
 }

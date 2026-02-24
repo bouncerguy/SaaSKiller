@@ -7,8 +7,11 @@ import { ThemeProvider } from "@/components/theme-provider";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/app-sidebar";
+import { AuthProvider, useAuth } from "@/hooks/use-auth";
+import { Loader2 } from "lucide-react";
 import NotFound from "@/pages/not-found";
 import Landing from "@/pages/landing";
+import AuthPage from "@/pages/auth-page";
 import AdminDashboard from "@/pages/admin-dashboard";
 import AdminEventTypes from "@/pages/admin-event-types";
 import AdminBookings from "@/pages/admin-bookings";
@@ -16,8 +19,10 @@ import AdminAvailability from "@/pages/admin-availability";
 import AdminEmbed from "@/pages/admin-embed";
 import AdminSettings from "@/pages/admin-settings";
 import AdminHelp from "@/pages/admin-help";
+import AdminTeam from "@/pages/admin-team";
 import PublicBooking from "@/pages/public-booking";
 import PublicTenant from "@/pages/public-tenant";
+import { Redirect } from "wouter";
 
 function AdminLayout({ children }: { children: React.ReactNode }) {
   const style = {
@@ -43,7 +48,21 @@ function AdminLayout({ children }: { children: React.ReactNode }) {
   );
 }
 
-function AdminRouter() {
+function ProtectedAdminRouter() {
+  const { user, isLoading } = useAuth();
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  if (!user) {
+    return <Redirect to="/auth" />;
+  }
+
   return (
     <AdminLayout>
       <Switch>
@@ -54,6 +73,7 @@ function AdminRouter() {
         <Route path="/admin/embed" component={AdminEmbed} />
         <Route path="/admin/settings" component={AdminSettings} />
         <Route path="/admin/help" component={AdminHelp} />
+        <Route path="/admin/team" component={AdminTeam} />
         <Route component={NotFound} />
       </Switch>
     </AdminLayout>
@@ -64,10 +84,11 @@ function Router() {
   return (
     <Switch>
       <Route path="/" component={Landing} />
+      <Route path="/auth" component={AuthPage} />
       <Route path="/book/:tenantSlug/:eventSlug" component={PublicBooking} />
       <Route path="/book/:tenantSlug" component={PublicTenant} />
-      <Route path="/admin/:rest*" component={AdminRouter} />
-      <Route path="/admin" component={AdminRouter} />
+      <Route path="/admin/:rest*" component={ProtectedAdminRouter} />
+      <Route path="/admin" component={ProtectedAdminRouter} />
       <Route component={NotFound} />
     </Switch>
   );
@@ -77,10 +98,12 @@ function App() {
   return (
     <ThemeProvider>
       <QueryClientProvider client={queryClient}>
-        <TooltipProvider>
-          <Toaster />
-          <Router />
-        </TooltipProvider>
+        <AuthProvider>
+          <TooltipProvider>
+            <Toaster />
+            <Router />
+          </TooltipProvider>
+        </AuthProvider>
       </QueryClientProvider>
     </ThemeProvider>
   );

@@ -16,8 +16,11 @@ export interface IStorage {
   createTenant(data: InsertTenant): Promise<Tenant>;
 
   getUser(id: string): Promise<User | undefined>;
+  getUserByEmail(email: string): Promise<User | undefined>;
   getUsersByTenant(tenantId: string): Promise<User[]>;
   createUser(data: InsertUser): Promise<User>;
+  updateUser(id: string, data: Partial<InsertUser>): Promise<User>;
+  deleteUser(id: string): Promise<void>;
 
   getEventType(id: string): Promise<EventType | undefined>;
   getEventTypeBySlug(tenantId: string, slug: string): Promise<EventType | undefined>;
@@ -66,9 +69,23 @@ export class DatabaseStorage implements IStorage {
     return db.select().from(users).where(eq(users.tenantId, tenantId));
   }
 
+  async getUserByEmail(email: string): Promise<User | undefined> {
+    const [u] = await db.select().from(users).where(eq(users.email, email));
+    return u;
+  }
+
   async createUser(data: InsertUser): Promise<User> {
     const [u] = await db.insert(users).values(data).returning();
     return u;
+  }
+
+  async updateUser(id: string, data: Partial<InsertUser>): Promise<User> {
+    const [u] = await db.update(users).set(data).where(eq(users.id, id)).returning();
+    return u;
+  }
+
+  async deleteUser(id: string): Promise<void> {
+    await db.delete(users).where(eq(users.id, id));
   }
 
   async getEventType(id: string): Promise<EventType | undefined> {
