@@ -15,6 +15,12 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
   Select,
   SelectContent,
   SelectItem,
@@ -24,7 +30,7 @@ import {
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { Plus, Clock, Video, Phone, MapPin, Settings, Copy, ExternalLink, Calendar } from "lucide-react";
+import { Plus, Clock, Video, Phone, MapPin, Settings, Copy, ExternalLink, Calendar, Check, Code } from "lucide-react";
 import type { EventType } from "@shared/schema";
 
 const locationIcons: Record<string, typeof Video> = {
@@ -110,11 +116,20 @@ export default function AdminEventTypes() {
     }
   };
 
-  const copyBookingLink = (slug: string) => {
-    const url = `${window.location.origin}/book/default/${slug}`;
-    navigator.clipboard.writeText(url);
-    toast({ title: "Link copied to clipboard" });
+  const [copiedField, setCopiedField] = useState<string | null>(null);
+
+  const copyToClipboard = (text: string, fieldId: string) => {
+    navigator.clipboard.writeText(text);
+    setCopiedField(fieldId);
+    toast({ title: "Copied to clipboard" });
+    setTimeout(() => setCopiedField(null), 2000);
   };
+
+  const getBookingUrl = (slug: string) =>
+    `${window.location.origin}/book/default/${slug}`;
+
+  const getEmbedSnippet = (slug: string) =>
+    `<iframe src="${window.location.origin}/book/default/${slug}" style="width:100%;height:700px;border:none;border-radius:8px;" title="Book a meeting"></iframe>`;
 
   return (
     <div className="p-6 lg:p-8 space-y-8 max-w-5xl mx-auto">
@@ -221,15 +236,67 @@ export default function AdminEventTypes() {
                     />
                   </div>
                   <div className="flex items-center gap-1 mt-4 pt-4 border-t flex-wrap" data-testid={`actions-event-${et.id}`}>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => copyBookingLink(et.slug)}
-                      data-testid={`button-copy-link-${et.id}`}
-                    >
-                      <Copy className="h-3.5 w-3.5 mr-1.5" />
-                      Copy Link
-                    </Button>
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          data-testid={`button-share-${et.id}`}
+                        >
+                          <Code className="h-3.5 w-3.5 mr-1.5" />
+                          Share / Embed
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-96 p-0" align="start">
+                        <Tabs defaultValue="link" className="w-full">
+                          <TabsList className="w-full rounded-none border-b bg-transparent h-auto p-0">
+                            <TabsTrigger value="link" className="flex-1 rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:shadow-none py-2.5 text-xs">
+                              Booking URL
+                            </TabsTrigger>
+                            <TabsTrigger value="embed" className="flex-1 rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:shadow-none py-2.5 text-xs">
+                              Embed Code
+                            </TabsTrigger>
+                          </TabsList>
+                          <TabsContent value="link" className="p-3 mt-0">
+                            <p className="text-xs text-muted-foreground mb-2">Share this link so people can book with you</p>
+                            <div className="flex items-center gap-2">
+                              <Input
+                                readOnly
+                                value={getBookingUrl(et.slug)}
+                                className="text-xs h-8 font-mono"
+                                data-testid={`input-booking-url-${et.id}`}
+                              />
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="h-8 px-2.5 flex-shrink-0"
+                                onClick={() => copyToClipboard(getBookingUrl(et.slug), `url-${et.id}`)}
+                                data-testid={`button-copy-url-${et.id}`}
+                              >
+                                {copiedField === `url-${et.id}` ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
+                              </Button>
+                            </div>
+                          </TabsContent>
+                          <TabsContent value="embed" className="p-3 mt-0">
+                            <p className="text-xs text-muted-foreground mb-2">Paste this into your website's HTML</p>
+                            <div className="relative">
+                              <pre className="text-[11px] font-mono bg-muted p-2.5 rounded-md overflow-x-auto whitespace-pre-wrap break-all leading-relaxed" data-testid={`text-embed-code-${et.id}`}>
+                                {getEmbedSnippet(et.slug)}
+                              </pre>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="absolute top-1.5 right-1.5 h-7 px-2"
+                                onClick={() => copyToClipboard(getEmbedSnippet(et.slug), `embed-${et.id}`)}
+                                data-testid={`button-copy-embed-${et.id}`}
+                              >
+                                {copiedField === `embed-${et.id}` ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />}
+                              </Button>
+                            </div>
+                          </TabsContent>
+                        </Tabs>
+                      </PopoverContent>
+                    </Popover>
                     <Button
                       variant="ghost"
                       size="sm"
