@@ -1,0 +1,672 @@
+# Open Source Self-Hosted Business Operating System — Replit Build Prompt
+
+> **CONTEXT**: This project already has calendar functionality built. DO NOT rebuild the calendar. Integrate all new features around the existing calendar module. The calendar is the starting point — everything below extends the project into a full business operating system.
+
+---
+
+## PROJECT OVERVIEW
+
+Build an open-source, self-hosted business operating system for brands and solopreneurs. This replaces all SaaS products (CRM, support desk, invoicing, project management, etc.) with a single self-hosted platform. The user downloads the code, puts it on their own server, and owns their entire infrastructure with zero recurring SaaS fees.
+
+**Target audience**: Small businesses, solopreneurs, agencies, and consultants who want to own their stack.
+
+**Open source**: This will be published on GitHub. Code must be clean, well-documented, and modular.
+
+---
+
+## TECH STACK
+
+- **Frontend**: React with modern responsive design
+- **Backend**: Node.js / Express
+- **Database**: PostgreSQL (Neon cloud-compatible, but runs anywhere)
+- **Real-time**: WebSockets (Socket.io)
+- **Deployment**: Replit-ready, but portable to any Node.js host
+- **Package manager**: npm
+
+---
+
+## ROUTING STRUCTURE
+
+```
+/                          → Public website (customer-facing)
+/login                     → Single login (role determines dashboard)
+/install (or /configure)   → First-run setup wizard (runs once)
+/hud                       → Back office dashboard (employees/admin)
+/hud/crm                   → Customer/Lead management
+/hud/products              → Products & services management
+/hud/support               → Trouble tickets & support
+/hud/finance               → Financial dashboard
+/hud/calendar              → Calendar (ALREADY EXISTS — integrate, don't rebuild)
+/hud/forms                 → Form builder & submissions
+/hud/email                 → Email client (IMAP reader + SMTP sender)
+/hud/agents                → AI agent configuration
+/hud/assets                → Fixed asset management
+/hud/media                 → Media gallery
+/hud/users                 → User & group management
+/hud/settings              → System configuration
+/hud/backups               → Backup management
+/hud/updates               → Git-based update system
+/hud/time-tracking         → Time tracker
+/hud/history               → Global activity history
+/customer-portal           → Customer self-service dashboard
+```
+
+---
+
+## FIRST-RUN SETUP WIZARD (/install or /configure)
+
+This runs ONCE when the software is first deployed. It collects all configuration variables needed to initialize the system. After completion, it locks itself and redirects to /login.
+
+### Setup Questionnaire Fields:
+
+**Business Information**
+- Business name
+- Domain name
+- Business address (for tax jurisdiction)
+- Business phone
+- Business email
+- What do you call your customers? (Customers / Clients / Members — stored as a global variable used throughout the UI)
+
+**Authentication Configuration**
+- Choose auth method: Google Authentication / Local Authentication / Both
+- Enable two-factor authentication? (Google Authenticator / SMS via Twilio)
+- Create super administrator account (name, email, password)
+
+**AI Configuration**
+- Preferred AI provider: Claude (recommended) / OpenAI / xAI / Google / Microsoft
+- API key input for chosen provider(s)
+- (Multiple providers can be configured — different agents can use different providers)
+
+**Payment Gateway Configuration**
+- Stripe API keys (publishable + secret)
+- PayPal API credentials
+- Zelle integration (if applicable)
+- Additional payment gateways as available
+
+**Communication Configuration**
+- Default SMTP server settings (host, port, username, password, encryption)
+- Twilio account SID, auth token, and phone number (for SMS/calls)
+- Default IMAP settings (for email reading functionality)
+
+**Website Look & Feel**
+- Choose from 5 layout templates:
+  1. Hero with Forever Scroll (modern single-page)
+  2. Classic Side-by-Side (two-column layout)
+  3. Card Grid (Pinterest/news-style)
+  4. Minimal Magazine (clean editorial)
+  5. Bold Superhero (large imagery, bold type)
+- Design style: Modern / Contemporary / Minimalist / Bold / Classic
+- Primary color, secondary color, accent color
+- Logo upload
+- Font preference selection
+
+**Shipping Configuration (if selling physical products)**
+- FedEx API credentials
+- UPS API credentials
+- USPS API credentials
+
+**Backup Configuration**
+- Dropbox OAuth setup (optional)
+- Google Drive OAuth setup (optional)
+
+---
+
+## AUTHENTICATION SYSTEM
+
+Single login page at /login. Role determines what dashboard the user sees:
+
+- **Super Administrator**: Full /hud access + system settings + update management
+- **Administrator**: Full /hud access
+- **Employee**: /hud access limited by group permissions
+- **Customer/Client/Member**: /customer-portal access only
+- **Dual-role users**: See BOTH dashboards with a toggle switch between employee view and customer view
+
+### Authentication Features:
+- Google OAuth integration
+- Local email/password authentication
+- Two-factor authentication (Google Authenticator app OR SMS via Twilio)
+- Password reset flow (email-based, never exposes passwords)
+- Session management with modern security (httpOnly cookies, CSRF protection, rate limiting)
+- Employees/AI agents can initiate password reset emails for customers (never see the password)
+
+---
+
+## USER HIERARCHY & PERMISSIONS
+
+### Structure: Groups → Individuals → Features/Tools
+
+- Create **groups** (e.g., "Sales Team", "Support Staff", "Managers")
+- Assign **users** to groups
+- Assign **feature access** to groups first, then override at individual level if needed
+- Every feature/tool in the system has a permission toggle
+- When a new feature is added, it defaults to OFF for all groups until explicitly enabled
+
+### User Management (/hud/users):
+- Create/edit/deactivate users
+- Assign to groups
+- View user activity history
+- Per-user feature toggles (override group settings)
+- Role assignment (admin, employee, customer)
+
+---
+
+## CRM SYSTEM (/hud/crm)
+
+This must be **as robust as HubSpot**. Two completely separate views with visual differentiation:
+
+### Lead Management (visually distinct — e.g., blue-tinted header/accent)
+
+**Awareness Stage:**
+- Track website visitors by IP address
+- Gather as much anonymous data as possible (pages visited, time on site, referral source)
+- This is viewable but NOT part of the active sales pipeline
+- Toggle: show/hide awareness data
+- As more data is gathered, attempt to match anonymous visitors to known leads
+
+**Lead Pipeline:**
+- Kanban board view with customizable stages
+- Create multiple pipelines (one per product/service or custom)
+- Default pipeline: Awareness → New Lead → Contacted → Qualified → Proposal → Negotiation → Won/Lost
+- Each pipeline stage can have automated sequences
+
+**Lead Sequences (Default: 13 contacts in 30 days):**
+- Email sequences (via AI agent + SMTP)
+- SMS sequences (via AI agent + Twilio)
+- Call reminders/scheduling
+- Configure tone, messaging, and context per pipeline
+- Each pipeline can have its own SMTP configuration
+- Each pipeline can have its own AI agent with different context/SOPs
+- Per-pipeline SOP (Standard Operating Procedures) field — text/markdown that gets injected into the AI agent's context window for that pipeline
+
+**Lead Record:**
+- Full contact information
+- Source tracking (which form, which page, referral)
+- All interactions logged with timestamps
+- Notes section (timestamped, attributed to user who added)
+- Form submission history (linked by email match)
+- Activity timeline
+
+### Customer Management (visually distinct — e.g., green-tinted header/accent)
+
+Leads become customers ONLY when they start paying. These are separate database tables.
+
+**Customer Record:**
+- Full contact information (name, address, phone, email)
+- Searchable by ANY field
+- Billing type and payment method (credit card on file via Stripe/PayPal)
+- Update credit card / update address functionality
+- All products and services they're subscribed to
+- Payment history: last payment date, next due date, amount
+- **Status indicator (traffic light):**
+  - 🟢 Green: Paid up / current
+  - 🟡 Yellow: 30+ days past due
+  - 🔴 Red: 60+ days past due / collections / retainer hours depleted
+- Auto-suspend toggle per service (yes/no — configured at product level)
+- Trouble ticket history (viewable from customer record)
+- Form submission history (linked by email)
+- Complete activity/change history (every action logged: who, when, what)
+- Notes section (timestamped, attributed — submit clears the box for next note)
+- Password reset initiation (sends email to customer)
+- Link to navigate customer to forgot-password page
+
+---
+
+## PRODUCTS & SERVICES (/hud/products)
+
+### Product Types:
+1. **Physical Product** — needs to be shipped
+2. **Digital Product** — downloadable file/link
+3. **Service** — rendered by humans/AI
+4. **Retainer** — pre-paid hours for ongoing service
+
+### Product Configuration:
+- Product name, description, images (from media gallery)
+- Product type selection (above)
+- Price / pricing tiers
+- Cost (for profit margin calculation in financial dashboard)
+- Variants: size, color, or any custom variable (small/medium/large, red/blue/green, etc.)
+- Quantity control / inventory tracking
+- What do you call buyers of this product? (Customer / Client / Member — overrides global if set)
+- Assign pipeline for this product
+- Does this product need time tracking? (Yes/No — if Yes, enables timer for employees on this product)
+- Auto-suspend if payment is delinquent? (Yes/No)
+- Per-product support email address (default or custom with its own SMTP settings)
+- Per-product AI agent configuration (context window, SOPs, tone)
+- Per-product standard operating procedures (text/markdown)
+
+### Physical Product Extras:
+- Shipping integration: FedEx, UPS, USPS (API-based rate calculation and label generation)
+- US sales tax management (auto-detect jurisdiction from business address configured in setup)
+- Weight, dimensions for shipping calculation
+
+### Digital Product Extras:
+- Upload downloadable file
+- Generate secure download link
+- Download tracking
+
+### Shopping Cart:
+- Add to cart / remove from cart
+- Cart persistence (session-based for guests, account-based for logged-in users)
+- Checkout flow with payment gateway selection (Stripe/PayPal)
+- Order confirmation email
+- Order history
+
+---
+
+## TIME TRACKING (/hud/time-tracking)
+
+- Per-user timer: start/stop/pause for any customer account
+- Associate time entry with specific customer and product/service
+- Timer displays: customer name, product/service, elapsed time
+- When timer stops: log entry created with start time, end time, duration, notes on what was done
+- For **retainer** products: automatically deducts from remaining hours
+- Auto-email to customer when time is logged: what was done, time spent, time remaining (for retainers)
+- When retainer hours are depleted: customer account goes 🔴 red status
+- Ability to start timer directly from customer record view
+- Time tracking dashboard: view all time entries by employee, customer, date range
+- Export time entries
+
+---
+
+## SUPPORT / TROUBLE TICKETS (/hud/support)
+
+### Ticket Creation:
+- Employees/AI agents can create tickets on customer accounts
+- Customers can submit tickets from customer portal
+- Incoming support emails (per-product support address) auto-create tickets
+- Incoming support texts (Twilio) auto-create tickets
+- AI agent auto-categorizes tickets into the correct product/category
+
+### Ticket Kanban Board:
+**AI-Handled Board:**
+- New → AI Reviewing → Awaiting Customer Response → Resolved/Closed
+- AI can: accept ticket, respond, request more info, close ticket
+- For informational tickets, AI handles end-to-end
+
+**Human-in-the-Loop Board (separate kanban):**
+- AI escalates here when it can't resolve
+- When escalated, notify the human(s) responsible (configurable: email, text, or just kanban flag)
+- Human can: respond, call customer, kick back to AI to finish, close ticket
+- AI puts ticket in human-in-loop category; human resolves and can return to AI
+
+### Ticket Features:
+- Full conversation history (threaded)
+- Linked to customer record (visible from customer view)
+- Status tracking with timestamps
+- Priority levels
+- Assignment to specific employees or groups
+- SLA tracking (optional)
+
+---
+
+## FINANCIAL DASHBOARD (/hud/finance)
+
+CEO/CFO-level heads-up display. Clean, not overwhelming.
+
+### Key Metrics:
+- Total Revenue (current month, quarter, year, all-time)
+- Total Profit (revenue minus product costs)
+- Profit Margins (per product, overall)
+- Cost Per Acquisition (marketing spend / new customers)
+- Monthly Recurring Revenue (MRR)
+- Accounts Receivable (outstanding invoices)
+- Accounts Receivable Aging (30/60/90 day breakdown)
+- Customer Lifetime Value (average)
+- Churn rate
+
+### Ledger:
+- Complete debit/credit ledger
+- Exportable (CSV, PDF)
+- Filterable by date range, product, customer
+
+### Per-Product Financials:
+- Revenue per product
+- Cost per product (from product configuration)
+- Margin per product
+- Number of active subscribers/customers per product
+
+---
+
+## EMAIL CLIENT (/hud/email)
+
+Built-in email reader and sender — looks and feels like Gmail.
+
+### Features:
+- IMAP connection to read incoming email
+- SMTP connection to send email
+- Per-employee IMAP/SMTP configuration
+- AI agents can read and send email through this system
+- Inbox, Sent, Drafts, Trash folders
+- Compose new email
+- Reply, Reply All, Forward
+- Search emails
+- Clean, modern UI (Gmail-inspired)
+
+---
+
+## FORM BUILDER (/hud/forms)
+
+### Form Creation:
+- Drag-and-drop or text-based form builder
+- AI web developer agent can create forms from natural language (e.g., "Make me a contact form with name, email, phone, and a message box")
+- Field types: text, email, phone, textarea, dropdown, checkbox, radio, date, file upload
+- Each form gets a unique Form ID
+- Assign form to a pipeline (submissions enter that pipeline as leads)
+- Form styling matches website theme
+- Embed code generation (for placing on public website pages)
+- Thank-you/confirmation email configuration per form
+
+### Form Submissions:
+- View all submissions per form (searchable, sortable)
+- Submissions also viewable in pipeline kanban
+- If submitter's email matches a customer record, link submission to customer history
+- Export submissions (CSV)
+
+---
+
+## AI AGENTS (/hud/agents)
+
+### Default Built-in Agents:
+
+1. **Web Developer Agent**
+   - Uses the configured AI API key (Claude recommended)
+   - Chat-based interface: employee describes changes in plain language
+   - Agent makes changes to website files
+   - From /hud: see all pages, click a page, chat with the agent to edit it
+   - Can update text, swap images (upload new image), modify layouts
+   - Shows preview before applying changes
+
+2. **Support Agent** (per-product)
+   - Handles incoming tickets
+   - Uses product-specific SOPs and context
+   - Categorizes, responds, escalates as needed
+
+3. **Pipeline/Outreach Agent** (per-pipeline)
+   - Executes email/SMS/call sequences
+   - Uses pipeline-specific tone, messaging, SOPs
+   - Personalized outreach based on lead data
+
+### Agent Configuration:
+- Select AI provider and model per agent
+- Set system prompt / context window content
+- Attach SOPs (from product/pipeline configuration)
+- Set tone and communication style
+- Test agent before deploying
+
+---
+
+## FIXED ASSET MANAGEMENT (/hud/assets)
+
+### Asset Registry:
+- Add assets with: name, description, category/class, value, serial number, purchase date, location, assigned user/department
+- Asset classes (e.g., "HVAC Systems", "Vehicles", "IT Equipment")
+
+### Maintenance Scheduling:
+- Per-asset: Does this need maintenance? (Yes/No)
+- If yes: maintenance schedule (every X days/weeks/months)
+- Description of maintenance required
+- Role/person responsible for maintenance
+- Notification method: email, text, or kanban listing
+- Acknowledgment workflow: responsible person marks work complete
+
+### Maintenance Kanban (per asset class):
+- Work Needs to Be Done (upcoming/overdue)
+- Work in Progress
+- Needs Finance/Approval
+- Completed
+- Add other relevant status columns as appropriate
+
+---
+
+## MEDIA GALLERY (/hud/media)
+
+- Upload images (jpg, png, gif, webp, svg)
+- Organize into folders/categories
+- Search by filename, tag, or category
+- Use images anywhere in the system (website pages, products, emails, forms)
+- Image preview with dimensions and file size
+- Drag-and-drop upload
+- Bulk upload support
+
+---
+
+## CUSTOMER PORTAL (/customer-portal)
+
+When a customer logs in, they see:
+
+- Their billing information
+- When their next bill is due
+- How to make a payment / update payment method
+- What products and services they have
+- Submit a trouble ticket
+- View trouble ticket history and status
+- Chat with the AI agent assigned to their product/service
+- Request a human (escalation button)
+- Download digital products they've purchased
+- View their retainer hours remaining (if applicable)
+
+---
+
+## BACKUP MANAGEMENT (/hud/backups)
+
+- **One-click backup** button
+- Backup options:
+  - Download to desktop (browser download)
+  - Save as zip on server
+  - Upload to Dropbox (requires OAuth setup)
+  - Upload to Google Drive (requires OAuth setup)
+- Backup includes: database dump + all files
+- Backup history with timestamps
+- Restore from backup functionality
+
+---
+
+## GIT-BASED UPDATE SYSTEM (/hud/updates)
+
+**⚠️ WARNING: This feature is inherently risky. Display prominent warnings.**
+
+- System checks GitHub repository once daily for new stable releases
+- If updates available: show notification in /hud header — "Updates Available"
+- Click to see changelog / what's new
+- **Before updating, display:**
+  - "⚠️ DANGER: Updating will modify system files. This could break your installation."
+  - "ALWAYS make a full backup before updating."
+  - One-click backup button right there
+  - Confirmation checkbox: "I have made a backup and understand the risks"
+- Update process: `git pull` from stable branch
+- Updates ONLY affect system/application code — NEVER touch:
+  - User-customized templates/themes
+  - Configuration files
+  - Database data
+  - Uploaded media
+  - Custom website pages
+
+---
+
+## GLOBAL HISTORY & LOGGING
+
+**Every single action in the system must be logged.**
+
+### Per-Entity History:
+- Every customer has a history tab
+- Every lead has a history tab
+- Every product has a history tab
+- Every ticket has a history tab
+- Every asset has a history tab
+
+### History Entry Format:
+- Timestamp
+- Who made the change (user name or "AI Agent: [agent name]")
+- What was changed (field name, old value → new value)
+- Action type (created, updated, deleted, viewed, emailed, called, etc.)
+
+### Global History (/hud/history):
+- Searchable, filterable log of ALL system activity
+- Filter by: user, action type, entity type, date range
+- For anything that doesn't have a specific history location, it goes here
+
+---
+
+## HELP SYSTEM
+
+- **Every single feature, field, and button** has a `?` icon next to it
+- Clicking `?` shows a tooltip or modal explaining: what this does, how to use it, common scenarios
+- As features are built, the help content must be written simultaneously
+- Help content is stored in the database and editable from /hud/settings
+- Consider a searchable help/documentation section
+
+---
+
+## UI/UX REQUIREMENTS
+
+- Clean, modern, user-friendly interface
+- Mobile-responsive throughout
+- Fast loading (lazy-load heavy components)
+- Consistent design language across all modules
+- Visual differentiation between lead view (blue accent) and customer view (green accent)
+- All data tables: sortable, searchable, filterable, paginated
+- Kanban boards: drag-and-drop between columns
+- Toast notifications for actions (saved, error, etc.)
+- Loading states on all async operations
+- Empty states with helpful messaging ("No customers yet — add your first one")
+- Dark mode toggle (optional but nice)
+
+---
+
+## ENVIRONMENT VARIABLES
+
+```
+# Database
+DATABASE_URL=postgresql://user:pass@host:port/dbname
+
+# Authentication
+GOOGLE_CLIENT_ID=
+GOOGLE_CLIENT_SECRET=
+JWT_SECRET=
+SESSION_SECRET=
+
+# AI Providers
+ANTHROPIC_API_KEY=
+OPENAI_API_KEY=
+XAI_API_KEY=
+GOOGLE_AI_API_KEY=
+AZURE_OPENAI_API_KEY=
+
+# Payments
+STRIPE_PUBLISHABLE_KEY=
+STRIPE_SECRET_KEY=
+STRIPE_WEBHOOK_SECRET=
+PAYPAL_CLIENT_ID=
+PAYPAL_CLIENT_SECRET=
+
+# Communication
+TWILIO_ACCOUNT_SID=
+TWILIO_AUTH_TOKEN=
+TWILIO_PHONE_NUMBER=
+DEFAULT_SMTP_HOST=
+DEFAULT_SMTP_PORT=
+DEFAULT_SMTP_USER=
+DEFAULT_SMTP_PASS=
+DEFAULT_IMAP_HOST=
+DEFAULT_IMAP_PORT=
+DEFAULT_IMAP_USER=
+DEFAULT_IMAP_PASS=
+
+# Shipping
+FEDEX_API_KEY=
+UPS_API_KEY=
+USPS_API_KEY=
+
+# Backups
+DROPBOX_APP_KEY=
+DROPBOX_APP_SECRET=
+GOOGLE_DRIVE_CLIENT_ID=
+GOOGLE_DRIVE_CLIENT_SECRET=
+
+# Application
+NODE_ENV=development
+PORT=3000
+APP_URL=https://yourdomain.com
+```
+
+---
+
+## DATABASE SCHEMA (High-Level)
+
+Design the full relational schema. Key tables include:
+
+- `users` (id, email, name, role, group_ids, auth_method, 2fa_enabled, created_at, updated_at)
+- `groups` (id, name, description, permissions JSON, created_at)
+- `user_groups` (user_id, group_id)
+- `features` (id, name, slug, description, enabled_globally)
+- `group_features` (group_id, feature_id, enabled)
+- `user_features` (user_id, feature_id, enabled — overrides group)
+- `customers` (id, user_id, business_name, address, phone, email, billing_type, payment_status, auto_suspend, created_at)
+- `leads` (id, email, name, phone, source, pipeline_id, stage, awareness_data JSON, created_at)
+- `awareness_visitors` (id, ip_address, pages_visited JSON, referral_source, first_seen, last_seen, matched_lead_id)
+- `products` (id, name, description, type, price, cost, variants JSON, quantity, needs_shipping, needs_time_tracking, auto_suspend, pipeline_id, support_email, sop_text, ai_agent_config JSON, created_at)
+- `orders` (id, customer_id, product_id, status, total, tax, shipping_cost, created_at)
+- `cart_items` (id, session_id, user_id, product_id, variant, quantity)
+- `pipelines` (id, name, product_id, stages JSON, smtp_config JSON, ai_agent_config JSON, sop_text, sequence_config JSON)
+- `pipeline_sequences` (id, pipeline_id, step_number, channel, delay_days, template_text)
+- `tickets` (id, customer_id, product_id, subject, status, priority, category, assigned_to, is_human_loop, created_at)
+- `ticket_messages` (id, ticket_id, sender_type, sender_id, message, created_at)
+- `time_entries` (id, user_id, customer_id, product_id, start_time, end_time, duration, notes)
+- `forms` (id, name, form_id_slug, fields JSON, pipeline_id, thank_you_config JSON, created_at)
+- `form_submissions` (id, form_id, data JSON, submitter_email, matched_customer_id, created_at)
+- `assets` (id, name, class, description, value, serial_number, purchase_date, location, assigned_to, needs_maintenance, maintenance_schedule JSON, created_at)
+- `asset_maintenance` (id, asset_id, status, assigned_to, due_date, completed_date, notes)
+- `media` (id, filename, path, category, tags, uploaded_by, created_at)
+- `notes` (id, entity_type, entity_id, user_id, content, created_at)
+- `activity_log` (id, user_id, entity_type, entity_id, action, details JSON, created_at)
+- `emails` (id, user_id, folder, from, to, subject, body, read, created_at)
+- `agents` (id, name, type, provider, model, system_prompt, sop_text, config JSON, created_at)
+- `settings` (id, key, value, category)
+- `backups` (id, filename, size, location, created_at)
+- `help_content` (id, feature_slug, title, content, created_at, updated_at)
+- `website_pages` (id, slug, title, content, template, published, created_at, updated_at)
+
+Design all foreign keys, indexes, and constraints appropriately. Add any additional tables needed.
+
+---
+
+## IMPLEMENTATION PRIORITY
+
+Build in this order:
+
+1. **Setup wizard** (/install) — get configuration working first
+2. **Authentication & user management** — login, roles, groups, permissions
+3. **Integrate existing calendar** — wire it into the /hud layout
+4. **CRM: Customer management** — customer records, status indicators, notes, history
+5. **CRM: Lead management** — leads, pipelines, kanban, forms
+6. **Products & services** — product types, variants, pricing, costs
+7. **Shopping cart & checkout** — Stripe/PayPal integration
+8. **Support tickets** — ticket system, AI categorization, kanban
+9. **Time tracking** — timers, retainer management
+10. **Financial dashboard** — metrics, ledger, reporting
+11. **Email client** — IMAP/SMTP integration
+12. **AI agents** — web developer agent, support agents, pipeline agents
+13. **Form builder** — form creation, submissions, pipeline integration
+14. **Fixed asset management** — registry, maintenance, kanban
+15. **Media gallery** — uploads, organization
+16. **Customer portal** — customer-facing dashboard
+17. **Backup management** — backup/restore functionality
+18. **Git update system** — update checker and installer
+19. **Public website** — templates, page builder, AI web developer
+20. **Help system** — contextual help for every feature
+21. **Polish** — responsive design pass, empty states, loading states, error handling
+
+---
+
+## CRITICAL REQUIREMENTS
+
+1. **Log everything.** Every action, every change, every view — timestamped and attributed.
+2. **Help on everything.** Every feature gets a `?` icon with explanation. Build help content as you build features.
+3. **Separate leads from customers.** Different tables, different visual treatment, different workflows.
+4. **Permission-gate everything.** Every feature checks group + individual permissions before rendering.
+5. **Per-pipeline configuration.** Each pipeline gets its own SMTP, AI agent, SOPs, and sequences.
+6. **Per-product configuration.** Each product gets its own support email, AI agent, SOPs, and settings.
+7. **Never expose passwords.** Employees can initiate resets but never see credentials.
+8. **Modern security.** CSRF protection, rate limiting, input sanitization, parameterized queries, httpOnly cookies, HTTPS enforcement.
+9. **The calendar already exists.** Do not rebuild it. Integrate it into the /hud layout and connect it to the user/permissions system.
+10. **This is open source.** Write clean, documented, modular code. Others will read and contribute to this.
