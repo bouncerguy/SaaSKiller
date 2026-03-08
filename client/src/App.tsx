@@ -12,19 +12,20 @@ import { Loader2 } from "lucide-react";
 import NotFound from "@/pages/not-found";
 import Landing from "@/pages/landing";
 import AuthPage from "@/pages/auth-page";
-import AdminDashboard from "@/pages/admin-dashboard";
-import AdminEventTypes from "@/pages/admin-event-types";
-import AdminBookings from "@/pages/admin-bookings";
-import AdminAvailability from "@/pages/admin-availability";
-import AdminEmbed from "@/pages/admin-embed";
-import AdminSettings from "@/pages/admin-settings";
-import AdminHelp from "@/pages/admin-help";
-import AdminTeam from "@/pages/admin-team";
+import SetupPage from "@/pages/setup-page";
+import HudDashboard from "@/pages/hud-dashboard";
+import HudEventTypes from "@/pages/hud-event-types";
+import HudBookings from "@/pages/hud-bookings";
+import HudAvailability from "@/pages/hud-availability";
+import HudEmbed from "@/pages/hud-embed";
+import HudSettings from "@/pages/hud-settings";
+import HudHelp from "@/pages/hud-help";
+import HudUsers from "@/pages/hud-users";
 import PublicBooking from "@/pages/public-booking";
 import PublicTenant from "@/pages/public-tenant";
 import { Redirect } from "wouter";
 
-function AdminLayout({ children }: { children: React.ReactNode }) {
+function HudLayout({ children }: { children: React.ReactNode }) {
   const style = {
     "--sidebar-width": "15rem",
     "--sidebar-width-icon": "3rem",
@@ -48,8 +49,8 @@ function AdminLayout({ children }: { children: React.ReactNode }) {
   );
 }
 
-function ProtectedAdminRouter() {
-  const { user, isLoading } = useAuth();
+function ProtectedHudRouter() {
+  const { user, isLoading, needsSetup } = useAuth();
 
   if (isLoading) {
     return (
@@ -59,24 +60,29 @@ function ProtectedAdminRouter() {
     );
   }
 
+  if (needsSetup) {
+    return <Redirect to="/setup" />;
+  }
+
   if (!user) {
     return <Redirect to="/auth" />;
   }
 
   return (
-    <AdminLayout>
+    <HudLayout>
       <Switch>
-        <Route path="/admin" component={AdminDashboard} />
-        <Route path="/admin/event-types" component={AdminEventTypes} />
-        <Route path="/admin/bookings" component={AdminBookings} />
-        <Route path="/admin/availability" component={AdminAvailability} />
-        <Route path="/admin/embed" component={AdminEmbed} />
-        <Route path="/admin/settings" component={AdminSettings} />
-        <Route path="/admin/help" component={AdminHelp} />
-        <Route path="/admin/team" component={AdminTeam} />
+        <Route path="/hud" component={HudDashboard} />
+        <Route path="/hud/event-types" component={HudEventTypes} />
+        <Route path="/hud/bookings" component={HudBookings} />
+        <Route path="/hud/availability" component={HudAvailability} />
+        <Route path="/hud/embed" component={HudEmbed} />
+        <Route path="/hud/settings" component={HudSettings} />
+        <Route path="/hud/help" component={HudHelp} />
+        <Route path="/hud/users" component={HudUsers} />
+        <Route path="/hud/team" component={HudUsers} />
         <Route component={NotFound} />
       </Switch>
-    </AdminLayout>
+    </HudLayout>
   );
 }
 
@@ -84,11 +90,12 @@ function Router() {
   return (
     <Switch>
       <Route path="/" component={Landing} />
+      <Route path="/setup" component={SetupPage} />
       <Route path="/auth" component={AuthPage} />
       <Route path="/book/:tenantSlug/:eventSlug" component={PublicBooking} />
       <Route path="/book/:tenantSlug" component={PublicTenant} />
-      <Route path="/admin/:rest*" component={ProtectedAdminRouter} />
-      <Route path="/admin" component={ProtectedAdminRouter} />
+      <Route path="/hud/:rest*" component={ProtectedHudRouter} />
+      <Route path="/hud" component={ProtectedHudRouter} />
       <Route component={NotFound} />
     </Switch>
   );

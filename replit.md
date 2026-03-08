@@ -1,11 +1,13 @@
-# Calendar Core - Open Source Scheduling Engine
+# Calendar Core — Open Source Self-Hosted Business Operating System
 
 ## Overview
-Calendar Core is a Calendly-like scheduling application with:
-- **Public booking pages**: `/book/:tenantSlug/:eventSlug` - date/time picker, timezone selector, booking form
-- **Admin dashboard (Caladmin)**: `/admin` - manage event types, bookings, availability, embed snippets, settings
+Calendar Core is a modular business platform that starts with Calendly-like scheduling and expands into a full business operating system. Current features:
+- **Public booking pages**: `/book/:tenantSlug/:eventSlug` — date/time picker, timezone selector, booking form
+- **HUD dashboard**: `/hud` — unified control center for all modules
+- **First-run setup wizard**: `/setup` — creates organization, admin account, and seeds features on fresh install
 - **Authentication**: Email/password login with session-based auth (passport-local + express-session)
 - **Multi-user teams**: OWNER can add/edit/remove team members; each user manages their own event types and availability
+- **Groups & permissions**: Group-based feature access with per-user overrides
 - **Availability engine**: Generates time slots from availability rules minus existing bookings
 - **Embed SDK**: Inline, popup, floating widget, and iframe embed snippets
 - **Multi-tenant**: Tenant isolation with branding support
@@ -21,99 +23,130 @@ Calendar Core is a Calendly-like scheduling application with:
 ```
 client/src/
   pages/
-    landing.tsx          - Home landing page
-    auth-page.tsx        - Login/register page (two-column layout)
-    public-booking.tsx   - Public booking flow (date picker, time slots, booking form)
-    public-tenant.tsx    - Tenant event listing page
-    admin-dashboard.tsx  - Admin dashboard with stats
-    admin-event-types.tsx - Event type CRUD
-    admin-bookings.tsx   - Bookings list with tabs (upcoming/past/canceled)
-    admin-availability.tsx - Weekly availability rules
-    admin-embed.tsx      - Embed snippet generator
-    admin-settings.tsx   - Tenant branding settings
-    admin-team.tsx       - Team member management (OWNER only)
-    admin-help.tsx       - Help & FAQ page
+    landing.tsx            - Public landing page
+    auth-page.tsx          - Login page (two-column layout)
+    setup-page.tsx         - First-run setup wizard (multi-step)
+    public-booking.tsx     - Public booking flow (date picker, time slots, booking form)
+    public-tenant.tsx      - Tenant event listing page
+    hud-dashboard.tsx      - HUD dashboard with stats
+    hud-event-types.tsx    - Event type CRUD
+    hud-bookings.tsx       - Bookings list with tabs (upcoming/past/canceled)
+    hud-availability.tsx   - Weekly availability rules
+    hud-embed.tsx          - Embed snippet generator
+    hud-settings.tsx       - Tenant branding settings
+    hud-team.tsx           - Team member management (OWNER only)
+    hud-users.tsx          - User & group management with feature permissions
+    hud-help.tsx           - Help & FAQ page
   hooks/
-    use-auth.tsx         - Auth context provider and useAuth hook
+    use-auth.tsx           - Auth context provider with setup status detection
   components/
-    app-sidebar.tsx      - Admin navigation sidebar with user info and logout
-    theme-provider.tsx   - Dark/light theme provider
-    theme-toggle.tsx     - Theme toggle button
+    app-sidebar.tsx        - Module-aware sidebar with grouped navigation
+    theme-provider.tsx     - Dark/light theme provider
+    theme-toggle.tsx       - Theme toggle button
 server/
-  index.ts              - Express server entry point
-  auth.ts               - Passport + session configuration, requireAuth middleware
-  routes.ts             - All API routes (auth, admin, public, team)
-  storage.ts            - Database storage interface
-  db.ts                 - Database connection
-  seed.ts               - Seed data (default login: alex@acmeconsulting.com / password123)
-  ics-calendar.ts       - ICS feed fetch, parse, cache
+  index.ts                - Express server entry point (auto schema push on startup)
+  auth.ts                 - Passport + session configuration, requireAuth middleware
+  routes.ts               - All API routes (auth, setup, admin, public, groups)
+  storage.ts              - Database storage interface with permission hierarchy
+  db.ts                   - Database connection
+  seed.ts                 - Dev-only seed data (default login: alex@acmeconsulting.com / password123)
+  ics-calendar.ts         - ICS feed fetch, parse, cache
 shared/
-  schema.ts             - Drizzle schema definitions
+  schema.ts               - Drizzle schema definitions (tenants, users, groups, features, settings, activity_log)
 ```
 
-## API Routes
-### Auth (prefix: /api/auth)
-- POST /register - Register new user (first user becomes OWNER; subsequent require OWNER auth)
-- POST /login - Login with email + password
-- POST /logout - Destroy session
-- GET /user - Get current authenticated user (or 401)
+## Startup Behavior
+- On startup, the server automatically runs `npx drizzle-kit push` to sync the database schema
+- In development (`NODE_ENV=development`), seed data is loaded automatically
+- In production, seed data is skipped — the setup wizard handles initial configuration
+- If no tenants exist, the app redirects to `/setup` for first-run configuration
 
-### Admin (prefix: /api/admin) - All require authentication
-- GET/PATCH /tenant - Tenant settings
-- GET/POST /event-types - Event types CRUD (scoped to tenant, owner is logged-in user)
-- PATCH /event-types/:id - Update event type
-- GET /bookings - All bookings for tenant
-- PATCH /bookings/:id/cancel - Cancel booking
-- GET/POST /availability - Availability rules (scoped to logged-in user)
-- DELETE /availability/:id - Delete rule
-- GET /team - List team members (OWNER only)
-- POST /team - Add team member (OWNER only)
-- PATCH /team/:id - Update team member (OWNER only)
-- DELETE /team/:id - Remove team member (OWNER only, cannot remove self)
-- POST /calendar/test - Test ICS URL
+## API Routes
+
+### Setup (unauthenticated)
+- GET `/api/setup/status` — Returns `{ needsSetup: boolean }` (true when zero tenants exist)
+- POST `/api/setup` — Create organization + admin user + seed features (403 if setup already done)
+
+### Auth (prefix: /api/auth)
+- POST /register — Register new user (first user becomes OWNER; subsequent require OWNER auth)
+- POST /login — Login with email + password
+- POST /logout — Destroy session
+- GET /user — Get current authenticated user (or 401)
+
+### Admin (prefix: /api/admin) — All require authentication
+- GET/PATCH /tenant — Tenant settings
+- GET/POST /event-types — Event types CRUD (scoped to tenant)
+- PATCH /event-types/:id — Update event type
+- GET /bookings — All bookings for tenant
+- PATCH /bookings/:id/cancel — Cancel booking
+- GET/POST /availability — Availability rules (scoped to logged-in user)
+- DELETE /availability/:id — Delete rule
+- GET /team — List team members (OWNER only)
+- POST /team — Add team member (OWNER only)
+- PATCH /team/:id — Update team member (OWNER only)
+- DELETE /team/:id — Remove team member (OWNER only, cannot remove self)
+- POST /calendar/test — Test ICS URL
+
+### Groups (prefix: /api/hud) — All require OWNER role
+- GET/POST /groups — List/create groups
+- PATCH/DELETE /groups/:id — Update/delete group
+- GET/POST/DELETE /groups/:id/members — Manage group membership
+- GET/PATCH /groups/:id/features — Manage group feature access
 
 ### Public (prefix: /api/public)
-- GET /:tenantSlug - Tenant info + active event types
-- GET /:tenantSlug/:eventSlug - Event type details
-- GET /:tenantSlug/:eventSlug/slots/:date/:timezone - Available time slots
-- POST /:tenantSlug/:eventSlug/book - Create booking
+- GET /:tenantSlug — Tenant info + active event types
+- GET /:tenantSlug/:eventSlug — Event type details
+- GET /:tenantSlug/:eventSlug/slots/:date/:timezone — Available time slots
+- POST /:tenantSlug/:eventSlug/book — Create booking
 
 ## Database Schema
-- tenants: id, name, slug, logoUrl, brandColor, timezone, calendarIcsUrl
-- users: id, tenantId, name, email, role (OWNER/MEMBER), passwordHash
-- session: managed by connect-pg-simple (auto-created)
-- event_types: id, tenantId, ownerUserId, slug, title, description, durationMinutes, locationType, locationValue, color, isActive, questionsJson
-- availability_rules: id, tenantId, userId, dayOfWeek, startTime, endTime, timezone
-- bookings: id, tenantId, eventTypeId, hostUserId, inviteeName, inviteeEmail, startAt, endAt, timezone, status, cancelReason, notes, createdAt
+- **tenants**: id, name, slug, logoUrl, brandColor, timezone, calendarIcsUrl
+- **users**: id, tenantId, name, email, role (OWNER/MEMBER), passwordHash, isActive
+- **groups**: id, tenantId, name, description, createdAt
+- **user_groups**: id, userId, groupId (junction table)
+- **features**: id, name, slug (unique), description, enabledGlobally
+- **group_features**: id, groupId, featureId, enabled
+- **user_features**: id, userId, featureId, enabled (overrides group setting)
+- **settings**: id, key (unique), value, category
+- **activity_log**: id, tenantId, userId, entityType, entityId, action, details, createdAt
+- **event_types**: id, tenantId, ownerUserId, slug, title, description, durationMinutes, locationType, locationValue, color, isActive, questionsJson
+- **availability_rules**: id, tenantId, userId, dayOfWeek, startTime, endTime, timezone
+- **bookings**: id, tenantId, eventTypeId, hostUserId, inviteeName, inviteeEmail, startAt, endAt, timezone, status, cancelReason, notes, createdAt
+- **session**: managed by connect-pg-simple (auto-created)
+
+## Permission Hierarchy
+Feature access is resolved in this order:
+1. **user_features** — Per-user override (highest priority)
+2. **group_features** — Group-level permission (checked for all groups the user belongs to)
+3. **features.enabledGlobally** — Global default (lowest priority)
 
 ## Authentication Flow
 - Session-based auth using express-session stored in PostgreSQL (connect-pg-simple)
-- Passwords hashed with bcryptjs (cost factor 10)
-- First registered user automatically becomes OWNER
-- OWNER can add team members via /admin/team page
+- Passwords hashed with bcryptjs
+- First-run: setup wizard creates the initial OWNER user
+- OWNER can add team members via /hud/team page
 - All /api/admin/* routes protected by requireAuth middleware
-- Frontend AuthProvider wraps app, redirects to /auth if unauthenticated
-- SESSION_SECRET environment variable used for session signing
+- Frontend AuthProvider checks setup status and redirects accordingly
 
-## Calendar Integration (ICS Feed)
-- Users can paste any public ICS/iCal feed URL in admin settings (Google Calendar, Outlook, Apple Calendar)
-- Backend fetches and parses the ICS feed, caches results for 5 minutes
-- Busy times from the external calendar are excluded from available slots
-- Booking creation also validates against ICS busy times to prevent conflicts
-- Test endpoint: POST /api/admin/calendar/test validates the ICS URL
-- No OAuth or API keys required - works with any standard ICS feed URL
-- Server utility: `server/ics-calendar.ts` handles fetch, parse, cache, and date filtering
-
-## Seed Data
+## Seed Data (dev only)
 Default tenant "Acme Consulting" with 3 event types, weekday availability (9-12, 1-5), and 4 sample bookings.
 Default login: alex@acmeconsulting.com / password123
 
-## Design System (Updated Feb 2026)
+## Design System
 - **Color palette**: Warm indigo primary (#5b4cdb / HSL 235 72% 55%), neutral grays for backgrounds
 - **Typography**: Inter font with -0.011em tracking, tighter heading tracking (-0.025em)
 - **Spacing**: Consistent 4/6/8px rhythm, generous whitespace, max-w containers for readability
-- **Components**: Shadcn UI exclusively - Cards, Buttons, Badges, Sidebar, Tabs, Dialogs
+- **Components**: Shadcn UI exclusively — Cards, Buttons, Badges, Sidebar, Tabs, Dialogs
 - **Icons**: Lucide React throughout
 - **Dark mode**: Full dark mode support via CSS variables in :root/.dark
 - **Shadows**: Custom shadow scale from 2xs to 2xl for depth hierarchy
 - **Layout**: Sticky headers with z-[9999], backdrop-blur, flex-wrap on all flex rows
+
+## Sidebar Navigation Structure
+The HUD sidebar is organized by function:
+- **Core**: Dashboard, Calendar (with sub-items: Event Types, Bookings, Availability), CRM, Products
+- **Operations**: Support, Time Tracking, Finance
+- **Tools**: Forms, Email, AI Agents, Media
+- **System**: Users & Groups, Assets, Settings, Backups, Updates, Help
+
+Modules that aren't built yet appear disabled with a "Coming Soon" tooltip.

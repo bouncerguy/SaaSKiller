@@ -1,28 +1,45 @@
-# Calendar Core
+# Calendar Core — Open Source Self-Hosted Business Operating System
 
-An open-source, self-hostable scheduling engine for individuals and small teams. Built for authors, coaches, consultants, and anyone who wants to own their scheduling infrastructure instead of renting it from a SaaS platform.
+A modular, self-hosted business platform built for small teams and solo operators. Start with scheduling, grow into CRM, support tickets, finance, and more — all from one unified dashboard. Own your data. Run it anywhere.
 
 ## Why Calendar Core?
 
-Most scheduling tools are SaaS products that hold your data, charge monthly fees, and disappear if the company shuts down. Calendar Core is different:
+Most business tools are fragmented SaaS products that hold your data hostage, charge monthly fees per module, and disappear if the company shuts down. Calendar Core takes a different approach:
 
-- **Self-hosted**: Run it on your own server. Your data stays yours.
-- **Embeddable**: Drop scheduling into any website with a simple embed snippet.
-- **No vendor lock-in**: Uses standard ICS calendar feeds — works with Google Calendar, Outlook, Apple Calendar, and any iCal-compatible service.
-- **Multi-tenant**: One instance can serve multiple users or organizations.
+- **Self-hosted**: Run it on your own server or on Replit. Your data stays yours.
+- **Modular**: Start with calendar scheduling, enable more modules as you need them.
+- **No vendor lock-in**: Uses standard protocols (ICS calendar feeds) and open formats.
+- **Multi-tenant**: One instance can serve multiple organizations.
+- **Permission system**: Groups, per-user feature overrides, and role-based access control.
 
-## Features
+## Modules
 
-- **Public booking pages** — Shareable links where anyone can book time with you
-- **Timezone-aware scheduling** — Automatic timezone detection and conversion
-- **Availability rules** — Set your weekly schedule with multiple time blocks per day
-- **Calendar integration** — Paste an ICS feed URL to automatically block busy times
-- **Admin dashboard** — Manage event types, view bookings, configure availability
-- **Embed SDK** — Inline, popup, floating widget, and iframe embed options
-- **Dark mode** — Full dark mode support throughout the interface
-- **Booking management** — View upcoming/past bookings, cancel with reasons
+| Module | Status | Description |
+|--------|--------|-------------|
+| Calendar | Built | Public booking pages, availability rules, ICS integration, embed SDK |
+| CRM | Coming Soon | Contact and deal management |
+| Products | Coming Soon | Product catalog and inventory |
+| Support | Coming Soon | Ticket and helpdesk system |
+| Finance | Coming Soon | Invoicing and expense tracking |
+| Email | Coming Soon | Transactional and marketing email |
+| Forms | Coming Soon | Custom form builder |
+| AI Agents | Coming Soon | Workflow automation with AI |
+| Media | Coming Soon | Asset and media library |
+| Time Tracking | Coming Soon | Time logs and reporting |
+| Backups | Coming Soon | Automated backup management |
+| Updates | Coming Soon | Platform update manager |
 
-## Quick Start
+## Deploy on Replit
+
+The fastest way to get started:
+
+1. Fork or import this repository into Replit
+2. Replit auto-provisions a PostgreSQL database — no configuration needed
+3. Click **Run** — the app automatically creates database tables on startup
+4. The setup wizard guides you through creating your organization and admin account
+5. You're live at your Replit URL
+
+## Self-Hosted Deployment
 
 ### Prerequisites
 
@@ -32,25 +49,18 @@ Most scheduling tools are SaaS products that hold your data, charge monthly fees
 ### Setup
 
 ```bash
-# Clone the repository
 git clone https://github.com/your-username/calendar-core.git
 cd calendar-core
 
-# Install dependencies
 npm install
 
-# Set up environment variables
 cp .env.example .env
-# Edit .env with your database credentials and a session secret
+# Edit .env — set DATABASE_URL and SESSION_SECRET
 
-# Push the database schema
-npm run db:push
-
-# Start the development server
 npm run dev
 ```
 
-The app will be available at `http://localhost:5000`.
+On first run, the app automatically pushes the database schema and presents a setup wizard at the root URL. No manual migration step required.
 
 ### Production Build
 
@@ -59,80 +69,183 @@ npm run build
 npm start
 ```
 
+The app will be available at `http://localhost:5000`.
+
+## First-Run Setup
+
+When Calendar Core starts with an empty database, it redirects to a setup wizard:
+
+1. **Step 1 — Organization**: Enter your organization name, URL slug (auto-generated, editable), and timezone
+2. **Step 2 — Admin Account**: Create the first admin user with name, email, and password
+
+The wizard creates your tenant, seeds default feature flags (only Calendar enabled), and logs you into the `/hud` dashboard.
+
 ## Architecture
 
 ```
-client/src/           React frontend (Vite)
-  pages/              Page components (booking, admin, landing)
-  components/         Shared UI components (Shadcn)
-server/               Express backend
-  routes.ts           API endpoints
-  storage.ts          Database access layer
-  ics-calendar.ts     ICS calendar feed integration
-  seed.ts             Initial seed data
-shared/               Shared between frontend and backend
-  schema.ts           Database schema (Drizzle) + validation (Zod)
+client/src/               React frontend (Vite)
+  pages/                  Page components
+    landing.tsx           Public landing page
+    auth-page.tsx         Login page
+    setup-page.tsx        First-run setup wizard
+    public-booking.tsx    Public booking flow
+    public-tenant.tsx     Tenant event listing
+    hud-dashboard.tsx     HUD dashboard with stats
+    hud-event-types.tsx   Event type CRUD
+    hud-bookings.tsx      Bookings list (upcoming/past/canceled)
+    hud-availability.tsx  Weekly availability rules
+    hud-embed.tsx         Embed snippet generator
+    hud-settings.tsx      Tenant settings
+    hud-team.tsx          Team member management
+    hud-users.tsx         User & group management
+    hud-help.tsx          Help & FAQ
+  hooks/
+    use-auth.tsx          Auth context with setup detection
+  components/
+    app-sidebar.tsx       Module-aware sidebar navigation
+    theme-provider.tsx    Dark/light theme provider
+    theme-toggle.tsx      Theme toggle button
+server/
+  index.ts               Express server entry (auto schema push)
+  auth.ts                Passport + session config, requireAuth middleware
+  routes.ts              All API routes (auth, setup, admin, public, groups)
+  storage.ts             Database storage interface + implementations
+  db.ts                  Database connection
+  seed.ts                Dev-only seed data
+  ics-calendar.ts        ICS feed fetch, parse, cache
+shared/
+  schema.ts              Drizzle schema + Zod validation
 ```
 
 ### Tech Stack
 
-| Layer     | Technology                        |
-|-----------|-----------------------------------|
-| Frontend  | React 18, Wouter, TanStack Query  |
-| UI        | Shadcn UI, Tailwind CSS, Lucide   |
-| Backend   | Express.js, TypeScript            |
-| Database  | PostgreSQL, Drizzle ORM           |
-| Build     | Vite                              |
+| Layer | Technology |
+|-------|------------|
+| Frontend | React 18, Wouter, TanStack Query |
+| UI | Shadcn UI, Tailwind CSS, Lucide |
+| Backend | Express.js, TypeScript |
+| Database | PostgreSQL, Drizzle ORM |
+| Auth | Passport.js (local), express-session, bcryptjs |
+| Build | Vite |
 
-## Public Booking Flow
+## Environment Variables
 
-Bookings happen through shareable URLs:
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `DATABASE_URL` | Yes | PostgreSQL connection string |
+| `SESSION_SECRET` | Yes | Secret for signing session cookies |
+| `PGHOST` | No | PostgreSQL host (alternative to DATABASE_URL) |
+| `PGPORT` | No | PostgreSQL port (default: 5432) |
+| `PGUSER` | No | PostgreSQL user |
+| `PGPASSWORD` | No | PostgreSQL password |
+| `PGDATABASE` | No | PostgreSQL database name |
+| `NODE_ENV` | No | Set to `production` for production builds |
 
+## Development
+
+### Dev Seed Data
+
+In development mode (`NODE_ENV=development`), the app seeds sample data on startup:
+
+- **Tenant**: Acme Consulting
+- **Default login**: `alex@acmeconsulting.com` / `password123`
+- **Sample data**: 3 event types, weekday availability (9-12, 1-5), 4 sample bookings
+
+In production, seed data is skipped — use the setup wizard instead.
+
+### Running Locally
+
+```bash
+npm run dev          # Start dev server (frontend + backend on port 5000)
+npm run build        # Production build
+npm start            # Start production server
+npm run db:push      # Push schema changes to database
+npm run check        # TypeScript type checking
 ```
-/book/:tenantSlug/:eventSlug
-```
 
-The booking page includes:
-1. A date picker showing available days
-2. Time slots generated from your availability rules
-3. Automatic timezone detection with manual override
-4. A booking form collecting name, email, and optional notes
+## Calendar Features
 
-## Admin Dashboard
+- **Public booking pages** — Shareable links at `/book/:tenantSlug/:eventSlug`
+- **Timezone-aware scheduling** — Automatic detection with manual override
+- **Availability rules** — Weekly schedule with multiple time blocks per day
+- **ICS calendar integration** — Paste a feed URL to block busy times (Google Calendar, Outlook, Apple Calendar)
+- **Embed SDK** — Inline, popup, floating widget, and iframe options
+- **Dark mode** — Full dark mode support throughout the interface
+- **Booking management** — View upcoming/past bookings, cancel with reasons
 
-Access the admin panel at `/admin` to:
-
-- **Event Types** — Create and manage different meeting types (duration, location, custom questions)
-- **Bookings** — View all bookings with tabs for upcoming, past, and canceled
-- **Availability** — Set weekly availability rules with timezone support
-- **Embed** — Generate embed snippets for your website
-- **Settings** — Configure organization name, branding, timezone, and calendar integration
-
-## Calendar Integration
+### Calendar Integration
 
 Calendar Core uses ICS feeds to check external calendar availability — no OAuth or API keys needed.
 
-1. Go to **Admin > Settings > Calendar Integration**
+1. Go to **HUD > Settings > Calendar Integration**
 2. Paste your calendar's ICS feed URL
 3. Click **Test** to verify the connection
 4. Save — busy times are now automatically excluded from available slots
 
-### Where to Find Your ICS URL
-
+**Where to find your ICS URL:**
 - **Google Calendar**: Settings > Select calendar > Integrate calendar > "Secret address in iCal format"
 - **Outlook**: Calendar settings > Shared calendars > Publish a calendar > ICS link
 - **Apple Calendar**: Right-click calendar > Share Calendar > copy the URL
 
-## Embedding
+### Embedding
 
-Calendar Core provides four embed options. Generate snippets from the admin **Embed** page:
-
+Generate embed snippets from the HUD **Embed** page:
 - **Inline** — Renders directly in your page
 - **Popup** — Opens in a modal overlay
 - **Floating Widget** — A persistent button that opens the booking flow
 - **iframe** — Simple iframe embed
 
 ## API Reference
+
+### Setup Endpoints
+
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| GET | `/api/setup/status` | No | Returns `{ needsSetup: boolean }` |
+| POST | `/api/setup` | No | Create org + admin (only when needsSetup is true) |
+
+### Auth Endpoints
+
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| POST | `/api/auth/register` | OWNER | Register new user (first user auto-becomes OWNER) |
+| POST | `/api/auth/login` | No | Login with email + password |
+| POST | `/api/auth/logout` | Yes | Destroy session |
+| GET | `/api/auth/user` | Yes | Get current authenticated user |
+
+### Admin Endpoints
+
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| GET | `/api/admin/tenant` | Yes | Get tenant settings |
+| PATCH | `/api/admin/tenant` | Yes | Update tenant settings |
+| GET | `/api/admin/event-types` | Yes | List event types |
+| POST | `/api/admin/event-types` | Yes | Create event type |
+| PATCH | `/api/admin/event-types/:id` | Yes | Update event type |
+| GET | `/api/admin/bookings` | Yes | List all bookings |
+| PATCH | `/api/admin/bookings/:id/cancel` | Yes | Cancel a booking |
+| GET | `/api/admin/availability` | Yes | List availability rules |
+| POST | `/api/admin/availability` | Yes | Create availability rule |
+| DELETE | `/api/admin/availability/:id` | Yes | Delete availability rule |
+| POST | `/api/admin/calendar/test` | Yes | Test an ICS feed URL |
+| GET | `/api/admin/team` | OWNER | List team members |
+| POST | `/api/admin/team` | OWNER | Add team member |
+| PATCH | `/api/admin/team/:id` | OWNER | Update team member |
+| DELETE | `/api/admin/team/:id` | OWNER | Remove team member |
+
+### Group Management Endpoints
+
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| GET | `/api/hud/groups` | OWNER | List all groups |
+| POST | `/api/hud/groups` | OWNER | Create a group |
+| PATCH | `/api/hud/groups/:id` | OWNER | Update a group |
+| DELETE | `/api/hud/groups/:id` | OWNER | Delete a group |
+| GET | `/api/hud/groups/:id/members` | OWNER | List group members |
+| POST | `/api/hud/groups/:id/members` | OWNER | Add member to group |
+| DELETE | `/api/hud/groups/:id/members` | OWNER | Remove member from group |
+| GET | `/api/hud/groups/:id/features` | OWNER | List group feature permissions |
+| PATCH | `/api/hud/groups/:id/features` | OWNER | Update group feature permissions |
 
 ### Public Endpoints
 
@@ -142,32 +255,6 @@ Calendar Core provides four embed options. Generate snippets from the admin **Em
 | GET | `/api/public/:tenantSlug/:eventSlug` | Event type details |
 | GET | `/api/public/:tenantSlug/:eventSlug/slots/:date/:timezone` | Available time slots |
 | POST | `/api/public/:tenantSlug/:eventSlug/book` | Create a booking |
-
-### Admin Endpoints
-
-| Method | Path | Description |
-|--------|------|-------------|
-| GET | `/api/admin/tenant` | Get tenant settings |
-| PATCH | `/api/admin/tenant` | Update tenant settings |
-| GET | `/api/admin/event-types` | List event types |
-| POST | `/api/admin/event-types` | Create event type |
-| PATCH | `/api/admin/event-types/:id` | Update event type |
-| GET | `/api/admin/bookings` | List all bookings |
-| PATCH | `/api/admin/bookings/:id/cancel` | Cancel a booking |
-| GET | `/api/admin/availability` | List availability rules |
-| POST | `/api/admin/availability` | Create availability rule |
-| DELETE | `/api/admin/availability/:id` | Delete availability rule |
-| POST | `/api/admin/calendar/test` | Test an ICS feed URL |
-
-## Database Schema
-
-Calendar Core uses PostgreSQL with the following tables:
-
-- **tenants** — Organizations with branding and timezone settings
-- **users** — Team members belonging to a tenant
-- **event_types** — Bookable meeting types (duration, location, custom questions)
-- **availability_rules** — Weekly time blocks when the host is available
-- **bookings** — Scheduled meetings with status tracking
 
 ## Contributing
 

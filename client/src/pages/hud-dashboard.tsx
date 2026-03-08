@@ -99,7 +99,7 @@ export default function AdminDashboard() {
       <Card>
         <CardHeader className="flex flex-row items-center justify-between gap-4 pb-4">
           <CardTitle className="text-base font-medium">Upcoming Bookings</CardTitle>
-          <Link href="/admin/bookings">
+          <Link href="/hud/bookings">
             <Button variant="ghost" size="sm" data-testid="link-all-bookings">
               View All
               <ArrowRight className="h-3.5 w-3.5 ml-1" />

@@ -14,6 +14,7 @@ interface AuthUser {
 interface AuthContextType {
   user: AuthUser | null;
   isLoading: boolean;
+  needsSetup: boolean;
   login: (email: string, password: string) => Promise<void>;
   register: (name: string, email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
@@ -24,11 +25,19 @@ const AuthContext = createContext<AuthContextType | null>(null);
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [, setLocation] = useLocation();
 
-  const { data: user, isLoading } = useQuery<AuthUser | null>({
+  const { data: setupStatus, isLoading: setupLoading } = useQuery<{ needsSetup: boolean }>({
+    queryKey: ["/api/setup/status"],
+    queryFn: getQueryFn({ on401: "returnNull" }),
+    staleTime: 60000,
+    retry: false,
+  });
+
+  const { data: user, isLoading: userLoading } = useQuery<AuthUser | null>({
     queryKey: ["/api/auth/user"],
     queryFn: getQueryFn({ on401: "returnNull" }),
     staleTime: Infinity,
     retry: false,
+    enabled: !setupStatus?.needsSetup,
   });
 
   const loginMutation = useMutation({
@@ -73,8 +82,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     await logoutMutation.mutateAsync();
   };
 
+  const needsSetup = setupStatus?.needsSetup ?? false;
+  const isLoading = setupLoading || (!needsSetup && userLoading);
+
   return (
-    <AuthContext.Provider value={{ user: user ?? null, isLoading, login, register, logout }}>
+    <AuthContext.Provider value={{ user: user ?? null, isLoading, needsSetup, login, register, logout }}>
       {children}
     </AuthContext.Provider>
   );

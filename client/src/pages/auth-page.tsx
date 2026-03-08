@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -35,22 +35,9 @@ type RegisterData = z.infer<typeof registerSchema>;
 export default function AuthPage() {
   const [isLogin, setIsLogin] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const { user, isLoading, login, register } = useAuth();
+  const { user, isLoading, needsSetup, login, register } = useAuth();
   const [, setLocation] = useLocation();
   const { toast } = useToast();
-
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-      </div>
-    );
-  }
-
-  if (user) {
-    setLocation("/admin");
-    return null;
-  }
 
   const loginForm = useForm<LoginData>({
     resolver: zodResolver(loginSchema),
@@ -62,11 +49,31 @@ export default function AuthPage() {
     defaultValues: { name: "", email: "", password: "" },
   });
 
+  useEffect(() => {
+    if (!isLoading && needsSetup) {
+      setLocation("/setup");
+    } else if (!isLoading && user) {
+      setLocation("/hud");
+    }
+  }, [isLoading, needsSetup, user, setLocation]);
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  if (needsSetup || user) {
+    return null;
+  }
+
   const onLogin = async (data: LoginData) => {
     setIsSubmitting(true);
     try {
       await login(data.email, data.password);
-      setLocation("/admin");
+      setLocation("/hud");
     } catch (e: any) {
       const msg = e.message?.includes(":") ? e.message.split(":").slice(1).join(":").trim() : e.message;
       toast({ title: "Login failed", description: msg, variant: "destructive" });
@@ -79,7 +86,7 @@ export default function AuthPage() {
     setIsSubmitting(true);
     try {
       await register(data.name, data.email, data.password);
-      setLocation("/admin");
+      setLocation("/hud");
     } catch (e: any) {
       const msg = e.message?.includes(":") ? e.message.split(":").slice(1).join(":").trim() : e.message;
       toast({ title: "Registration failed", description: msg, variant: "destructive" });
@@ -103,8 +110,8 @@ export default function AuthPage() {
             </CardTitle>
             <CardDescription>
               {isLogin
-                ? "Enter your credentials to access the admin dashboard"
-                : "Set up your scheduling account to get started"}
+                ? "Enter your credentials to access the dashboard"
+                : "Set up your account to get started"}
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -255,30 +262,29 @@ export default function AuthPage() {
           </div>
           <div>
             <h2 className="text-2xl font-semibold tracking-tight" data-testid="text-hero-title">
-              Schedule on your terms
+              Your business, your terms
             </h2>
             <p className="text-muted-foreground mt-2 leading-relaxed">
-              Calendar Core is an open-source scheduling engine for individuals and small teams.
-              Create booking pages, manage availability, and let your clients schedule meetings
-              without the back-and-forth.
+              An open-source business operating system for brands and solopreneurs.
+              Own your scheduling, CRM, support, and more — with zero recurring SaaS fees.
             </p>
           </div>
           <div className="grid grid-cols-2 gap-3 text-left text-sm">
             <div className="p-3 rounded-lg bg-background border">
-              <p className="font-medium">No API keys needed</p>
-              <p className="text-xs text-muted-foreground mt-0.5">Works with standard ICS calendar feeds</p>
+              <p className="font-medium">Self-hosted</p>
+              <p className="text-xs text-muted-foreground mt-0.5">Own your data, deploy anywhere</p>
             </div>
             <div className="p-3 rounded-lg bg-background border">
-              <p className="font-medium">Embeddable</p>
-              <p className="text-xs text-muted-foreground mt-0.5">Inline, popup, or iframe on any site</p>
+              <p className="font-medium">Modular</p>
+              <p className="text-xs text-muted-foreground mt-0.5">Calendar, CRM, support & more</p>
             </div>
             <div className="p-3 rounded-lg bg-background border">
-              <p className="font-medium">Team support</p>
-              <p className="text-xs text-muted-foreground mt-0.5">Multiple staff members, individual schedules</p>
+              <p className="font-medium">Team ready</p>
+              <p className="text-xs text-muted-foreground mt-0.5">Roles, groups, and permissions</p>
             </div>
             <div className="p-3 rounded-lg bg-background border">
-              <p className="font-medium">Self-hostable</p>
-              <p className="text-xs text-muted-foreground mt-0.5">MIT licensed, deploy anywhere</p>
+              <p className="font-medium">Open source</p>
+              <p className="text-xs text-muted-foreground mt-0.5">MIT licensed, community-driven</p>
             </div>
           </div>
         </div>

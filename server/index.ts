@@ -60,11 +60,13 @@ app.use((req, res, next) => {
 });
 
 (async () => {
-  const { seedDatabase } = await import("./seed");
-  try {
-    await seedDatabase();
-  } catch (e) {
-    console.error("Seed error (may be first run before schema push):", e);
+  if (process.env.NODE_ENV !== "production") {
+    const { seedDatabase } = await import("./seed");
+    try {
+      await seedDatabase();
+    } catch (e) {
+      console.error("Seed error:", e);
+    }
   }
 
   const { setupAuth } = await import("./auth");
