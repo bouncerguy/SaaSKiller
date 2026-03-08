@@ -84,13 +84,13 @@ const coreItems: NavItem[] = [
       { title: "Leads", url: "/hud/crm/leads" },
     ],
   },
-  { title: "Products", url: "/hud/products", icon: ShoppingBag, enabled: false },
+  { title: "Products", url: "/hud/products", icon: ShoppingBag, enabled: true },
 ];
 
 const operationsItems: NavItem[] = [
-  { title: "Support", url: "/hud/support", icon: HeadphonesIcon, enabled: false },
-  { title: "Time Tracking", url: "/hud/time-tracking", icon: Timer, enabled: false },
-  { title: "Finance", url: "/hud/finance", icon: DollarSign, enabled: false },
+  { title: "Support", url: "/hud/support", icon: HeadphonesIcon, enabled: true },
+  { title: "Time Tracking", url: "/hud/time-tracking", icon: Timer, enabled: true },
+  { title: "Finance", url: "/hud/finance", icon: DollarSign, enabled: true },
 ];
 
 const toolItems: NavItem[] = [

@@ -3,8 +3,12 @@
 ## Overview
 SaaS Killer is a modular business platform that starts with Calendly-like scheduling and expands into a full business operating system. Current features:
 - **Public booking pages**: `/book/:tenantSlug/:eventSlug` — date/time picker, timezone selector, booking form
-- **HUD dashboard**: `/hud` — unified control center for all modules
+- **HUD dashboard**: `/hud` — unified control center with module stats (bookings, customers, products, tickets, revenue, time logged)
 - **CRM module**: Customer management with payment status tracking, lead management with kanban pipeline boards, notes system, lead-to-customer conversion
+- **Products module**: Product & service catalog with pricing, billing cycles (one-time/monthly/quarterly/yearly), categories, search
+- **Support module**: Ticket management with priority levels (Low/Medium/High/Urgent), status workflow (Open→In Progress→Waiting→Resolved→Closed), customer linking, team assignment
+- **Finance module**: Invoice management with auto-numbering (INV-0001), status tracking (Draft/Sent/Paid/Overdue/Cancelled), customer linking, revenue/outstanding totals
+- **Time Tracking module**: Time entry logging with start/end times, auto-duration calculation, billable/non-billable, hourly rates, customer linking, grouped by date
 - **First-run setup wizard**: `/setup` — creates organization, admin account, and seeds features on fresh install
 - **Authentication**: Email/password login with session-based auth (passport-local + express-session)
 - **Multi-user teams**: OWNER can add/edit/remove team members; each user manages their own event types and availability
@@ -39,6 +43,10 @@ client/src/
     hud-users.tsx          - User & group management with feature permissions
     hud-crm-customers.tsx  - Customer management (green accent, search, detail sheet, notes)
     hud-crm-leads.tsx      - Lead management with kanban board (blue accent, pipeline stages)
+    hud-products.tsx       - Product & service catalog (orange accent, grid cards, detail sheet)
+    hud-support.tsx        - Support tickets (rose accent, status tabs, priority badges)
+    hud-finance.tsx        - Invoice management (emerald accent, status tabs, revenue stats)
+    hud-time-tracking.tsx  - Time tracking (violet accent, grouped by date, billable toggle)
     hud-help.tsx           - Help & FAQ page
   hooks/
     use-auth.tsx           - Auth context provider with setup status detection
@@ -108,6 +116,23 @@ shared/
 - POST /notes — Create note (entityType, entityId, content)
 - DELETE /notes/:id — Delete note
 
+### Products (prefix: /api/admin) — All require authentication
+- GET/POST /products — List (with ?search) / create products
+- GET/PATCH/DELETE /products/:id — Get/update/delete single product
+
+### Support Tickets (prefix: /api/admin) — All require authentication
+- GET/POST /tickets — List (with ?status) / create tickets
+- GET/PATCH/DELETE /tickets/:id — Get/update/delete single ticket
+
+### Finance (prefix: /api/admin) — All require authentication
+- GET/POST /invoices — List (with ?status) / create invoices
+- GET /invoices/next-number — Get next auto-generated invoice number
+- GET/PATCH/DELETE /invoices/:id — Get/update/delete single invoice
+
+### Time Tracking (prefix: /api/admin) — All require authentication
+- GET/POST /time-entries — List / create time entries
+- PATCH/DELETE /time-entries/:id — Update/delete time entry
+
 ### Public (prefix: /api/public)
 - GET /:tenantSlug — Tenant info + active event types
 - GET /:tenantSlug/:eventSlug — Event type details
@@ -131,6 +156,10 @@ shared/
 - **customers**: id, tenantId, userId, name, businessName, email, phone, address, billingType, paymentStatus (CURRENT/PAST_DUE_30/PAST_DUE_60/COLLECTIONS), isActive, createdAt, updatedAt
 - **leads**: id, tenantId, name, email, phone, source, pipelineId, stage, awarenessData, createdAt, updatedAt
 - **notes**: id, tenantId, entityType, entityId, userId, content, createdAt
+- **products**: id, tenantId, name, description, price (cents), billingCycle (ONE_TIME/MONTHLY/QUARTERLY/YEARLY), category, isActive, createdAt, updatedAt
+- **tickets**: id, tenantId, subject, description, priority (LOW/MEDIUM/HIGH/URGENT), status (OPEN/IN_PROGRESS/WAITING/RESOLVED/CLOSED), assignedUserId, customerId, createdByUserId, resolvedAt, createdAt, updatedAt
+- **invoices**: id, tenantId, customerId, invoiceNumber, status (DRAFT/SENT/PAID/OVERDUE/CANCELLED), subtotal, tax, total (all cents), dueDate, paidAt, notes, lineItemsJson, createdAt, updatedAt
+- **time_entries**: id, tenantId, userId, customerId, description, startAt, endAt, durationMinutes, billable, hourlyRate (cents), createdAt
 - **session**: managed by connect-pg-simple (auto-created)
 
 ## Permission Hierarchy

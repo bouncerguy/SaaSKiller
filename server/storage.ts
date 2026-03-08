@@ -3,7 +3,7 @@ import { db } from "./db";
 import {
   tenants, users, eventTypes, availabilityRules, bookings,
   groups, userGroups, features, groupFeatures, userFeatures, settings, activityLog,
-  customers, leads, pipelines, notes,
+  customers, leads, pipelines, notes, products, tickets, invoices, timeEntries,
   type Tenant, type InsertTenant,
   type User, type InsertUser,
   type EventType, type InsertEventType,
@@ -20,6 +20,10 @@ import {
   type Lead, type InsertLead,
   type Pipeline, type InsertPipeline,
   type Note, type InsertNote,
+  type Product, type InsertProduct,
+  type Ticket, type InsertTicket,
+  type Invoice, type InsertInvoice,
+  type TimeEntry, type InsertTimeEntry,
 } from "@shared/schema";
 
 export interface IStorage {
@@ -107,6 +111,32 @@ export interface IStorage {
   createNote(data: InsertNote): Promise<Note>;
   getNotes(entityType: string, entityId: string, tenantId: string): Promise<Note[]>;
   deleteNote(id: string, tenantId: string): Promise<void>;
+
+  createProduct(data: InsertProduct): Promise<Product>;
+  getProductsByTenant(tenantId: string): Promise<Product[]>;
+  getProduct(id: string): Promise<Product | undefined>;
+  updateProduct(id: string, data: Partial<InsertProduct>): Promise<Product>;
+  deleteProduct(id: string): Promise<void>;
+  searchProducts(tenantId: string, query: string): Promise<Product[]>;
+
+  createTicket(data: InsertTicket): Promise<Ticket>;
+  getTicketsByTenant(tenantId: string, status?: string): Promise<Ticket[]>;
+  getTicket(id: string): Promise<Ticket | undefined>;
+  updateTicket(id: string, data: Partial<InsertTicket>): Promise<Ticket>;
+  deleteTicket(id: string): Promise<void>;
+
+  createInvoice(data: InsertInvoice): Promise<Invoice>;
+  getInvoicesByTenant(tenantId: string, status?: string): Promise<Invoice[]>;
+  getInvoice(id: string): Promise<Invoice | undefined>;
+  updateInvoice(id: string, data: Partial<InsertInvoice>): Promise<Invoice>;
+  deleteInvoice(id: string): Promise<void>;
+  getNextInvoiceNumber(tenantId: string): Promise<string>;
+
+  createTimeEntry(data: InsertTimeEntry): Promise<TimeEntry>;
+  getTimeEntriesByTenant(tenantId: string): Promise<TimeEntry[]>;
+  getTimeEntry(id: string): Promise<TimeEntry | undefined>;
+  updateTimeEntry(id: string, data: Partial<InsertTimeEntry>): Promise<TimeEntry>;
+  deleteTimeEntry(id: string): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -556,6 +586,130 @@ export class DatabaseStorage implements IStorage {
 
   async deleteNote(id: string, tenantId: string): Promise<void> {
     await db.delete(notes).where(and(eq(notes.id, id), eq(notes.tenantId, tenantId)));
+  }
+
+  async createProduct(data: InsertProduct): Promise<Product> {
+    const [p] = await db.insert(products).values(data).returning();
+    return p;
+  }
+
+  async getProductsByTenant(tenantId: string): Promise<Product[]> {
+    return db.select().from(products).where(eq(products.tenantId, tenantId)).orderBy(desc(products.createdAt));
+  }
+
+  async getProduct(id: string): Promise<Product | undefined> {
+    const [p] = await db.select().from(products).where(eq(products.id, id));
+    return p;
+  }
+
+  async updateProduct(id: string, data: Partial<InsertProduct>): Promise<Product> {
+    const [p] = await db.update(products).set({ ...data, updatedAt: new Date() }).where(eq(products.id, id)).returning();
+    return p;
+  }
+
+  async deleteProduct(id: string): Promise<void> {
+    await db.delete(products).where(eq(products.id, id));
+  }
+
+  async searchProducts(tenantId: string, query: string): Promise<Product[]> {
+    const pattern = `%${query}%`;
+    return db.select().from(products).where(
+      and(
+        eq(products.tenantId, tenantId),
+        or(ilike(products.name, pattern), ilike(products.description, pattern), ilike(products.category, pattern)),
+      ),
+    ).orderBy(desc(products.createdAt));
+  }
+
+  async createTicket(data: InsertTicket): Promise<Ticket> {
+    const [t] = await db.insert(tickets).values(data).returning();
+    return t;
+  }
+
+  async getTicketsByTenant(tenantId: string, status?: string): Promise<Ticket[]> {
+    const conditions = [eq(tickets.tenantId, tenantId)];
+    if (status) {
+      conditions.push(eq(tickets.status, status as any));
+    }
+    return db.select().from(tickets).where(and(...conditions)).orderBy(desc(tickets.createdAt));
+  }
+
+  async getTicket(id: string): Promise<Ticket | undefined> {
+    const [t] = await db.select().from(tickets).where(eq(tickets.id, id));
+    return t;
+  }
+
+  async updateTicket(id: string, data: Partial<InsertTicket>): Promise<Ticket> {
+    const updateData: any = { ...data, updatedAt: new Date() };
+    if (data.status === "RESOLVED" || data.status === "CLOSED") {
+      updateData.resolvedAt = new Date();
+    }
+    const [t] = await db.update(tickets).set(updateData).where(eq(tickets.id, id)).returning();
+    return t;
+  }
+
+  async deleteTicket(id: string): Promise<void> {
+    await db.delete(tickets).where(eq(tickets.id, id));
+  }
+
+  async createInvoice(data: InsertInvoice): Promise<Invoice> {
+    const [inv] = await db.insert(invoices).values(data).returning();
+    return inv;
+  }
+
+  async getInvoicesByTenant(tenantId: string, status?: string): Promise<Invoice[]> {
+    const conditions = [eq(invoices.tenantId, tenantId)];
+    if (status) {
+      conditions.push(eq(invoices.status, status as any));
+    }
+    return db.select().from(invoices).where(and(...conditions)).orderBy(desc(invoices.createdAt));
+  }
+
+  async getInvoice(id: string): Promise<Invoice | undefined> {
+    const [inv] = await db.select().from(invoices).where(eq(invoices.id, id));
+    return inv;
+  }
+
+  async updateInvoice(id: string, data: Partial<InsertInvoice>): Promise<Invoice> {
+    const updateData: any = { ...data, updatedAt: new Date() };
+    if (data.status === "PAID") {
+      updateData.paidAt = new Date();
+    }
+    const [inv] = await db.update(invoices).set(updateData).where(eq(invoices.id, id)).returning();
+    return inv;
+  }
+
+  async deleteInvoice(id: string): Promise<void> {
+    await db.delete(invoices).where(eq(invoices.id, id));
+  }
+
+  async getNextInvoiceNumber(tenantId: string): Promise<string> {
+    const all = await db.select().from(invoices).where(eq(invoices.tenantId, tenantId));
+    const num = all.length + 1;
+    return `INV-${String(num).padStart(4, "0")}`;
+  }
+
+  async createTimeEntry(data: InsertTimeEntry): Promise<TimeEntry> {
+    const [te] = await db.insert(timeEntries).values(data).returning();
+    return te;
+  }
+
+  async getTimeEntriesByTenant(tenantId: string): Promise<TimeEntry[]> {
+    return db.select().from(timeEntries).where(eq(timeEntries.tenantId, tenantId)).orderBy(desc(timeEntries.startAt));
+  }
+
+  async getTimeEntry(id: string): Promise<TimeEntry | undefined> {
+    const [te] = await db.select().from(timeEntries).where(eq(timeEntries.id, id));
+    return te;
+  }
+
+  async updateTimeEntry(id: string, data: Partial<InsertTimeEntry>): Promise<TimeEntry> {
+    const [te] = await db.update(timeEntries).set(data).where(eq(timeEntries.id, id)).returning();
+    return te;
+  }
+
+  async deleteTimeEntry(id: string): Promise<void> {
+    await db.delete(timeEntries).where(eq(timeEntries.id, id));
   }
 }
 

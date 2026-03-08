@@ -246,3 +246,85 @@ export const notes = pgTable("notes", {
 export const insertNoteSchema = createInsertSchema(notes).omit({ id: true, createdAt: true });
 export type InsertNote = z.infer<typeof insertNoteSchema>;
 export type Note = typeof notes.$inferSelect;
+
+export const billingCycleEnum = pgEnum("billing_cycle", ["ONE_TIME", "MONTHLY", "QUARTERLY", "YEARLY"]);
+
+export const products = pgTable("products", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar("tenant_id").notNull().references(() => tenants.id),
+  name: text("name").notNull(),
+  description: text("description"),
+  price: integer("price").notNull().default(0),
+  billingCycle: billingCycleEnum("billing_cycle").notNull().default("ONE_TIME"),
+  category: text("category"),
+  isActive: boolean("is_active").notNull().default(true),
+  createdAt: timestamp("created_at").notNull().default(sql`now()`),
+  updatedAt: timestamp("updated_at").notNull().default(sql`now()`),
+});
+
+export const insertProductSchema = createInsertSchema(products).omit({ id: true, createdAt: true, updatedAt: true });
+export type InsertProduct = z.infer<typeof insertProductSchema>;
+export type Product = typeof products.$inferSelect;
+
+export const ticketPriorityEnum = pgEnum("ticket_priority", ["LOW", "MEDIUM", "HIGH", "URGENT"]);
+export const ticketStatusEnum = pgEnum("ticket_status", ["OPEN", "IN_PROGRESS", "WAITING", "RESOLVED", "CLOSED"]);
+
+export const tickets = pgTable("tickets", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar("tenant_id").notNull().references(() => tenants.id),
+  subject: text("subject").notNull(),
+  description: text("description"),
+  priority: ticketPriorityEnum("priority").notNull().default("MEDIUM"),
+  status: ticketStatusEnum("status").notNull().default("OPEN"),
+  assignedUserId: varchar("assigned_user_id").references(() => users.id),
+  customerId: varchar("customer_id").references(() => customers.id),
+  createdByUserId: varchar("created_by_user_id").notNull().references(() => users.id),
+  resolvedAt: timestamp("resolved_at"),
+  createdAt: timestamp("created_at").notNull().default(sql`now()`),
+  updatedAt: timestamp("updated_at").notNull().default(sql`now()`),
+});
+
+export const insertTicketSchema = createInsertSchema(tickets).omit({ id: true, createdAt: true, updatedAt: true, resolvedAt: true });
+export type InsertTicket = z.infer<typeof insertTicketSchema>;
+export type Ticket = typeof tickets.$inferSelect;
+
+export const invoiceStatusEnum = pgEnum("invoice_status", ["DRAFT", "SENT", "PAID", "OVERDUE", "CANCELLED"]);
+
+export const invoices = pgTable("invoices", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar("tenant_id").notNull().references(() => tenants.id),
+  customerId: varchar("customer_id").references(() => customers.id),
+  invoiceNumber: text("invoice_number").notNull(),
+  status: invoiceStatusEnum("status").notNull().default("DRAFT"),
+  subtotal: integer("subtotal").notNull().default(0),
+  tax: integer("tax").notNull().default(0),
+  total: integer("total").notNull().default(0),
+  dueDate: timestamp("due_date"),
+  paidAt: timestamp("paid_at"),
+  notes: text("notes"),
+  lineItemsJson: text("line_items_json").default("[]"),
+  createdAt: timestamp("created_at").notNull().default(sql`now()`),
+  updatedAt: timestamp("updated_at").notNull().default(sql`now()`),
+});
+
+export const insertInvoiceSchema = createInsertSchema(invoices).omit({ id: true, createdAt: true, updatedAt: true, paidAt: true });
+export type InsertInvoice = z.infer<typeof insertInvoiceSchema>;
+export type Invoice = typeof invoices.$inferSelect;
+
+export const timeEntries = pgTable("time_entries", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar("tenant_id").notNull().references(() => tenants.id),
+  userId: varchar("user_id").notNull().references(() => users.id),
+  customerId: varchar("customer_id").references(() => customers.id),
+  description: text("description"),
+  startAt: timestamp("start_at").notNull(),
+  endAt: timestamp("end_at"),
+  durationMinutes: integer("duration_minutes"),
+  billable: boolean("billable").notNull().default(true),
+  hourlyRate: integer("hourly_rate"),
+  createdAt: timestamp("created_at").notNull().default(sql`now()`),
+});
+
+export const insertTimeEntrySchema = createInsertSchema(timeEntries).omit({ id: true, createdAt: true });
+export type InsertTimeEntry = z.infer<typeof insertTimeEntrySchema>;
+export type TimeEntry = typeof timeEntries.$inferSelect;

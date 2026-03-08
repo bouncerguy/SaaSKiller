@@ -3,10 +3,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
-import { Calendar, CalendarCheck, Clock, Users, ArrowRight, TrendingUp, XCircle } from "lucide-react";
+import { Calendar, CalendarCheck, Clock, Users, ArrowRight, TrendingUp, XCircle, ShoppingBag, HeadphonesIcon, DollarSign, Timer } from "lucide-react";
 import { format } from "date-fns";
 import { Link } from "wouter";
-import type { Booking, EventType } from "@shared/schema";
+import type { Booking, EventType, Customer, Product, Ticket, Invoice, TimeEntry } from "@shared/schema";
 
 export default function AdminDashboard() {
   const { data: bookings, isLoading: loadingBookings } = useQuery<Booking[]>({
@@ -15,6 +15,26 @@ export default function AdminDashboard() {
 
   const { data: eventTypes, isLoading: loadingEvents } = useQuery<EventType[]>({
     queryKey: ["/api/admin/event-types"],
+  });
+
+  const { data: customers } = useQuery<Customer[]>({
+    queryKey: ["/api/admin/customers"],
+  });
+
+  const { data: products } = useQuery<Product[]>({
+    queryKey: ["/api/admin/products"],
+  });
+
+  const { data: ticketsData } = useQuery<Ticket[]>({
+    queryKey: ["/api/admin/tickets"],
+  });
+
+  const { data: invoices } = useQuery<Invoice[]>({
+    queryKey: ["/api/admin/invoices"],
+  });
+
+  const { data: timeEntriesData } = useQuery<TimeEntry[]>({
+    queryKey: ["/api/admin/time-entries"],
   });
 
   const upcomingBookings = bookings
@@ -26,12 +46,17 @@ export default function AdminDashboard() {
   const confirmedBookings = bookings?.filter((b) => b.status === "CONFIRMED").length || 0;
   const canceledBookings = bookings?.filter((b) => b.status === "CANCELED").length || 0;
   const activeEventTypes = eventTypes?.filter((e) => e.isActive).length || 0;
+  const totalCustomers = customers?.length || 0;
+  const totalProducts = products?.filter((p) => p.isActive).length || 0;
+  const openTickets = ticketsData?.filter((t) => t.status === "OPEN" || t.status === "IN_PROGRESS").length || 0;
+  const paidRevenue = invoices?.filter((i) => i.status === "PAID").reduce((s, i) => s + i.total, 0) || 0;
+  const totalTimeMinutes = timeEntriesData?.reduce((s, e) => s + (e.durationMinutes || 0), 0) || 0;
 
   const isLoading = loadingBookings || loadingEvents;
 
   const stats = [
     {
-      label: "Total Bookings",
+      label: "Bookings",
       value: totalBookings,
       icon: CalendarCheck,
       testId: "text-total-bookings",
@@ -58,12 +83,60 @@ export default function AdminDashboard() {
     },
   ];
 
+  const moduleStats = [
+    {
+      label: "Customers",
+      value: totalCustomers,
+      icon: Users,
+      testId: "text-total-customers",
+      href: "/hud/crm/customers",
+      color: "text-emerald-600 dark:text-emerald-400",
+      bg: "bg-emerald-600/[0.08] dark:bg-emerald-600/[0.15]",
+    },
+    {
+      label: "Products",
+      value: totalProducts,
+      icon: ShoppingBag,
+      testId: "text-total-products",
+      href: "/hud/products",
+      color: "text-orange-600 dark:text-orange-400",
+      bg: "bg-orange-600/[0.08] dark:bg-orange-600/[0.15]",
+    },
+    {
+      label: "Open Tickets",
+      value: openTickets,
+      icon: HeadphonesIcon,
+      testId: "text-open-tickets",
+      href: "/hud/support",
+      color: "text-rose-600 dark:text-rose-400",
+      bg: "bg-rose-600/[0.08] dark:bg-rose-600/[0.15]",
+    },
+    {
+      label: "Revenue",
+      value: `$${(paidRevenue / 100).toFixed(0)}`,
+      icon: DollarSign,
+      testId: "text-paid-revenue",
+      href: "/hud/finance",
+      color: "text-emerald-600 dark:text-emerald-400",
+      bg: "bg-emerald-600/[0.08] dark:bg-emerald-600/[0.15]",
+    },
+    {
+      label: "Time Logged",
+      value: totalTimeMinutes > 0 ? `${Math.floor(totalTimeMinutes / 60)}h` : "0h",
+      icon: Timer,
+      testId: "text-time-logged",
+      href: "/hud/time-tracking",
+      color: "text-violet-600 dark:text-violet-400",
+      bg: "bg-violet-600/[0.08] dark:bg-violet-600/[0.15]",
+    },
+  ];
+
   return (
     <div className="p-6 lg:p-8 space-y-8 max-w-6xl mx-auto">
       <div>
         <h1 className="text-2xl font-semibold" data-testid="text-dashboard-title">Dashboard</h1>
         <p className="text-muted-foreground text-sm mt-1">
-          Overview of your scheduling activity
+          Overview of your business activity
         </p>
       </div>
 
@@ -94,6 +167,25 @@ export default function AdminDashboard() {
                 </CardContent>
               </Card>
             ))}
+      </div>
+
+      <div>
+        <h2 className="text-sm font-medium text-muted-foreground uppercase tracking-wide mb-3">Modules</h2>
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+          {moduleStats.map((ms) => (
+            <Link key={ms.label} href={ms.href}>
+              <Card className="hover:border-primary/30 transition-colors cursor-pointer">
+                <CardContent className="p-4 text-center">
+                  <div className={`w-10 h-10 rounded-md ${ms.bg} flex items-center justify-center mx-auto mb-2`}>
+                    <ms.icon className={`h-5 w-5 ${ms.color}`} />
+                  </div>
+                  <div className={`text-xl font-bold ${ms.color}`} data-testid={ms.testId}>{ms.value}</div>
+                  <div className="text-[11px] text-muted-foreground mt-0.5">{ms.label}</div>
+                </CardContent>
+              </Card>
+            </Link>
+          ))}
+        </div>
       </div>
 
       <Card>

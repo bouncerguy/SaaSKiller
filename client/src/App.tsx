@@ -23,6 +23,10 @@ import HudHelp from "@/pages/hud-help";
 import HudUsers from "@/pages/hud-users";
 import HudCrmCustomers from "@/pages/hud-crm-customers";
 import HudCrmLeads from "@/pages/hud-crm-leads";
+import HudProducts from "@/pages/hud-products";
+import HudSupport from "@/pages/hud-support";
+import HudFinance from "@/pages/hud-finance";
+import HudTimeTracking from "@/pages/hud-time-tracking";
 import PublicBooking from "@/pages/public-booking";
 import PublicTenant from "@/pages/public-tenant";
 import { Redirect } from "wouter";
@@ -101,6 +105,10 @@ function Router() {
       <Route path="/hud/crm/customers">{() => <ProtectedRoute component={HudCrmCustomers} />}</Route>
       <Route path="/hud/crm/leads">{() => <ProtectedRoute component={HudCrmLeads} />}</Route>
       <Route path="/hud/crm">{() => <ProtectedRoute component={CrmRedirect} />}</Route>
+      <Route path="/hud/products">{() => <ProtectedRoute component={HudProducts} />}</Route>
+      <Route path="/hud/support">{() => <ProtectedRoute component={HudSupport} />}</Route>
+      <Route path="/hud/finance">{() => <ProtectedRoute component={HudFinance} />}</Route>
+      <Route path="/hud/time-tracking">{() => <ProtectedRoute component={HudTimeTracking} />}</Route>
       <Route component={NotFound} />
     </Switch>
   );
