@@ -180,7 +180,7 @@ export default function SetupPage() {
             <Building2 className="h-7 w-7 text-primary-foreground" />
           </div>
           <h1 className="text-2xl font-semibold tracking-tight" data-testid="text-setup-title">
-            Welcome to Calendar Core
+            Welcome to SaaS Killer
           </h1>
           <p className="text-muted-foreground mt-1" data-testid="text-setup-tagline">
             Your open-source business operating system

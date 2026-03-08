@@ -1,9 +1,10 @@
-# Calendar Core — Open Source Self-Hosted Business Operating System
+# SaaS Killer — Open Source Self-Hosted Business Operating System
 
 ## Overview
-Calendar Core is a modular business platform that starts with Calendly-like scheduling and expands into a full business operating system. Current features:
+SaaS Killer is a modular business platform that starts with Calendly-like scheduling and expands into a full business operating system. Current features:
 - **Public booking pages**: `/book/:tenantSlug/:eventSlug` — date/time picker, timezone selector, booking form
 - **HUD dashboard**: `/hud` — unified control center for all modules
+- **CRM module**: Customer management with payment status tracking, lead management with kanban pipeline boards, notes system, lead-to-customer conversion
 - **First-run setup wizard**: `/setup` — creates organization, admin account, and seeds features on fresh install
 - **Authentication**: Email/password login with session-based auth (passport-local + express-session)
 - **Multi-user teams**: OWNER can add/edit/remove team members; each user manages their own event types and availability
@@ -36,6 +37,8 @@ client/src/
     hud-settings.tsx       - Tenant branding settings
     hud-team.tsx           - Team member management (OWNER only)
     hud-users.tsx          - User & group management with feature permissions
+    hud-crm-customers.tsx  - Customer management (green accent, search, detail sheet, notes)
+    hud-crm-leads.tsx      - Lead management with kanban board (blue accent, pipeline stages)
     hud-help.tsx           - Help & FAQ page
   hooks/
     use-auth.tsx           - Auth context provider with setup status detection
@@ -93,6 +96,18 @@ shared/
 - GET/POST/DELETE /groups/:id/members — Manage group membership
 - GET/PATCH /groups/:id/features — Manage group feature access
 
+### CRM (prefix: /api/admin) — All require authentication
+- GET/POST /customers — List (with ?search) / create customers
+- GET/PATCH /customers/:id — Get/update single customer (includes notes + activity)
+- GET/POST /leads — List (with ?pipelineId) / create leads
+- GET/PATCH/DELETE /leads/:id — Get/update/delete single lead
+- POST /leads/:id/convert — Convert lead to customer (creates customer, sets lead stage to Won)
+- GET/POST /pipelines — List/create pipelines (auto-creates default on first request)
+- PATCH/DELETE /pipelines/:id — Update/delete pipeline
+- GET /notes/:entityType/:entityId — Get notes for entity
+- POST /notes — Create note (entityType, entityId, content)
+- DELETE /notes/:id — Delete note
+
 ### Public (prefix: /api/public)
 - GET /:tenantSlug — Tenant info + active event types
 - GET /:tenantSlug/:eventSlug — Event type details
@@ -112,6 +127,10 @@ shared/
 - **event_types**: id, tenantId, ownerUserId, slug, title, description, durationMinutes, locationType, locationValue, color, isActive, questionsJson
 - **availability_rules**: id, tenantId, userId, dayOfWeek, startTime, endTime, timezone
 - **bookings**: id, tenantId, eventTypeId, hostUserId, inviteeName, inviteeEmail, startAt, endAt, timezone, status, cancelReason, notes, createdAt
+- **pipelines**: id, tenantId, name, stages (JSON text), isDefault, createdAt
+- **customers**: id, tenantId, userId, name, businessName, email, phone, address, billingType, paymentStatus (CURRENT/PAST_DUE_30/PAST_DUE_60/COLLECTIONS), isActive, createdAt, updatedAt
+- **leads**: id, tenantId, name, email, phone, source, pipelineId, stage, awarenessData, createdAt, updatedAt
+- **notes**: id, tenantId, entityType, entityId, userId, content, createdAt
 - **session**: managed by connect-pg-simple (auto-created)
 
 ## Permission Hierarchy
@@ -144,7 +163,7 @@ Default login: alex@acmeconsulting.com / password123
 
 ## Sidebar Navigation Structure
 The HUD sidebar is organized by function:
-- **Core**: Dashboard, Calendar (with sub-items: Event Types, Bookings, Availability), CRM, Products
+- **Core**: Dashboard, Calendar (with sub-items: Event Types, Bookings, Availability), CRM (with sub-items: Customers, Leads), Products
 - **Operations**: Support, Time Tracking, Finance
 - **Tools**: Forms, Email, AI Agents, Media
 - **System**: Users & Groups, Assets, Settings, Backups, Updates, Help

@@ -74,7 +74,16 @@ const coreItems: NavItem[] = [
       { title: "Availability", url: "/hud/availability" },
     ],
   },
-  { title: "CRM", url: "/hud/crm", icon: ContactRound, enabled: false },
+  {
+    title: "CRM",
+    url: "/hud/crm/customers",
+    icon: ContactRound,
+    enabled: true,
+    subItems: [
+      { title: "Customers", url: "/hud/crm/customers" },
+      { title: "Leads", url: "/hud/crm/leads" },
+    ],
+  },
   { title: "Products", url: "/hud/products", icon: ShoppingBag, enabled: false },
 ];
 
@@ -196,7 +205,7 @@ export function AppSidebar() {
             </div>
             <div>
               <h2 className="text-sm font-semibold leading-tight" data-testid="text-app-name">
-                Business OS
+                SaaS Killer
               </h2>
               <p className="text-[11px] text-muted-foreground leading-tight">Command Center</p>
             </div>

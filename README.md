@@ -1,10 +1,10 @@
-# Calendar Core — Open Source Self-Hosted Business Operating System
+# SaaS Killer — Open Source Self-Hosted Business Operating System
 
-A modular, self-hosted business platform built for small teams and solo operators. Start with scheduling, grow into CRM, support tickets, finance, and more — all from one unified dashboard. Own your data. Run it anywhere.
+A modular, self-hosted business platform built for small teams and solo operators. Start with scheduling, grow into CRM, support tickets, finance, and more — all from one unified dashboard. Own your data. Run it anywhere. Kill the SaaS.
 
-## Why Calendar Core?
+## Why SaaS Killer?
 
-Most business tools are fragmented SaaS products that hold your data hostage, charge monthly fees per module, and disappear if the company shuts down. Calendar Core takes a different approach:
+Most business tools are fragmented SaaS products that hold your data hostage, charge monthly fees per module, and disappear if the company shuts down. SaaS Killer takes a different approach:
 
 - **Self-hosted**: Run it on your own server or on Replit. Your data stays yours.
 - **Modular**: Start with calendar scheduling, enable more modules as you need them.
@@ -49,8 +49,8 @@ The fastest way to get started:
 ### Setup
 
 ```bash
-git clone https://github.com/your-username/calendar-core.git
-cd calendar-core
+git clone https://github.com/your-username/saas-killer.git
+cd saas-killer
 
 npm install
 
@@ -73,7 +73,7 @@ The app will be available at `http://localhost:5000`.
 
 ## First-Run Setup
 
-When Calendar Core starts with an empty database, it redirects to a setup wizard:
+When SaaS Killer starts with an empty database, it redirects to a setup wizard:
 
 1. **Step 1 — Organization**: Enter your organization name, URL slug (auto-generated, editable), and timezone
 2. **Step 2 — Admin Account**: Create the first admin user with name, email, and password
@@ -175,7 +175,7 @@ npm run check        # TypeScript type checking
 
 ### Calendar Integration
 
-Calendar Core uses ICS feeds to check external calendar availability — no OAuth or API keys needed.
+SaaS Killer uses ICS feeds to check external calendar availability — no OAuth or API keys needed.
 
 1. Go to **HUD > Settings > Calendar Integration**
 2. Paste your calendar's ICS feed URL

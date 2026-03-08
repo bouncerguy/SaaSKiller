@@ -106,7 +106,7 @@ export default function AuthPage() {
               </div>
             </div>
             <CardTitle className="text-xl" data-testid="text-auth-title">
-              {isLogin ? "Sign in to Calendar Core" : "Create your account"}
+              {isLogin ? "Sign in to SaaS Killer" : "Create your account"}
             </CardTitle>
             <CardDescription>
               {isLogin

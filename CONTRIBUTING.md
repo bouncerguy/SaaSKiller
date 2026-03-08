@@ -1,6 +1,6 @@
-# Contributing to Calendar Core
+# Contributing to SaaS Killer
 
-Thank you for your interest in contributing to Calendar Core! This project exists to help individuals and small teams own their scheduling infrastructure.
+Thank you for your interest in contributing to SaaS Killer! This project exists to help individuals and small teams own their scheduling infrastructure.
 
 ## Getting Started
 
@@ -46,7 +46,7 @@ Open an issue describing:
 
 ### What We Value
 
-- **Simplicity**: Calendar Core is meant to be easy to self-host and integrate. Avoid unnecessary complexity.
+- **Simplicity**: SaaS Killer is meant to be easy to self-host and integrate. Avoid unnecessary complexity.
 - **No vendor lock-in**: Features should work with standard protocols (like ICS feeds) rather than requiring specific provider APIs.
 - **Timezone correctness**: Scheduling is inherently timezone-sensitive. Test across multiple timezones.
 - **Multi-tenant safety**: All queries must be scoped to the correct tenant.

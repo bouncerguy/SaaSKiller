@@ -1,8 +1,9 @@
-import { eq, and, gte, lte, desc } from "drizzle-orm";
+import { eq, and, gte, lte, desc, or, ilike, sql } from "drizzle-orm";
 import { db } from "./db";
 import {
   tenants, users, eventTypes, availabilityRules, bookings,
   groups, userGroups, features, groupFeatures, userFeatures, settings, activityLog,
+  customers, leads, pipelines, notes,
   type Tenant, type InsertTenant,
   type User, type InsertUser,
   type EventType, type InsertEventType,
@@ -15,6 +16,10 @@ import {
   type UserFeature,
   type Setting, type InsertSetting,
   type ActivityLog, type InsertActivityLog,
+  type Customer, type InsertCustomer,
+  type Lead, type InsertLead,
+  type Pipeline, type InsertPipeline,
+  type Note, type InsertNote,
 } from "@shared/schema";
 
 export interface IStorage {
@@ -78,6 +83,30 @@ export interface IStorage {
   getActivityLog(filters: { tenantId?: string; entityType?: string; entityId?: string; userId?: string; limit?: number; offset?: number }): Promise<ActivityLog[]>;
 
   hasFeatureAccess(userId: string, featureSlug: string): Promise<boolean>;
+
+  createCustomer(data: InsertCustomer): Promise<Customer>;
+  getCustomersByTenant(tenantId: string): Promise<Customer[]>;
+  getCustomer(id: string): Promise<Customer | undefined>;
+  updateCustomer(id: string, data: Partial<InsertCustomer>): Promise<Customer>;
+  searchCustomers(tenantId: string, query: string): Promise<Customer[]>;
+  getCustomerByEmail(tenantId: string, email: string): Promise<Customer | undefined>;
+
+  createLead(data: InsertLead): Promise<Lead>;
+  getLeadsByTenant(tenantId: string): Promise<Lead[]>;
+  getLeadsByPipeline(pipelineId: string): Promise<Lead[]>;
+  getLead(id: string): Promise<Lead | undefined>;
+  updateLead(id: string, data: Partial<InsertLead>): Promise<Lead>;
+  deleteLead(id: string): Promise<void>;
+
+  createPipeline(data: InsertPipeline): Promise<Pipeline>;
+  getPipelinesByTenant(tenantId: string): Promise<Pipeline[]>;
+  getPipeline(id: string): Promise<Pipeline | undefined>;
+  updatePipeline(id: string, data: Partial<InsertPipeline>): Promise<Pipeline>;
+  deletePipeline(id: string): Promise<void>;
+
+  createNote(data: InsertNote): Promise<Note>;
+  getNotes(entityType: string, entityId: string, tenantId: string): Promise<Note[]>;
+  deleteNote(id: string, tenantId: string): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -283,7 +312,7 @@ export class DatabaseStorage implements IStorage {
   async seedDefaultFeatures(): Promise<void> {
     const defaultFeatures: InsertFeature[] = [
       { name: "Calendar", slug: "calendar", description: "Scheduling and booking management", enabledGlobally: true },
-      { name: "CRM", slug: "crm", description: "Customer and lead management", enabledGlobally: false },
+      { name: "CRM", slug: "crm", description: "Customer and lead management", enabledGlobally: true },
       { name: "Products", slug: "products", description: "Products and services management", enabledGlobally: false },
       { name: "Support", slug: "support", description: "Trouble tickets and support desk", enabledGlobally: false },
       { name: "Finance", slug: "finance", description: "Financial dashboard and ledger", enabledGlobally: false },
@@ -420,6 +449,113 @@ export class DatabaseStorage implements IStorage {
     }
 
     return false;
+  }
+
+  async createCustomer(data: InsertCustomer): Promise<Customer> {
+    const [c] = await db.insert(customers).values(data).returning();
+    return c;
+  }
+
+  async getCustomersByTenant(tenantId: string): Promise<Customer[]> {
+    return db.select().from(customers).where(eq(customers.tenantId, tenantId)).orderBy(desc(customers.createdAt));
+  }
+
+  async getCustomer(id: string): Promise<Customer | undefined> {
+    const [c] = await db.select().from(customers).where(eq(customers.id, id));
+    return c;
+  }
+
+  async updateCustomer(id: string, data: Partial<InsertCustomer>): Promise<Customer> {
+    const [c] = await db.update(customers).set({ ...data, updatedAt: new Date() }).where(eq(customers.id, id)).returning();
+    return c;
+  }
+
+  async searchCustomers(tenantId: string, query: string): Promise<Customer[]> {
+    const pattern = `%${query}%`;
+    return db.select().from(customers).where(
+      and(
+        eq(customers.tenantId, tenantId),
+        or(
+          ilike(customers.name, pattern),
+          ilike(customers.email, pattern),
+          ilike(customers.phone, pattern),
+          ilike(customers.businessName, pattern),
+        ),
+      ),
+    ).orderBy(desc(customers.createdAt));
+  }
+
+  async getCustomerByEmail(tenantId: string, email: string): Promise<Customer | undefined> {
+    const [c] = await db.select().from(customers).where(
+      and(eq(customers.tenantId, tenantId), eq(customers.email, email)),
+    );
+    return c;
+  }
+
+  async createLead(data: InsertLead): Promise<Lead> {
+    const [l] = await db.insert(leads).values(data).returning();
+    return l;
+  }
+
+  async getLeadsByTenant(tenantId: string): Promise<Lead[]> {
+    return db.select().from(leads).where(eq(leads.tenantId, tenantId)).orderBy(desc(leads.createdAt));
+  }
+
+  async getLeadsByPipeline(pipelineId: string): Promise<Lead[]> {
+    return db.select().from(leads).where(eq(leads.pipelineId, pipelineId)).orderBy(desc(leads.createdAt));
+  }
+
+  async getLead(id: string): Promise<Lead | undefined> {
+    const [l] = await db.select().from(leads).where(eq(leads.id, id));
+    return l;
+  }
+
+  async updateLead(id: string, data: Partial<InsertLead>): Promise<Lead> {
+    const [l] = await db.update(leads).set({ ...data, updatedAt: new Date() }).where(eq(leads.id, id)).returning();
+    return l;
+  }
+
+  async deleteLead(id: string): Promise<void> {
+    await db.delete(notes).where(and(eq(notes.entityType, "lead"), eq(notes.entityId, id)));
+    await db.delete(leads).where(eq(leads.id, id));
+  }
+
+  async createPipeline(data: InsertPipeline): Promise<Pipeline> {
+    const [p] = await db.insert(pipelines).values(data).returning();
+    return p;
+  }
+
+  async getPipelinesByTenant(tenantId: string): Promise<Pipeline[]> {
+    return db.select().from(pipelines).where(eq(pipelines.tenantId, tenantId)).orderBy(desc(pipelines.createdAt));
+  }
+
+  async getPipeline(id: string): Promise<Pipeline | undefined> {
+    const [p] = await db.select().from(pipelines).where(eq(pipelines.id, id));
+    return p;
+  }
+
+  async updatePipeline(id: string, data: Partial<InsertPipeline>): Promise<Pipeline> {
+    const [p] = await db.update(pipelines).set(data).where(eq(pipelines.id, id)).returning();
+    return p;
+  }
+
+  async deletePipeline(id: string): Promise<void> {
+    await db.delete(pipelines).where(eq(pipelines.id, id));
+  }
+
+  async createNote(data: InsertNote): Promise<Note> {
+    const [n] = await db.insert(notes).values(data).returning();
+    return n;
+  }
+
+  async getNotes(entityType: string, entityId: string, tenantId: string): Promise<Note[]> {
+    return db.select().from(notes).where(
+      and(eq(notes.entityType, entityType), eq(notes.entityId, entityId), eq(notes.tenantId, tenantId)),
+    ).orderBy(desc(notes.createdAt));
+  }
+
+  async deleteNote(id: string, tenantId: string): Promise<void> {
+    await db.delete(notes).where(and(eq(notes.id, id), eq(notes.tenantId, tenantId)));
   }
 }
 

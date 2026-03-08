@@ -21,6 +21,8 @@ import HudEmbed from "@/pages/hud-embed";
 import HudSettings from "@/pages/hud-settings";
 import HudHelp from "@/pages/hud-help";
 import HudUsers from "@/pages/hud-users";
+import HudCrmCustomers from "@/pages/hud-crm-customers";
+import HudCrmLeads from "@/pages/hud-crm-leads";
 import PublicBooking from "@/pages/public-booking";
 import PublicTenant from "@/pages/public-tenant";
 import { Redirect } from "wouter";
@@ -49,7 +51,7 @@ function HudLayout({ children }: { children: React.ReactNode }) {
   );
 }
 
-function ProtectedHudRouter() {
+function ProtectedRoute({ component: Component }: { component: React.ComponentType }) {
   const { user, isLoading, needsSetup } = useAuth();
 
   if (isLoading) {
@@ -70,20 +72,13 @@ function ProtectedHudRouter() {
 
   return (
     <HudLayout>
-      <Switch>
-        <Route path="/hud" component={HudDashboard} />
-        <Route path="/hud/event-types" component={HudEventTypes} />
-        <Route path="/hud/bookings" component={HudBookings} />
-        <Route path="/hud/availability" component={HudAvailability} />
-        <Route path="/hud/embed" component={HudEmbed} />
-        <Route path="/hud/settings" component={HudSettings} />
-        <Route path="/hud/help" component={HudHelp} />
-        <Route path="/hud/users" component={HudUsers} />
-        <Route path="/hud/team" component={HudUsers} />
-        <Route component={NotFound} />
-      </Switch>
+      <Component />
     </HudLayout>
   );
+}
+
+function CrmRedirect() {
+  return <Redirect to="/hud/crm/customers" />;
 }
 
 function Router() {
@@ -94,8 +89,18 @@ function Router() {
       <Route path="/auth" component={AuthPage} />
       <Route path="/book/:tenantSlug/:eventSlug" component={PublicBooking} />
       <Route path="/book/:tenantSlug" component={PublicTenant} />
-      <Route path="/hud/:rest*" component={ProtectedHudRouter} />
-      <Route path="/hud" component={ProtectedHudRouter} />
+      <Route path="/hud">{() => <ProtectedRoute component={HudDashboard} />}</Route>
+      <Route path="/hud/event-types">{() => <ProtectedRoute component={HudEventTypes} />}</Route>
+      <Route path="/hud/bookings">{() => <ProtectedRoute component={HudBookings} />}</Route>
+      <Route path="/hud/availability">{() => <ProtectedRoute component={HudAvailability} />}</Route>
+      <Route path="/hud/embed">{() => <ProtectedRoute component={HudEmbed} />}</Route>
+      <Route path="/hud/settings">{() => <ProtectedRoute component={HudSettings} />}</Route>
+      <Route path="/hud/help">{() => <ProtectedRoute component={HudHelp} />}</Route>
+      <Route path="/hud/users">{() => <ProtectedRoute component={HudUsers} />}</Route>
+      <Route path="/hud/team">{() => <ProtectedRoute component={HudUsers} />}</Route>
+      <Route path="/hud/crm/customers">{() => <ProtectedRoute component={HudCrmCustomers} />}</Route>
+      <Route path="/hud/crm/leads">{() => <ProtectedRoute component={HudCrmLeads} />}</Route>
+      <Route path="/hud/crm">{() => <ProtectedRoute component={CrmRedirect} />}</Route>
       <Route component={NotFound} />
     </Switch>
   );

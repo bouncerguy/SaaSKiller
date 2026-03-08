@@ -100,7 +100,7 @@ const faqItems = [
       },
       {
         q: "Does this require any API keys or OAuth?",
-        a: "No. Calendar Core uses standard ICS feeds, which are simple URLs that return calendar data. No API keys, no OAuth tokens, no third-party app permissions needed.",
+        a: "No. SaaS Killer uses standard ICS feeds, which are simple URLs that return calendar data. No API keys, no OAuth tokens, no third-party app permissions needed.",
       },
       {
         q: "How often does it check my external calendar?",
@@ -165,7 +165,7 @@ export default function AdminHelp() {
           Help & FAQ
         </h1>
         <p className="text-muted-foreground mt-1">
-          Everything you need to get started with Calendar Core
+          Everything you need to get started with SaaS Killer
         </p>
       </div>
 

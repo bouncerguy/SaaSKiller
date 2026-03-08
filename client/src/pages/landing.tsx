@@ -54,7 +54,7 @@ export default function Landing() {
               <div className="w-8 h-8 rounded-md bg-primary flex items-center justify-center">
                 <Calendar className="h-4 w-4 text-primary-foreground" />
               </div>
-              <span className="font-semibold text-[15px]" data-testid="text-brand">Calendar Core</span>
+              <span className="font-semibold text-[15px]" data-testid="text-brand">SaaS Killer</span>
             </div>
           </Link>
           <div className="flex items-center gap-1 flex-wrap">
@@ -142,7 +142,7 @@ export default function Landing() {
                   Built for personal platforms
                 </h2>
                 <p className="mt-3 text-muted-foreground leading-relaxed">
-                  Calendar Core is designed to be the scheduling layer in websites you build for individuals and small companies. It handles availability, conflicts, timezones, and embeds so you can focus on the rest of the platform.
+                  SaaS Killer is designed to be the scheduling layer in websites you build for individuals and small companies. It handles availability, conflicts, timezones, and embeds so you can focus on the rest of the platform.
                 </p>
                 <ul className="mt-6 space-y-3">
                   {useCases.map((b) => (
@@ -214,7 +214,7 @@ export default function Landing() {
             <div className="w-6 h-6 rounded bg-primary flex items-center justify-center">
               <Calendar className="h-3 w-3 text-primary-foreground" />
             </div>
-            <span className="text-sm font-medium">Calendar Core</span>
+            <span className="text-sm font-medium">SaaS Killer</span>
           </div>
           <p className="text-xs text-muted-foreground">
             Open-source scheduling engine for personal platforms

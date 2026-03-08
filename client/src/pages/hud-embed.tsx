@@ -30,26 +30,26 @@ export default function AdminEmbed() {
   const tenantSlug = "default";
 
   const inlineSnippet = selectedEvent
-    ? `<div id="calendar-core-inline"></div>
+    ? `<div id="saas-killer-inline"></div>
 <script src="${baseUrl}/embed.js"></script>
 <script>
-  CalendarCore.init({
+  SaaSKiller.init({
     tenantSlug: "${tenantSlug}",
     eventTypeSlug: "${selectedEvent.slug}",
-    target: "#calendar-core-inline",
+    target: "#saas-killer-inline",
     mode: "inline"
   });
 </script>`
     : "";
 
   const popupSnippet = selectedEvent
-    ? `<a href="#" id="calendar-core-link">Schedule a meeting</a>
+    ? `<a href="#" id="saas-killer-link">Schedule a meeting</a>
 <script src="${baseUrl}/embed.js"></script>
 <script>
-  CalendarCore.init({
+  SaaSKiller.init({
     tenantSlug: "${tenantSlug}",
     eventTypeSlug: "${selectedEvent.slug}",
-    trigger: "#calendar-core-link",
+    trigger: "#saas-killer-link",
     mode: "popup"
   });
 </script>`
@@ -58,7 +58,7 @@ export default function AdminEmbed() {
   const floatingSnippet = selectedEvent
     ? `<script src="${baseUrl}/embed.js"></script>
 <script>
-  CalendarCore.init({
+  SaaSKiller.init({
     tenantSlug: "${tenantSlug}",
     eventTypeSlug: "${selectedEvent.slug}",
     mode: "floating",
