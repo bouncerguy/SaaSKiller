@@ -1,47 +1,68 @@
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Calendar, Clock, Code, Globe, Zap, Shield, ArrowRight, Check } from "lucide-react";
+import { Calendar, Users, ShoppingBag, HeadphonesIcon, DollarSign, Timer, Code, Shield, Zap, ArrowRight, Check, Layers } from "lucide-react";
 import { ThemeToggle } from "@/components/theme-toggle";
 
-const features = [
+const modules = [
   {
     icon: Calendar,
-    title: "Event Types",
-    desc: "Create meeting types with custom durations, locations, and intake questions.",
+    title: "Scheduling",
+    desc: "Event types, availability rules, timezone-aware booking, and embeddable widgets for any site.",
+    color: "text-primary",
+    bg: "bg-primary/[0.08] dark:bg-primary/[0.15]",
   },
   {
-    icon: Clock,
-    title: "Smart Availability",
-    desc: "Define weekly schedules. The engine calculates open slots in real time.",
+    icon: Users,
+    title: "CRM",
+    desc: "Customer management, lead pipelines with kanban boards, notes, and lead-to-customer conversion.",
+    color: "text-emerald-600 dark:text-emerald-400",
+    bg: "bg-emerald-600/[0.08] dark:bg-emerald-600/[0.15]",
   },
   {
-    icon: Globe,
-    title: "Timezone Aware",
-    desc: "Automatic detection ensures bookings work seamlessly across every timezone.",
+    icon: ShoppingBag,
+    title: "Products & Services",
+    desc: "Product catalog with pricing, billing cycles, categories, and active/inactive management.",
+    color: "text-orange-600 dark:text-orange-400",
+    bg: "bg-orange-600/[0.08] dark:bg-orange-600/[0.15]",
   },
   {
-    icon: Code,
-    title: "Embed Anywhere",
-    desc: "Inline, popup, floating widget, or iframe. Drop scheduling into any site.",
+    icon: HeadphonesIcon,
+    title: "Support Tickets",
+    desc: "Ticket management with priority levels, status workflow, customer linking, and team assignment.",
+    color: "text-rose-600 dark:text-rose-400",
+    bg: "bg-rose-600/[0.08] dark:bg-rose-600/[0.15]",
   },
   {
-    icon: Shield,
-    title: "Multi-Tenant",
-    desc: "Built for platforms with tenant isolation, branding, and role-based access.",
+    icon: DollarSign,
+    title: "Finance & Invoicing",
+    desc: "Invoice management with auto-numbering, status tracking, revenue dashboards, and customer billing.",
+    color: "text-emerald-600 dark:text-emerald-400",
+    bg: "bg-emerald-600/[0.08] dark:bg-emerald-600/[0.15]",
   },
   {
-    icon: Zap,
-    title: "Self-Hostable",
-    desc: "Run it on your own infrastructure. No vendor lock-in, no external dependencies.",
+    icon: Timer,
+    title: "Time Tracking",
+    desc: "Log billable and non-billable hours, set rates, link to customers, and track estimated earnings.",
+    color: "text-violet-600 dark:text-violet-400",
+    bg: "bg-violet-600/[0.08] dark:bg-violet-600/[0.15]",
   },
 ];
 
-const useCases = [
-  "Author websites with coaching session booking",
-  "Consultant platforms with discovery call scheduling",
-  "Small business sites with appointment management",
-  "Personal brands with event and session booking",
+const platformFeatures = [
+  "Multi-tenant architecture with full data isolation",
+  "Team management with OWNER and MEMBER roles",
+  "Group-based permissions with per-user overrides",
+  "Self-hostable on Replit, Docker, or any VPS",
+  "Embeddable booking widgets (inline, popup, floating, iframe)",
+  "Dark mode and custom branding per organization",
+];
+
+const comingSoon = [
+  "Forms & Surveys",
+  "Email Campaigns",
+  "AI Agents",
+  "Media & Asset Management",
 ];
 
 export default function Landing() {
@@ -52,21 +73,21 @@ export default function Landing() {
           <Link href="/">
             <div className="flex items-center gap-2.5 cursor-pointer">
               <div className="w-8 h-8 rounded-md bg-primary flex items-center justify-center">
-                <Calendar className="h-4 w-4 text-primary-foreground" />
+                <Layers className="h-4 w-4 text-primary-foreground" />
               </div>
               <span className="font-semibold text-[15px]" data-testid="text-brand">SaaS Killer</span>
             </div>
           </Link>
           <div className="flex items-center gap-1 flex-wrap">
             <ThemeToggle />
-            <Link href="/book/default">
-              <Button variant="ghost" size="sm" data-testid="button-live-demo">
-                Live Demo
+            <Link href="/auth">
+              <Button variant="ghost" size="sm" data-testid="button-login">
+                Log In
               </Button>
             </Link>
-            <Link href="/admin">
-              <Button size="sm" data-testid="button-admin">
-                Admin Panel
+            <Link href="/hud">
+              <Button size="sm" data-testid="button-dashboard">
+                Dashboard
                 <ArrowRight className="h-3.5 w-3.5 ml-1" />
               </Button>
             </Link>
@@ -81,27 +102,24 @@ export default function Landing() {
           <div className="relative max-w-3xl mx-auto text-center px-6 pt-24 pb-20">
             <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-primary/[0.08] dark:bg-primary/[0.15] text-primary text-xs font-medium mb-6">
               <Zap className="h-3 w-3" />
-              Open-source scheduling for personal platforms
+              Open-source business operating system
             </div>
             <h1 className="text-4xl sm:text-5xl md:text-[3.5rem] font-bold leading-[1.1]" data-testid="text-hero-title">
-              The scheduling engine
-              <br />
-              <span className="text-primary">for your platform</span>
+              Your business, your terms.
             </h1>
-            <p className="mt-5 text-base sm:text-lg text-muted-foreground max-w-lg mx-auto leading-relaxed">
-              Add booking and scheduling to any website. Built for authors, coaches, and
-              consultants who need a self-hosted calendar that just works.
+            <p className="mt-5 text-base sm:text-lg text-muted-foreground max-w-xl mx-auto leading-relaxed">
+              SaaS Killer replaces the stack of SaaS tools eating your margins. Scheduling, CRM, invoicing, support tickets, time tracking, and products — all in one self-hosted platform you actually own.
             </p>
             <div className="mt-8 flex items-center gap-3 justify-center flex-wrap">
-              <Link href="/book/default">
-                <Button size="lg" data-testid="button-try-booking">
-                  See It In Action
+              <Link href="/hud">
+                <Button size="lg" data-testid="button-explore">
+                  Explore the HUD
                   <ArrowRight className="h-4 w-4 ml-1.5" />
                 </Button>
               </Link>
-              <Link href="/admin">
-                <Button variant="outline" size="lg" data-testid="button-open-admin">
-                  Explore Admin
+              <Link href="/auth">
+                <Button variant="outline" size="lg" data-testid="button-get-started">
+                  Get Started
                 </Button>
               </Link>
             </div>
@@ -111,22 +129,22 @@ export default function Landing() {
         <section className="py-20 px-6">
           <div className="max-w-5xl mx-auto">
             <div className="text-center mb-14">
-              <h2 className="text-2xl sm:text-3xl font-semibold" data-testid="text-features-title">
-                Everything your platform needs
+              <h2 className="text-2xl sm:text-3xl font-semibold" data-testid="text-modules-title">
+                Six modules. One platform. Zero SaaS fees.
               </h2>
-              <p className="mt-3 text-muted-foreground max-w-md mx-auto">
-                A complete scheduling toolkit you embed into your site, from availability rules to booking widgets.
+              <p className="mt-3 text-muted-foreground max-w-lg mx-auto">
+                Each module works on its own or together. Add what you need, skip what you don't.
               </p>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              {features.map((feature) => (
-                <Card key={feature.title} className="overflow-visible hover-elevate transition-colors">
+              {modules.map((mod) => (
+                <Card key={mod.title} className="overflow-visible hover-elevate transition-colors">
                   <CardContent className="p-6">
-                    <div className="w-10 h-10 rounded-md bg-primary/[0.08] dark:bg-primary/[0.15] flex items-center justify-center mb-4">
-                      <feature.icon className="h-5 w-5 text-primary" />
+                    <div className={`w-10 h-10 rounded-md ${mod.bg} flex items-center justify-center mb-4`}>
+                      <mod.icon className={`h-5 w-5 ${mod.color}`} />
                     </div>
-                    <h3 className="font-medium text-[15px]">{feature.title}</h3>
-                    <p className="text-sm text-muted-foreground mt-1.5 leading-relaxed">{feature.desc}</p>
+                    <h3 className="font-medium text-[15px]">{mod.title}</h3>
+                    <p className="text-sm text-muted-foreground mt-1.5 leading-relaxed">{mod.desc}</p>
                   </CardContent>
                 </Card>
               ))}
@@ -139,18 +157,18 @@ export default function Landing() {
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
               <div>
                 <h2 className="text-2xl sm:text-3xl font-semibold">
-                  Built for personal platforms
+                  Built for independence
                 </h2>
                 <p className="mt-3 text-muted-foreground leading-relaxed">
-                  SaaS Killer is designed to be the scheduling layer in websites you build for individuals and small companies. It handles availability, conflicts, timezones, and embeds so you can focus on the rest of the platform.
+                  SaaS Killer is a modular business operating system designed for small businesses, freelancers, and agencies who are tired of paying monthly for five different tools. Self-host it, own your data, and run your business on your terms.
                 </p>
                 <ul className="mt-6 space-y-3">
-                  {useCases.map((b) => (
-                    <li key={b} className="flex items-start gap-3">
+                  {platformFeatures.map((feature) => (
+                    <li key={feature} className="flex items-start gap-3">
                       <div className="w-5 h-5 rounded-full bg-chart-2/10 dark:bg-chart-2/20 flex items-center justify-center flex-shrink-0 mt-0.5">
                         <Check className="h-3 w-3 text-chart-2" />
                       </div>
-                      <span className="text-sm">{b}</span>
+                      <span className="text-sm">{feature}</span>
                     </li>
                   ))}
                 </ul>
@@ -158,25 +176,27 @@ export default function Landing() {
               <div className="flex justify-center">
                 <Card className="w-full max-w-sm overflow-visible">
                   <CardContent className="p-6">
-                    <div className="flex items-center gap-3 mb-5">
-                      <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
-                        <Calendar className="h-5 w-5 text-primary" />
-                      </div>
-                      <div>
-                        <p className="text-sm font-medium">Strategy Consultation</p>
-                        <p className="text-xs text-muted-foreground">45 min / Video Call</p>
-                      </div>
-                    </div>
-                    <div className="space-y-2">
-                      {["9:00 AM", "10:00 AM", "11:00 AM", "1:00 PM", "2:30 PM"].map((t) => (
-                        <div
-                          key={t}
-                          className="flex items-center justify-between py-2.5 px-3 rounded-md bg-muted/50 text-sm"
-                        >
-                          <span className="text-muted-foreground">{t}</span>
-                          <span className="text-xs text-primary font-medium">Available</span>
+                    <div className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-4">What you're replacing</div>
+                    <div className="space-y-3">
+                      {[
+                        { name: "Calendly", cost: "$12/mo", module: "Scheduling" },
+                        { name: "HubSpot CRM", cost: "$20/mo", module: "CRM" },
+                        { name: "FreshBooks", cost: "$17/mo", module: "Finance" },
+                        { name: "Zendesk", cost: "$19/mo", module: "Support" },
+                        { name: "Toggl", cost: "$9/mo", module: "Time Tracking" },
+                      ].map((item) => (
+                        <div key={item.name} className="flex items-center justify-between py-2 px-3 rounded-md bg-muted/50">
+                          <div>
+                            <span className="text-sm line-through text-muted-foreground">{item.name}</span>
+                            <span className="text-xs text-muted-foreground ml-2">{item.cost}</span>
+                          </div>
+                          <span className="text-xs text-primary font-medium">{item.module}</span>
                         </div>
                       ))}
+                    </div>
+                    <div className="mt-4 pt-4 border-t flex items-center justify-between">
+                      <span className="text-sm font-medium">SaaS Killer</span>
+                      <span className="text-sm font-bold text-primary">$0/mo</span>
                     </div>
                   </CardContent>
                 </Card>
@@ -186,21 +206,39 @@ export default function Landing() {
         </section>
 
         <section className="py-16 px-6 border-t">
+          <div className="max-w-3xl mx-auto">
+            <div className="text-center mb-8">
+              <h2 className="text-2xl font-semibold">Coming soon</h2>
+              <p className="mt-2 text-muted-foreground text-sm">
+                The roadmap keeps growing. These modules are next.
+              </p>
+            </div>
+            <div className="flex items-center justify-center gap-3 flex-wrap">
+              {comingSoon.map((item) => (
+                <div key={item} className="px-4 py-2 rounded-full border text-sm text-muted-foreground">
+                  {item}
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        <section className="py-16 px-6 border-t">
           <div className="max-w-xl mx-auto text-center">
-            <h2 className="text-2xl font-semibold">See how it works</h2>
+            <h2 className="text-2xl font-semibold">Ready to take control?</h2>
             <p className="mt-3 text-muted-foreground">
-              Try the public booking flow or explore the admin dashboard to see what your clients get.
+              Log in to the HUD and see every module in action. No credit card, no trial expiration, no strings.
             </p>
             <div className="mt-6 flex items-center gap-3 justify-center flex-wrap">
-              <Link href="/book/default">
-                <Button size="lg" data-testid="button-cta-book">
-                  Public Booking Page
+              <Link href="/hud">
+                <Button size="lg" data-testid="button-cta-hud">
+                  Open the HUD
                   <ArrowRight className="h-4 w-4 ml-1.5" />
                 </Button>
               </Link>
-              <Link href="/admin">
-                <Button variant="outline" size="lg" data-testid="button-cta-admin">
-                  Admin Dashboard
+              <Link href="/auth">
+                <Button variant="outline" size="lg" data-testid="button-cta-login">
+                  Log In
                 </Button>
               </Link>
             </div>
@@ -212,12 +250,12 @@ export default function Landing() {
         <div className="max-w-6xl mx-auto flex items-center justify-between gap-4 flex-wrap">
           <div className="flex items-center gap-2">
             <div className="w-6 h-6 rounded bg-primary flex items-center justify-center">
-              <Calendar className="h-3 w-3 text-primary-foreground" />
+              <Layers className="h-3 w-3 text-primary-foreground" />
             </div>
             <span className="text-sm font-medium">SaaS Killer</span>
           </div>
           <p className="text-xs text-muted-foreground">
-            Open-source scheduling engine for personal platforms
+            Open-source business operating system. MIT Licensed.
           </p>
         </div>
       </footer>
