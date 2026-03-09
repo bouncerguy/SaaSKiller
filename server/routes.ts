@@ -2,7 +2,7 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { z } from "zod";
-import type { AvailabilityRule, Lead } from "@shared/schema";
+import type { AvailabilityRule, Lead, Form, EmailTemplate } from "@shared/schema";
 import { fetchIcsEvents, getBusyRangesForDate, testIcsUrl } from "./ics-calendar";
 import { requireAuth, hashPassword } from "./auth";
 import passport from "passport";
@@ -1807,6 +1807,264 @@ export async function registerRoutes(
       }
       await storage.deleteTimeEntry(req.params.id as string);
       res.json({ success: true });
+    } catch (e: any) {
+      res.status(500).json({ message: e.message });
+    }
+  });
+
+  // ─── FORMS ───────────────────────────────────────────────────────────────
+
+  const createFormSchema = z.object({
+    name: z.string().min(1),
+    description: z.string().optional(),
+    slug: z.string().min(1).regex(/^[a-z0-9-]+$/, "Slug must be lowercase letters, numbers, and hyphens only"),
+  });
+
+  const updateFormSchema = z.object({
+    name: z.string().min(1).optional(),
+    description: z.string().optional(),
+    slug: z.string().min(1).regex(/^[a-z0-9-]+$/).optional(),
+    status: z.enum(["DRAFT", "PUBLISHED", "ARCHIVED"]).optional(),
+    fieldsJson: z.string().optional(),
+    settingsJson: z.string().optional(),
+  });
+
+  app.get("/api/admin/forms", requireAuth, async (req, res) => {
+    try {
+      const result = await storage.getFormsByTenant(req.user!.tenantId);
+      res.json(result);
+    } catch (e: any) {
+      res.status(500).json({ message: e.message });
+    }
+  });
+
+  app.post("/api/admin/forms", requireAuth, async (req, res) => {
+    try {
+      const parsed = createFormSchema.parse(req.body);
+      const existing = await storage.getFormBySlug(req.user!.tenantId, parsed.slug);
+      if (existing) {
+        return res.status(400).json({ message: "A form with that slug already exists" });
+      }
+      const form = await storage.createForm({
+        ...parsed,
+        tenantId: req.user!.tenantId,
+        createdByUserId: req.user!.id,
+        status: "DRAFT",
+        fieldsJson: "[]",
+        settingsJson: "{}",
+      });
+      res.json(form);
+    } catch (e: any) {
+      if (e.name === "ZodError") {
+        return res.status(400).json({ message: e.errors[0]?.message || "Validation failed" });
+      }
+      res.status(500).json({ message: e.message });
+    }
+  });
+
+  app.get("/api/admin/forms/:id", requireAuth, async (req, res) => {
+    try {
+      const form = await storage.getForm(req.params.id as string);
+      if (!form || form.tenantId !== req.user!.tenantId) {
+        return res.status(404).json({ message: "Form not found" });
+      }
+      const responses = await storage.getFormResponses(form.id);
+      res.json({ ...form, responses });
+    } catch (e: any) {
+      res.status(500).json({ message: e.message });
+    }
+  });
+
+  app.patch("/api/admin/forms/:id", requireAuth, async (req, res) => {
+    try {
+      const form = await storage.getForm(req.params.id as string);
+      if (!form || form.tenantId !== req.user!.tenantId) {
+        return res.status(404).json({ message: "Form not found" });
+      }
+      const parsed = updateFormSchema.parse(req.body);
+      if (parsed.slug && parsed.slug !== form.slug) {
+        const existing = await storage.getFormBySlug(req.user!.tenantId, parsed.slug);
+        if (existing) {
+          return res.status(400).json({ message: "A form with that slug already exists" });
+        }
+      }
+      const updated = await storage.updateForm(form.id, parsed);
+      res.json(updated);
+    } catch (e: any) {
+      if (e.name === "ZodError") {
+        return res.status(400).json({ message: e.errors[0]?.message || "Validation failed" });
+      }
+      res.status(500).json({ message: e.message });
+    }
+  });
+
+  app.delete("/api/admin/forms/:id", requireAuth, async (req, res) => {
+    try {
+      const form = await storage.getForm(req.params.id as string);
+      if (!form || form.tenantId !== req.user!.tenantId) {
+        return res.status(404).json({ message: "Form not found" });
+      }
+      await storage.deleteForm(form.id);
+      res.json({ success: true });
+    } catch (e: any) {
+      res.status(500).json({ message: e.message });
+    }
+  });
+
+  app.get("/api/admin/forms/:id/responses", requireAuth, async (req, res) => {
+    try {
+      const form = await storage.getForm(req.params.id as string);
+      if (!form || form.tenantId !== req.user!.tenantId) {
+        return res.status(404).json({ message: "Form not found" });
+      }
+      const responses = await storage.getFormResponses(form.id);
+      res.json(responses);
+    } catch (e: any) {
+      res.status(500).json({ message: e.message });
+    }
+  });
+
+  app.get("/api/public/forms/:tenantSlug/:formSlug", async (req, res) => {
+    try {
+      const tenant = await storage.getTenantBySlug(req.params.tenantSlug as string);
+      if (!tenant) {
+        return res.status(404).json({ message: "Not found" });
+      }
+      const form = await storage.getFormBySlug(tenant.id, req.params.formSlug as string);
+      if (!form || form.status !== "PUBLISHED") {
+        return res.status(404).json({ message: "Form not found" });
+      }
+      res.json({
+        id: form.id,
+        name: form.name,
+        description: form.description,
+        fieldsJson: form.fieldsJson,
+        settingsJson: form.settingsJson,
+        tenant: { name: tenant.name, brandColor: tenant.brandColor },
+      });
+    } catch (e: any) {
+      res.status(500).json({ message: e.message });
+    }
+  });
+
+  app.post("/api/public/forms/:tenantSlug/:formSlug/submit", async (req, res) => {
+    try {
+      const tenant = await storage.getTenantBySlug(req.params.tenantSlug as string);
+      if (!tenant) {
+        return res.status(404).json({ message: "Not found" });
+      }
+      const form = await storage.getFormBySlug(tenant.id, req.params.formSlug as string);
+      if (!form || form.status !== "PUBLISHED") {
+        return res.status(404).json({ message: "Form not found" });
+      }
+      const response = await storage.createFormResponse({
+        tenantId: tenant.id,
+        formId: form.id,
+        dataJson: JSON.stringify(req.body.data || {}),
+        ipAddress: (req.ip || req.socket.remoteAddress || null) as string | null,
+        referrer: (req.headers.referer || null) as string | null,
+      });
+      await storage.incrementFormResponseCount(form.id);
+      res.json({ success: true, id: response.id });
+    } catch (e: any) {
+      res.status(500).json({ message: e.message });
+    }
+  });
+
+  // ─── EMAIL TEMPLATES ────────────────────────────────────────────────────
+
+  const createEmailTemplateSchema = z.object({
+    name: z.string().min(1),
+    subject: z.string().min(1),
+    bodyHtml: z.string().optional(),
+    bodyText: z.string().optional(),
+    category: z.enum(["transactional", "marketing", "notification"]).optional(),
+    variablesJson: z.string().optional(),
+  });
+
+  const updateEmailTemplateSchema = z.object({
+    name: z.string().min(1).optional(),
+    subject: z.string().min(1).optional(),
+    bodyHtml: z.string().optional(),
+    bodyText: z.string().optional(),
+    category: z.enum(["transactional", "marketing", "notification"]).optional(),
+    variablesJson: z.string().optional(),
+    isActive: z.boolean().optional(),
+  });
+
+  app.get("/api/admin/email-templates", requireAuth, async (req, res) => {
+    try {
+      const result = await storage.getEmailTemplatesByTenant(req.user!.tenantId);
+      res.json(result);
+    } catch (e: any) {
+      res.status(500).json({ message: e.message });
+    }
+  });
+
+  app.post("/api/admin/email-templates", requireAuth, async (req, res) => {
+    try {
+      const parsed = createEmailTemplateSchema.parse(req.body);
+      const template = await storage.createEmailTemplate({
+        ...parsed,
+        tenantId: req.user!.tenantId,
+        createdByUserId: req.user!.id,
+        isActive: true,
+      });
+      res.json(template);
+    } catch (e: any) {
+      if (e.name === "ZodError") {
+        return res.status(400).json({ message: e.errors[0]?.message || "Validation failed" });
+      }
+      res.status(500).json({ message: e.message });
+    }
+  });
+
+  app.get("/api/admin/email-templates/:id", requireAuth, async (req, res) => {
+    try {
+      const template = await storage.getEmailTemplate(req.params.id as string);
+      if (!template || template.tenantId !== req.user!.tenantId) {
+        return res.status(404).json({ message: "Template not found" });
+      }
+      res.json(template);
+    } catch (e: any) {
+      res.status(500).json({ message: e.message });
+    }
+  });
+
+  app.patch("/api/admin/email-templates/:id", requireAuth, async (req, res) => {
+    try {
+      const template = await storage.getEmailTemplate(req.params.id as string);
+      if (!template || template.tenantId !== req.user!.tenantId) {
+        return res.status(404).json({ message: "Template not found" });
+      }
+      const parsed = updateEmailTemplateSchema.parse(req.body);
+      const updated = await storage.updateEmailTemplate(template.id, parsed);
+      res.json(updated);
+    } catch (e: any) {
+      if (e.name === "ZodError") {
+        return res.status(400).json({ message: e.errors[0]?.message || "Validation failed" });
+      }
+      res.status(500).json({ message: e.message });
+    }
+  });
+
+  app.delete("/api/admin/email-templates/:id", requireAuth, async (req, res) => {
+    try {
+      const template = await storage.getEmailTemplate(req.params.id as string);
+      if (!template || template.tenantId !== req.user!.tenantId) {
+        return res.status(404).json({ message: "Template not found" });
+      }
+      await storage.deleteEmailTemplate(template.id);
+      res.json({ success: true });
+    } catch (e: any) {
+      res.status(500).json({ message: e.message });
+    }
+  });
+
+  app.get("/api/admin/email-logs", requireAuth, async (req, res) => {
+    try {
+      const result = await storage.getEmailLogsByTenant(req.user!.tenantId);
+      res.json(result);
     } catch (e: any) {
       res.status(500).json({ message: e.message });
     }

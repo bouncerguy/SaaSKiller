@@ -27,6 +27,8 @@ import HudProducts from "@/pages/hud-products";
 import HudSupport from "@/pages/hud-support";
 import HudFinance from "@/pages/hud-finance";
 import HudTimeTracking from "@/pages/hud-time-tracking";
+import HudForms from "@/pages/hud-forms";
+import HudEmail from "@/pages/hud-email";
 import PublicBooking from "@/pages/public-booking";
 import PublicTenant from "@/pages/public-tenant";
 import { Redirect } from "wouter";
@@ -109,6 +111,8 @@ function Router() {
       <Route path="/hud/support">{() => <ProtectedRoute component={HudSupport} />}</Route>
       <Route path="/hud/finance">{() => <ProtectedRoute component={HudFinance} />}</Route>
       <Route path="/hud/time-tracking">{() => <ProtectedRoute component={HudTimeTracking} />}</Route>
+      <Route path="/hud/forms">{() => <ProtectedRoute component={HudForms} />}</Route>
+      <Route path="/hud/email">{() => <ProtectedRoute component={HudEmail} />}</Route>
       <Route component={NotFound} />
     </Switch>
   );

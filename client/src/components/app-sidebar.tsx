@@ -94,8 +94,8 @@ const operationsItems: NavItem[] = [
 ];
 
 const toolItems: NavItem[] = [
-  { title: "Forms", url: "/hud/forms", icon: FileText, enabled: false },
-  { title: "Email", url: "/hud/email", icon: Mail, enabled: false },
+  { title: "Forms", url: "/hud/forms", icon: FileText, enabled: true },
+  { title: "Email", url: "/hud/email", icon: Mail, enabled: true },
   { title: "AI Agents", url: "/hud/agents", icon: Bot, enabled: false },
   { title: "Media", url: "/hud/media", icon: Image, enabled: false },
 ];

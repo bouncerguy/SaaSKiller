@@ -4,6 +4,7 @@ import {
   tenants, users, eventTypes, availabilityRules, bookings,
   groups, userGroups, features, groupFeatures, userFeatures, settings, activityLog,
   customers, leads, pipelines, notes, products, tickets, invoices, timeEntries,
+  forms, formResponses, emailTemplates, emailLogs,
   type Tenant, type InsertTenant,
   type User, type InsertUser,
   type EventType, type InsertEventType,
@@ -24,6 +25,10 @@ import {
   type Ticket, type InsertTicket,
   type Invoice, type InsertInvoice,
   type TimeEntry, type InsertTimeEntry,
+  type Form, type InsertForm,
+  type FormResponse, type InsertFormResponse,
+  type EmailTemplate, type InsertEmailTemplate,
+  type EmailLog, type InsertEmailLog,
 } from "@shared/schema";
 
 export interface IStorage {
@@ -140,6 +145,24 @@ export interface IStorage {
   getTimeEntry(id: string): Promise<TimeEntry | undefined>;
   updateTimeEntry(id: string, data: Partial<InsertTimeEntry>): Promise<TimeEntry>;
   deleteTimeEntry(id: string): Promise<void>;
+
+  createForm(data: InsertForm): Promise<Form>;
+  getFormsByTenant(tenantId: string): Promise<Form[]>;
+  getForm(id: string): Promise<Form | undefined>;
+  getFormBySlug(tenantId: string, slug: string): Promise<Form | undefined>;
+  updateForm(id: string, data: Partial<InsertForm>): Promise<Form>;
+  deleteForm(id: string): Promise<void>;
+  createFormResponse(data: InsertFormResponse): Promise<FormResponse>;
+  getFormResponses(formId: string): Promise<FormResponse[]>;
+  incrementFormResponseCount(formId: string): Promise<void>;
+
+  createEmailTemplate(data: InsertEmailTemplate): Promise<EmailTemplate>;
+  getEmailTemplatesByTenant(tenantId: string): Promise<EmailTemplate[]>;
+  getEmailTemplate(id: string): Promise<EmailTemplate | undefined>;
+  updateEmailTemplate(id: string, data: Partial<InsertEmailTemplate>): Promise<EmailTemplate>;
+  deleteEmailTemplate(id: string): Promise<void>;
+  createEmailLog(data: InsertEmailLog): Promise<EmailLog>;
+  getEmailLogsByTenant(tenantId: string): Promise<EmailLog[]>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -731,6 +754,82 @@ export class DatabaseStorage implements IStorage {
 
   async deleteTimeEntry(id: string): Promise<void> {
     await db.delete(timeEntries).where(eq(timeEntries.id, id));
+  }
+
+  async createForm(data: InsertForm): Promise<Form> {
+    const [f] = await db.insert(forms).values(data).returning();
+    return f;
+  }
+
+  async getFormsByTenant(tenantId: string): Promise<Form[]> {
+    return db.select().from(forms).where(eq(forms.tenantId, tenantId)).orderBy(desc(forms.createdAt));
+  }
+
+  async getForm(id: string): Promise<Form | undefined> {
+    const [f] = await db.select().from(forms).where(eq(forms.id, id));
+    return f;
+  }
+
+  async getFormBySlug(tenantId: string, slug: string): Promise<Form | undefined> {
+    const [f] = await db.select().from(forms).where(
+      and(eq(forms.tenantId, tenantId), eq(forms.slug, slug))
+    );
+    return f;
+  }
+
+  async updateForm(id: string, data: Partial<InsertForm>): Promise<Form> {
+    const [f] = await db.update(forms).set({ ...data, updatedAt: new Date() }).where(eq(forms.id, id)).returning();
+    return f;
+  }
+
+  async deleteForm(id: string): Promise<void> {
+    await db.delete(formResponses).where(eq(formResponses.formId, id));
+    await db.delete(forms).where(eq(forms.id, id));
+  }
+
+  async createFormResponse(data: InsertFormResponse): Promise<FormResponse> {
+    const [r] = await db.insert(formResponses).values(data).returning();
+    return r;
+  }
+
+  async getFormResponses(formId: string): Promise<FormResponse[]> {
+    return db.select().from(formResponses).where(eq(formResponses.formId, formId)).orderBy(desc(formResponses.submittedAt));
+  }
+
+  async incrementFormResponseCount(formId: string): Promise<void> {
+    await db.update(forms).set({ responseCount: sql`${forms.responseCount} + 1` }).where(eq(forms.id, formId));
+  }
+
+  async createEmailTemplate(data: InsertEmailTemplate): Promise<EmailTemplate> {
+    const [t] = await db.insert(emailTemplates).values(data).returning();
+    return t;
+  }
+
+  async getEmailTemplatesByTenant(tenantId: string): Promise<EmailTemplate[]> {
+    return db.select().from(emailTemplates).where(eq(emailTemplates.tenantId, tenantId)).orderBy(desc(emailTemplates.createdAt));
+  }
+
+  async getEmailTemplate(id: string): Promise<EmailTemplate | undefined> {
+    const [t] = await db.select().from(emailTemplates).where(eq(emailTemplates.id, id));
+    return t;
+  }
+
+  async updateEmailTemplate(id: string, data: Partial<InsertEmailTemplate>): Promise<EmailTemplate> {
+    const [t] = await db.update(emailTemplates).set({ ...data, updatedAt: new Date() }).where(eq(emailTemplates.id, id)).returning();
+    return t;
+  }
+
+  async deleteEmailTemplate(id: string): Promise<void> {
+    await db.delete(emailTemplates).where(eq(emailTemplates.id, id));
+  }
+
+  async createEmailLog(data: InsertEmailLog): Promise<EmailLog> {
+    const [l] = await db.insert(emailLogs).values(data).returning();
+    return l;
+  }
+
+  async getEmailLogsByTenant(tenantId: string): Promise<EmailLog[]> {
+    return db.select().from(emailLogs).where(eq(emailLogs.tenantId, tenantId)).orderBy(desc(emailLogs.createdAt));
   }
 }
 

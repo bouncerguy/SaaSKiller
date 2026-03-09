@@ -3,10 +3,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
-import { Calendar, CalendarCheck, Clock, Users, ArrowRight, TrendingUp, XCircle, ShoppingBag, HeadphonesIcon, DollarSign, Timer } from "lucide-react";
+import { Calendar, CalendarCheck, Clock, Users, ArrowRight, TrendingUp, XCircle, ShoppingBag, HeadphonesIcon, DollarSign, Timer, FileText, Mail } from "lucide-react";
 import { format } from "date-fns";
 import { Link } from "wouter";
-import type { Booking, EventType, Customer, Product, Ticket, Invoice, TimeEntry } from "@shared/schema";
+import type { Booking, EventType, Customer, Product, Ticket, Invoice, TimeEntry, Form, EmailTemplate } from "@shared/schema";
 
 export default function AdminDashboard() {
   const { data: bookings, isLoading: loadingBookings } = useQuery<Booking[]>({
@@ -37,6 +37,14 @@ export default function AdminDashboard() {
     queryKey: ["/api/admin/time-entries"],
   });
 
+  const { data: formsData } = useQuery<Form[]>({
+    queryKey: ["/api/admin/forms"],
+  });
+
+  const { data: emailTemplatesData } = useQuery<EmailTemplate[]>({
+    queryKey: ["/api/admin/email-templates"],
+  });
+
   const upcomingBookings = bookings
     ?.filter((b) => b.status === "CONFIRMED" && new Date(b.startAt) > new Date())
     .sort((a, b) => new Date(a.startAt).getTime() - new Date(b.startAt).getTime())
@@ -51,6 +59,8 @@ export default function AdminDashboard() {
   const openTickets = ticketsData?.filter((t) => t.status === "OPEN" || t.status === "IN_PROGRESS").length || 0;
   const paidRevenue = invoices?.filter((i) => i.status === "PAID").reduce((s, i) => s + i.total, 0) || 0;
   const totalTimeMinutes = timeEntriesData?.reduce((s, e) => s + (e.durationMinutes || 0), 0) || 0;
+  const totalForms = formsData?.length || 0;
+  const totalEmailTemplates = emailTemplatesData?.length || 0;
 
   const isLoading = loadingBookings || loadingEvents;
 
@@ -128,6 +138,24 @@ export default function AdminDashboard() {
       href: "/hud/time-tracking",
       color: "text-violet-600 dark:text-violet-400",
       bg: "bg-violet-600/[0.08] dark:bg-violet-600/[0.15]",
+    },
+    {
+      label: "Forms",
+      value: totalForms,
+      icon: FileText,
+      testId: "text-total-forms",
+      href: "/hud/forms",
+      color: "text-sky-600 dark:text-sky-400",
+      bg: "bg-sky-600/[0.08] dark:bg-sky-600/[0.15]",
+    },
+    {
+      label: "Templates",
+      value: totalEmailTemplates,
+      icon: Mail,
+      testId: "text-total-templates",
+      href: "/hud/email",
+      color: "text-amber-600 dark:text-amber-400",
+      bg: "bg-amber-600/[0.08] dark:bg-amber-600/[0.15]",
     },
   ];
 

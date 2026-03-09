@@ -1,200 +1,51 @@
 # SaaS Killer — Open Source Self-Hosted Business Operating System
 
 ## Overview
-SaaS Killer is a modular business platform that starts with Calendly-like scheduling and expands into a full business operating system. Current features:
-- **Public booking pages**: `/book/:tenantSlug/:eventSlug` — date/time picker, timezone selector, booking form
-- **HUD dashboard**: `/hud` — unified control center with module stats (bookings, customers, products, tickets, revenue, time logged)
-- **CRM module**: Customer management with payment status tracking, lead management with kanban pipeline boards, notes system, lead-to-customer conversion, cross-module linking (tickets, invoices, time entries visible in customer detail)
-- **Products module**: Product & service catalog with pricing, billing cycles (one-time/monthly/quarterly/yearly), categories, search
-- **Support module**: Ticket management with priority levels (Low/Medium/High/Urgent), status workflow (Open→In Progress→Waiting→Resolved→Closed), customer linking, team assignment
-- **Finance module**: Invoice management with auto-numbering (INV-0001), status tracking (Draft/Sent/Paid/Overdue/Cancelled), customer linking, revenue/outstanding totals
-- **Time Tracking module**: Time entry logging with start/end times, auto-duration calculation, billable/non-billable, hourly rates, customer linking, grouped by date
-- **First-run setup wizard**: `/setup` — creates organization, admin account, and seeds features on fresh install
-- **Authentication**: Email/password login with session-based auth (passport-local + express-session)
-- **Multi-user teams**: OWNER can add/edit/remove team members; each user manages their own event types and availability
-- **Groups & permissions**: Group-based feature access with per-user overrides
-- **Availability engine**: Generates time slots from availability rules minus existing bookings
-- **Embed SDK**: Inline, popup, floating widget, and iframe embed snippets
-- **Multi-tenant**: Tenant isolation with branding support
+SaaS Killer is a modular business platform designed to be a comprehensive business operating system. It provides functionalities starting with scheduling and expanding into various business management areas. The project's vision is to offer an open-source, self-hosted alternative to proprietary SaaS solutions, empowering businesses with full control over their data and operations. Key capabilities include booking, customer relationship management (CRM), product catalog, support ticket management, finance/invoicing, time tracking, form building, and email template management.
 
-## Tech Stack
-- **Frontend**: React 18 + Wouter + TanStack Query + Shadcn UI + Tailwind CSS
-- **Backend**: Express.js + TypeScript
-- **Auth**: Passport.js (local strategy) + express-session + connect-pg-simple + bcryptjs
-- **Database**: PostgreSQL + Drizzle ORM
-- **Build**: Vite
+## User Preferences
+I prefer clear, concise, and structured information. When making changes, please explain the "why" behind them, not just the "what." I value iterative development with frequent, small commits. Before implementing major architectural changes or introducing new external dependencies, please ask for my approval. Ensure the codebase remains clean, well-documented, and follows established best practices for maintainability and scalability. Do not make changes to the `shared/schema.ts` file without explicit instruction.
 
-## Project Structure
-```
-client/src/
-  pages/
-    landing.tsx            - Public landing page
-    auth-page.tsx          - Login page (two-column layout)
-    setup-page.tsx         - First-run setup wizard (multi-step)
-    public-booking.tsx     - Public booking flow (date picker, time slots, booking form)
-    public-tenant.tsx      - Tenant event listing page
-    hud-dashboard.tsx      - HUD dashboard with stats
-    hud-event-types.tsx    - Event type CRUD
-    hud-bookings.tsx       - Bookings list with tabs (upcoming/past/canceled)
-    hud-availability.tsx   - Weekly availability rules
-    hud-embed.tsx          - Embed snippet generator
-    hud-settings.tsx       - Tenant branding settings
-    hud-team.tsx           - Team member management (OWNER only)
-    hud-users.tsx          - User & group management with feature permissions
-    hud-crm-customers.tsx  - Customer management (green accent, search, detail sheet, notes)
-    hud-crm-leads.tsx      - Lead management with kanban board (blue accent, pipeline stages)
-    hud-products.tsx       - Product & service catalog (orange accent, grid cards, detail sheet)
-    hud-support.tsx        - Support tickets (rose accent, status tabs, priority badges)
-    hud-finance.tsx        - Invoice management (emerald accent, status tabs, revenue stats)
-    hud-time-tracking.tsx  - Time tracking (violet accent, grouped by date, billable toggle)
-    hud-help.tsx           - Help & FAQ page
-  hooks/
-    use-auth.tsx           - Auth context provider with setup status detection
-  components/
-    app-sidebar.tsx        - Module-aware sidebar with grouped navigation
-    theme-provider.tsx     - Dark/light theme provider
-    theme-toggle.tsx       - Theme toggle button
-server/
-  index.ts                - Express server entry point (auto schema push on startup)
-  auth.ts                 - Passport + session configuration, requireAuth middleware
-  routes.ts               - All API routes (auth, setup, admin, public, groups)
-  storage.ts              - Database storage interface with permission hierarchy
-  db.ts                   - Database connection
-  seed.ts                 - Dev-only seed data (default login: alex@acmeconsulting.com / password123)
-  ics-calendar.ts         - ICS feed fetch, parse, cache
-shared/
-  schema.ts               - Drizzle schema definitions (tenants, users, groups, features, settings, activity_log)
-```
+## System Architecture
+The application follows a client-server architecture.
 
-## Startup Behavior
-- On startup, the server automatically runs `npx drizzle-kit push` to sync the database schema
-- In development (`NODE_ENV=development`), seed data is loaded automatically
-- In production, seed data is skipped — the setup wizard handles initial configuration
-- If no tenants exist, the app redirects to `/setup` for first-run configuration
+**Frontend:**
+- Built with React 18, utilizing Wouter for routing, TanStack Query for data fetching, Shadcn UI for componentry, and Tailwind CSS for styling.
+- UI/UX decisions prioritize a clean, modern aesthetic with a warm indigo primary color, neutral grays, and the Inter font. Consistent spacing, custom shadows, and full dark mode support are implemented.
+- The HUD dashboard provides a unified control center with module-specific statistics.
+- The sidebar navigation is structured by function (Core, Operations, Tools, System) for intuitive access.
 
-## API Routes
+**Backend:**
+- Developed using Express.js and TypeScript, providing a robust API layer.
+- Authentication is session-based, utilizing Passport.js (local strategy) with `express-session` and `connect-pg-simple` for session storage in PostgreSQL. Passwords are hashed with bcryptjs.
+- The system supports multi-tenancy with tenant isolation and branding capabilities.
+- A first-run setup wizard handles initial organization and admin account creation.
+- Feature access is managed through a hierarchical permission system: per-user overrides, group-level permissions, and global defaults.
 
-### Setup (unauthenticated)
-- GET `/api/setup/status` — Returns `{ needsSetup: boolean }` (true when zero tenants exist)
-- POST `/api/setup` — Create organization + admin user + seed features (403 if setup already done)
+**Database:**
+- PostgreSQL is used as the primary data store.
+- Drizzle ORM provides a type-safe way to interact with the database.
+- The server automatically pushes schema updates using `drizzle-kit` on startup.
 
-### Auth (prefix: /api/auth)
-- POST /register — Register new user (first user becomes OWNER; subsequent require OWNER auth)
-- POST /login — Login with email + password
-- POST /logout — Destroy session
-- GET /user — Get current authenticated user (or 401)
+**Core Features & Design Patterns:**
+- **Booking Engine**: Generates available time slots based on user-defined availability rules, accounting for existing bookings.
+- **Modular Design**: The system is built with a modular approach, allowing for easy expansion with new features.
+- **Embed SDK**: Provides snippets for embedding booking functionalities (inline, popup, floating widget, iframe).
+- **CRUD Operations**: Standardized API routes for Create, Read, Update, and Delete operations across all modules.
 
-### Admin (prefix: /api/admin) — All require authentication
-- GET/PATCH /tenant — Tenant settings
-- GET/POST /event-types — Event types CRUD (scoped to tenant)
-- PATCH /event-types/:id — Update event type
-- GET /bookings — All bookings for tenant
-- PATCH /bookings/:id/cancel — Cancel booking
-- GET/POST /availability — Availability rules (scoped to logged-in user)
-- DELETE /availability/:id — Delete rule
-- GET /team — List team members (OWNER only)
-- POST /team — Add team member (OWNER only)
-- PATCH /team/:id — Update team member (OWNER only)
-- DELETE /team/:id — Remove team member (OWNER only, cannot remove self)
-- POST /calendar/test — Test ICS URL
-
-### Groups (prefix: /api/hud) — All require OWNER role
-- GET/POST /groups — List/create groups
-- PATCH/DELETE /groups/:id — Update/delete group
-- GET/POST/DELETE /groups/:id/members — Manage group membership
-- GET/PATCH /groups/:id/features — Manage group feature access
-
-### CRM (prefix: /api/admin) — All require authentication
-- GET/POST /customers — List (with ?search) / create customers
-- GET/PATCH /customers/:id — Get/update single customer (includes notes + activity)
-- GET/POST /leads — List (with ?pipelineId) / create leads
-- GET/PATCH/DELETE /leads/:id — Get/update/delete single lead
-- POST /leads/:id/convert — Convert lead to customer (creates customer, sets lead stage to Won)
-- GET/POST /pipelines — List/create pipelines (auto-creates default on first request)
-- PATCH/DELETE /pipelines/:id — Update/delete pipeline
-- GET /notes/:entityType/:entityId — Get notes for entity
-- POST /notes — Create note (entityType, entityId, content)
-- DELETE /notes/:id — Delete note
-
-### Products (prefix: /api/admin) — All require authentication
-- GET/POST /products — List (with ?search) / create products
-- GET/PATCH/DELETE /products/:id — Get/update/delete single product
-
-### Support Tickets (prefix: /api/admin) — All require authentication
-- GET/POST /tickets — List (with ?status) / create tickets
-- GET/PATCH/DELETE /tickets/:id — Get/update/delete single ticket
-
-### Finance (prefix: /api/admin) — All require authentication
-- GET/POST /invoices — List (with ?status) / create invoices
-- GET /invoices/next-number — Get next auto-generated invoice number
-- GET/PATCH/DELETE /invoices/:id — Get/update/delete single invoice
-
-### Time Tracking (prefix: /api/admin) — All require authentication
-- GET/POST /time-entries — List / create time entries
-- PATCH/DELETE /time-entries/:id — Update/delete time entry
-
-### Public (prefix: /api/public)
-- GET /:tenantSlug — Tenant info + active event types
-- GET /:tenantSlug/:eventSlug — Event type details
-- GET /:tenantSlug/:eventSlug/slots/:date/:timezone — Available time slots
-- POST /:tenantSlug/:eventSlug/book — Create booking
-
-## Database Schema
-- **tenants**: id, name, slug, logoUrl, brandColor, timezone, calendarIcsUrl
-- **users**: id, tenantId, name, email, role (OWNER/MEMBER), passwordHash, isActive
-- **groups**: id, tenantId, name, description, createdAt
-- **user_groups**: id, userId, groupId (junction table)
-- **features**: id, name, slug (unique), description, enabledGlobally
-- **group_features**: id, groupId, featureId, enabled
-- **user_features**: id, userId, featureId, enabled (overrides group setting)
-- **settings**: id, key (unique), value, category
-- **activity_log**: id, tenantId, userId, entityType, entityId, action, details, createdAt
-- **event_types**: id, tenantId, ownerUserId, slug, title, description, durationMinutes, locationType, locationValue, color, isActive, questionsJson
-- **availability_rules**: id, tenantId, userId, dayOfWeek, startTime, endTime, timezone
-- **bookings**: id, tenantId, eventTypeId, hostUserId, inviteeName, inviteeEmail, startAt, endAt, timezone, status, cancelReason, notes, createdAt
-- **pipelines**: id, tenantId, name, stages (JSON text), isDefault, createdAt
-- **customers**: id, tenantId, userId, name, businessName, email, phone, address, billingType, paymentStatus (CURRENT/PAST_DUE_30/PAST_DUE_60/COLLECTIONS), isActive, createdAt, updatedAt
-- **leads**: id, tenantId, name, email, phone, source, pipelineId, stage, awarenessData, createdAt, updatedAt
-- **notes**: id, tenantId, entityType, entityId, userId, content, createdAt
-- **products**: id, tenantId, name, description, price (cents), billingCycle (ONE_TIME/MONTHLY/QUARTERLY/YEARLY), category, isActive, createdAt, updatedAt
-- **tickets**: id, tenantId, subject, description, priority (LOW/MEDIUM/HIGH/URGENT), status (OPEN/IN_PROGRESS/WAITING/RESOLVED/CLOSED), assignedUserId, customerId, createdByUserId, resolvedAt, createdAt, updatedAt
-- **invoices**: id, tenantId, customerId, invoiceNumber, status (DRAFT/SENT/PAID/OVERDUE/CANCELLED), subtotal, tax, total (all cents), dueDate, paidAt, notes, lineItemsJson, createdAt, updatedAt
-- **time_entries**: id, tenantId, userId, customerId, description, startAt, endAt, durationMinutes, billable, hourlyRate (cents), createdAt
-- **session**: managed by connect-pg-simple (auto-created)
-
-## Permission Hierarchy
-Feature access is resolved in this order:
-1. **user_features** — Per-user override (highest priority)
-2. **group_features** — Group-level permission (checked for all groups the user belongs to)
-3. **features.enabledGlobally** — Global default (lowest priority)
-
-## Authentication Flow
-- Session-based auth using express-session stored in PostgreSQL (connect-pg-simple)
-- Passwords hashed with bcryptjs
-- First-run: setup wizard creates the initial OWNER user
-- OWNER can add team members via /hud/team page
-- All /api/admin/* routes protected by requireAuth middleware
-- Frontend AuthProvider checks setup status and redirects accordingly
-
-## Seed Data (dev only)
-Default tenant "Acme Consulting" with 3 event types, weekday availability (9-12, 1-5), and 4 sample bookings.
-Default login: alex@acmeconsulting.com / password123
-
-## Design System
-- **Color palette**: Warm indigo primary (#5b4cdb / HSL 235 72% 55%), neutral grays for backgrounds
-- **Typography**: Inter font with -0.011em tracking, tighter heading tracking (-0.025em)
-- **Spacing**: Consistent 4/6/8px rhythm, generous whitespace, max-w containers for readability
-- **Components**: Shadcn UI exclusively — Cards, Buttons, Badges, Sidebar, Tabs, Dialogs
-- **Icons**: Lucide React throughout
-- **Dark mode**: Full dark mode support via CSS variables in :root/.dark
-- **Shadows**: Custom shadow scale from 2xs to 2xl for depth hierarchy
-- **Layout**: Sticky headers with z-[9999], backdrop-blur, flex-wrap on all flex rows
-
-## Sidebar Navigation Structure
-The HUD sidebar is organized by function:
-- **Core**: Dashboard, Calendar (with sub-items: Event Types, Bookings, Availability), CRM (with sub-items: Customers, Leads), Products
-- **Operations**: Support, Time Tracking, Finance
-- **Tools**: Forms, Email, AI Agents, Media
-- **System**: Users & Groups, Assets, Settings, Backups, Updates, Help
-
-Modules that aren't built yet appear disabled with a "Coming Soon" tooltip.
+## External Dependencies
+- **React 18**: Frontend library for building user interfaces.
+- **Wouter**: Small routing library for React.
+- **TanStack Query**: Data fetching and caching library for React.
+- **Shadcn UI**: Collection of reusable components for the UI.
+- **Tailwind CSS**: Utility-first CSS framework for styling.
+- **Express.js**: Web application framework for Node.js.
+- **TypeScript**: Superset of JavaScript that adds static typing.
+- **Passport.js**: Authentication middleware for Node.js.
+- **express-session**: Session middleware for Express.
+- **connect-pg-simple**: PostgreSQL session store for `express-session`.
+- **bcryptjs**: Library for hashing passwords.
+- **PostgreSQL**: Relational database system.
+- **Drizzle ORM**: TypeScript ORM for PostgreSQL.
+- **Vite**: Frontend build tool.
+- **Lucide React**: Icon library for React.
