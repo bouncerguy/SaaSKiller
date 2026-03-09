@@ -3,10 +3,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
-import { Calendar, CalendarCheck, Clock, Users, ArrowRight, TrendingUp, XCircle, ShoppingBag, HeadphonesIcon, DollarSign, Timer, FileText, Mail } from "lucide-react";
+import { Calendar, CalendarCheck, Clock, Users, ArrowRight, TrendingUp, XCircle, ShoppingBag, HeadphonesIcon, DollarSign, Timer, FileText, Mail, Bot, ImageIcon } from "lucide-react";
 import { format } from "date-fns";
 import { Link } from "wouter";
-import type { Booking, EventType, Customer, Product, Ticket, Invoice, TimeEntry, Form, EmailTemplate } from "@shared/schema";
+import type { Booking, EventType, Customer, Product, Ticket, Invoice, TimeEntry, Form, EmailTemplate, Agent, MediaAsset } from "@shared/schema";
 
 export default function AdminDashboard() {
   const { data: bookings, isLoading: loadingBookings } = useQuery<Booking[]>({
@@ -45,6 +45,14 @@ export default function AdminDashboard() {
     queryKey: ["/api/admin/email-templates"],
   });
 
+  const { data: agentsData } = useQuery<Agent[]>({
+    queryKey: ["/api/admin/agents"],
+  });
+
+  const { data: mediaData } = useQuery<MediaAsset[]>({
+    queryKey: ["/api/admin/media"],
+  });
+
   const upcomingBookings = bookings
     ?.filter((b) => b.status === "CONFIRMED" && new Date(b.startAt) > new Date())
     .sort((a, b) => new Date(a.startAt).getTime() - new Date(b.startAt).getTime())
@@ -61,6 +69,8 @@ export default function AdminDashboard() {
   const totalTimeMinutes = timeEntriesData?.reduce((s, e) => s + (e.durationMinutes || 0), 0) || 0;
   const totalForms = formsData?.length || 0;
   const totalEmailTemplates = emailTemplatesData?.length || 0;
+  const activeAgents = agentsData?.filter((a) => a.status === "ACTIVE").length || 0;
+  const totalMedia = mediaData?.length || 0;
 
   const isLoading = loadingBookings || loadingEvents;
 
@@ -156,6 +166,24 @@ export default function AdminDashboard() {
       href: "/hud/email",
       color: "text-amber-600 dark:text-amber-400",
       bg: "bg-amber-600/[0.08] dark:bg-amber-600/[0.15]",
+    },
+    {
+      label: "Active Agents",
+      value: activeAgents,
+      icon: Bot,
+      testId: "text-active-agents",
+      href: "/hud/agents",
+      color: "text-cyan-600 dark:text-cyan-400",
+      bg: "bg-cyan-600/[0.08] dark:bg-cyan-600/[0.15]",
+    },
+    {
+      label: "Media",
+      value: totalMedia,
+      icon: ImageIcon,
+      testId: "text-total-media",
+      href: "/hud/media",
+      color: "text-pink-600 dark:text-pink-400",
+      bg: "bg-pink-600/[0.08] dark:bg-pink-600/[0.15]",
     },
   ];
 

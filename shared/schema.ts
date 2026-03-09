@@ -401,3 +401,59 @@ export const emailLogs = pgTable("email_logs", {
 export const insertEmailLogSchema = createInsertSchema(emailLogs).omit({ id: true, createdAt: true, sentAt: true });
 export type InsertEmailLog = z.infer<typeof insertEmailLogSchema>;
 export type EmailLog = typeof emailLogs.$inferSelect;
+
+export const agentStatusEnum = pgEnum("agent_status", ["ACTIVE", "PAUSED", "DRAFT"]);
+
+export const agents = pgTable("agents", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar("tenant_id").notNull().references(() => tenants.id),
+  name: text("name").notNull(),
+  description: text("description"),
+  status: agentStatusEnum("status").notNull().default("DRAFT"),
+  triggerType: text("trigger_type").notNull().default("manual"),
+  triggerConfig: text("trigger_config").default("{}"),
+  actionsJson: text("actions_json").default("[]"),
+  lastRunAt: timestamp("last_run_at"),
+  runCount: integer("run_count").notNull().default(0),
+  createdByUserId: varchar("created_by_user_id").notNull().references(() => users.id),
+  createdAt: timestamp("created_at").notNull().default(sql`now()`),
+  updatedAt: timestamp("updated_at").notNull().default(sql`now()`),
+});
+
+export const insertAgentSchema = createInsertSchema(agents).omit({ id: true, createdAt: true, updatedAt: true, lastRunAt: true, runCount: true });
+export type InsertAgent = z.infer<typeof insertAgentSchema>;
+export type Agent = typeof agents.$inferSelect;
+
+export const agentRuns = pgTable("agent_runs", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar("tenant_id").notNull().references(() => tenants.id),
+  agentId: varchar("agent_id").notNull().references(() => agents.id),
+  status: text("status").notNull().default("running"),
+  startedAt: timestamp("started_at").notNull().default(sql`now()`),
+  completedAt: timestamp("completed_at"),
+  resultJson: text("result_json"),
+  errorMessage: text("error_message"),
+});
+
+export const insertAgentRunSchema = createInsertSchema(agentRuns).omit({ id: true, startedAt: true, completedAt: true });
+export type InsertAgentRun = z.infer<typeof insertAgentRunSchema>;
+export type AgentRun = typeof agentRuns.$inferSelect;
+
+export const mediaAssets = pgTable("media_assets", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar("tenant_id").notNull().references(() => tenants.id),
+  filename: text("filename").notNull(),
+  originalName: text("original_name").notNull(),
+  mimeType: text("mime_type").notNull(),
+  sizeBytes: integer("size_bytes").notNull().default(0),
+  url: text("url").notNull(),
+  alt: text("alt"),
+  tagsJson: text("tags_json").default("[]"),
+  folder: text("folder").default(""),
+  uploadedByUserId: varchar("uploaded_by_user_id").notNull().references(() => users.id),
+  createdAt: timestamp("created_at").notNull().default(sql`now()`),
+});
+
+export const insertMediaAssetSchema = createInsertSchema(mediaAssets).omit({ id: true, createdAt: true });
+export type InsertMediaAsset = z.infer<typeof insertMediaAssetSchema>;
+export type MediaAsset = typeof mediaAssets.$inferSelect;

@@ -2070,5 +2070,223 @@ export async function registerRoutes(
     }
   });
 
+  // ─── AI AGENTS ───────────────────────────────────────────────────────────
+
+  const createAgentSchema = z.object({
+    name: z.string().min(1),
+    description: z.string().optional().nullable(),
+    triggerType: z.enum(["manual", "schedule", "form_submission", "new_customer", "new_ticket"]).optional(),
+  });
+
+  const updateAgentSchema = z.object({
+    name: z.string().min(1).optional(),
+    description: z.string().optional().nullable(),
+    status: z.enum(["ACTIVE", "PAUSED", "DRAFT"]).optional(),
+    triggerType: z.enum(["manual", "schedule", "form_submission", "new_customer", "new_ticket"]).optional(),
+    triggerConfig: z.string().optional().nullable(),
+    actionsJson: z.string().optional().nullable(),
+  });
+
+  app.get("/api/admin/agents", requireAuth, async (req, res) => {
+    try {
+      const result = await storage.getAgentsByTenant(req.user!.tenantId);
+      res.json(result);
+    } catch (e: any) {
+      res.status(500).json({ message: e.message });
+    }
+  });
+
+  app.post("/api/admin/agents", requireAuth, async (req, res) => {
+    try {
+      const parsed = createAgentSchema.parse(req.body);
+      const agent = await storage.createAgent({
+        ...parsed,
+        tenantId: req.user!.tenantId,
+        createdByUserId: req.user!.id,
+        status: "DRAFT",
+        triggerType: parsed.triggerType || "manual",
+        triggerConfig: "{}",
+        actionsJson: "[]",
+      });
+      res.json(agent);
+    } catch (e: any) {
+      if (e.name === "ZodError") {
+        return res.status(400).json({ message: e.errors[0]?.message || "Validation failed" });
+      }
+      res.status(500).json({ message: e.message });
+    }
+  });
+
+  app.get("/api/admin/agents/:id", requireAuth, async (req, res) => {
+    try {
+      const agent = await storage.getAgent(req.params.id as string);
+      if (!agent || agent.tenantId !== req.user!.tenantId) {
+        return res.status(404).json({ message: "Agent not found" });
+      }
+      const runs = await storage.getAgentRuns(agent.id);
+      res.json({ ...agent, runs });
+    } catch (e: any) {
+      res.status(500).json({ message: e.message });
+    }
+  });
+
+  app.patch("/api/admin/agents/:id", requireAuth, async (req, res) => {
+    try {
+      const agent = await storage.getAgent(req.params.id as string);
+      if (!agent || agent.tenantId !== req.user!.tenantId) {
+        return res.status(404).json({ message: "Agent not found" });
+      }
+      const parsed = updateAgentSchema.parse(req.body);
+      const updated = await storage.updateAgent(agent.id, parsed);
+      res.json(updated);
+    } catch (e: any) {
+      if (e.name === "ZodError") {
+        return res.status(400).json({ message: e.errors[0]?.message || "Validation failed" });
+      }
+      res.status(500).json({ message: e.message });
+    }
+  });
+
+  app.delete("/api/admin/agents/:id", requireAuth, async (req, res) => {
+    try {
+      const agent = await storage.getAgent(req.params.id as string);
+      if (!agent || agent.tenantId !== req.user!.tenantId) {
+        return res.status(404).json({ message: "Agent not found" });
+      }
+      await storage.deleteAgent(agent.id);
+      res.json({ success: true });
+    } catch (e: any) {
+      res.status(500).json({ message: e.message });
+    }
+  });
+
+  app.post("/api/admin/agents/:id/run", requireAuth, async (req, res) => {
+    try {
+      const agent = await storage.getAgent(req.params.id as string);
+      if (!agent || agent.tenantId !== req.user!.tenantId) {
+        return res.status(404).json({ message: "Agent not found" });
+      }
+      const run = await storage.createAgentRun({
+        tenantId: req.user!.tenantId,
+        agentId: agent.id,
+        status: "success",
+        resultJson: JSON.stringify({ message: "Manual trigger completed", triggeredBy: req.user!.name }),
+      });
+      await storage.incrementAgentRunCount(agent.id);
+      res.json(run);
+    } catch (e: any) {
+      res.status(500).json({ message: e.message });
+    }
+  });
+
+  app.get("/api/admin/agents/:id/runs", requireAuth, async (req, res) => {
+    try {
+      const agent = await storage.getAgent(req.params.id as string);
+      if (!agent || agent.tenantId !== req.user!.tenantId) {
+        return res.status(404).json({ message: "Agent not found" });
+      }
+      const runs = await storage.getAgentRuns(agent.id);
+      res.json(runs);
+    } catch (e: any) {
+      res.status(500).json({ message: e.message });
+    }
+  });
+
+  // ─── MEDIA ASSETS ──────────────────────────────────────────────────────
+
+  const createMediaSchema = z.object({
+    filename: z.string().min(1),
+    originalName: z.string().min(1),
+    mimeType: z.string().min(1),
+    sizeBytes: z.number().int().min(0).optional(),
+    url: z.string().url(),
+    alt: z.string().optional().nullable(),
+    tagsJson: z.string().optional().nullable(),
+    folder: z.string().optional().nullable(),
+  });
+
+  const updateMediaSchema = z.object({
+    alt: z.string().optional().nullable(),
+    tagsJson: z.string().optional().nullable(),
+    folder: z.string().optional().nullable(),
+    filename: z.string().min(1).optional(),
+  });
+
+  app.get("/api/admin/media", requireAuth, async (req, res) => {
+    try {
+      const search = req.query.search as string | undefined;
+      const folder = req.query.folder as string | undefined;
+      let result;
+      if (search) {
+        result = await storage.searchMediaAssets(req.user!.tenantId, search);
+      } else {
+        result = await storage.getMediaAssetsByTenant(req.user!.tenantId, folder);
+      }
+      res.json(result);
+    } catch (e: any) {
+      res.status(500).json({ message: e.message });
+    }
+  });
+
+  app.post("/api/admin/media", requireAuth, async (req, res) => {
+    try {
+      const parsed = createMediaSchema.parse(req.body);
+      const asset = await storage.createMediaAsset({
+        ...parsed,
+        sizeBytes: parsed.sizeBytes || 0,
+        tenantId: req.user!.tenantId,
+        uploadedByUserId: req.user!.id,
+      });
+      res.json(asset);
+    } catch (e: any) {
+      if (e.name === "ZodError") {
+        return res.status(400).json({ message: e.errors[0]?.message || "Validation failed" });
+      }
+      res.status(500).json({ message: e.message });
+    }
+  });
+
+  app.get("/api/admin/media/:id", requireAuth, async (req, res) => {
+    try {
+      const asset = await storage.getMediaAsset(req.params.id as string);
+      if (!asset || asset.tenantId !== req.user!.tenantId) {
+        return res.status(404).json({ message: "Asset not found" });
+      }
+      res.json(asset);
+    } catch (e: any) {
+      res.status(500).json({ message: e.message });
+    }
+  });
+
+  app.patch("/api/admin/media/:id", requireAuth, async (req, res) => {
+    try {
+      const asset = await storage.getMediaAsset(req.params.id as string);
+      if (!asset || asset.tenantId !== req.user!.tenantId) {
+        return res.status(404).json({ message: "Asset not found" });
+      }
+      const parsed = updateMediaSchema.parse(req.body);
+      const updated = await storage.updateMediaAsset(asset.id, parsed);
+      res.json(updated);
+    } catch (e: any) {
+      if (e.name === "ZodError") {
+        return res.status(400).json({ message: e.errors[0]?.message || "Validation failed" });
+      }
+      res.status(500).json({ message: e.message });
+    }
+  });
+
+  app.delete("/api/admin/media/:id", requireAuth, async (req, res) => {
+    try {
+      const asset = await storage.getMediaAsset(req.params.id as string);
+      if (!asset || asset.tenantId !== req.user!.tenantId) {
+        return res.status(404).json({ message: "Asset not found" });
+      }
+      await storage.deleteMediaAsset(asset.id);
+      res.json({ success: true });
+    } catch (e: any) {
+      res.status(500).json({ message: e.message });
+    }
+  });
+
   return httpServer;
 }

@@ -4,7 +4,7 @@ import {
   tenants, users, eventTypes, availabilityRules, bookings,
   groups, userGroups, features, groupFeatures, userFeatures, settings, activityLog,
   customers, leads, pipelines, notes, products, tickets, invoices, timeEntries,
-  forms, formResponses, emailTemplates, emailLogs,
+  forms, formResponses, emailTemplates, emailLogs, agents, agentRuns, mediaAssets,
   type Tenant, type InsertTenant,
   type User, type InsertUser,
   type EventType, type InsertEventType,
@@ -29,6 +29,9 @@ import {
   type FormResponse, type InsertFormResponse,
   type EmailTemplate, type InsertEmailTemplate,
   type EmailLog, type InsertEmailLog,
+  type Agent, type InsertAgent,
+  type AgentRun, type InsertAgentRun,
+  type MediaAsset, type InsertMediaAsset,
 } from "@shared/schema";
 
 export interface IStorage {
@@ -163,6 +166,22 @@ export interface IStorage {
   deleteEmailTemplate(id: string): Promise<void>;
   createEmailLog(data: InsertEmailLog): Promise<EmailLog>;
   getEmailLogsByTenant(tenantId: string): Promise<EmailLog[]>;
+
+  createAgent(data: InsertAgent): Promise<Agent>;
+  getAgentsByTenant(tenantId: string): Promise<Agent[]>;
+  getAgent(id: string): Promise<Agent | undefined>;
+  updateAgent(id: string, data: Partial<InsertAgent>): Promise<Agent>;
+  deleteAgent(id: string): Promise<void>;
+  createAgentRun(data: InsertAgentRun): Promise<AgentRun>;
+  getAgentRuns(agentId: string): Promise<AgentRun[]>;
+  incrementAgentRunCount(agentId: string): Promise<void>;
+
+  createMediaAsset(data: InsertMediaAsset): Promise<MediaAsset>;
+  getMediaAssetsByTenant(tenantId: string, folder?: string): Promise<MediaAsset[]>;
+  getMediaAsset(id: string): Promise<MediaAsset | undefined>;
+  updateMediaAsset(id: string, data: Partial<InsertMediaAsset>): Promise<MediaAsset>;
+  deleteMediaAsset(id: string): Promise<void>;
+  searchMediaAssets(tenantId: string, query: string): Promise<MediaAsset[]>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -830,6 +849,87 @@ export class DatabaseStorage implements IStorage {
 
   async getEmailLogsByTenant(tenantId: string): Promise<EmailLog[]> {
     return db.select().from(emailLogs).where(eq(emailLogs.tenantId, tenantId)).orderBy(desc(emailLogs.createdAt));
+  }
+
+  async createAgent(data: InsertAgent): Promise<Agent> {
+    const [a] = await db.insert(agents).values(data).returning();
+    return a;
+  }
+
+  async getAgentsByTenant(tenantId: string): Promise<Agent[]> {
+    return db.select().from(agents).where(eq(agents.tenantId, tenantId)).orderBy(desc(agents.createdAt));
+  }
+
+  async getAgent(id: string): Promise<Agent | undefined> {
+    const [a] = await db.select().from(agents).where(eq(agents.id, id));
+    return a;
+  }
+
+  async updateAgent(id: string, data: Partial<InsertAgent>): Promise<Agent> {
+    const [a] = await db.update(agents).set({ ...data, updatedAt: new Date() }).where(eq(agents.id, id)).returning();
+    return a;
+  }
+
+  async deleteAgent(id: string): Promise<void> {
+    await db.delete(agentRuns).where(eq(agentRuns.agentId, id));
+    await db.delete(agents).where(eq(agents.id, id));
+  }
+
+  async createAgentRun(data: InsertAgentRun): Promise<AgentRun> {
+    const [r] = await db.insert(agentRuns).values(data).returning();
+    return r;
+  }
+
+  async getAgentRuns(agentId: string): Promise<AgentRun[]> {
+    return db.select().from(agentRuns).where(eq(agentRuns.agentId, agentId)).orderBy(desc(agentRuns.startedAt));
+  }
+
+  async incrementAgentRunCount(agentId: string): Promise<void> {
+    await db.update(agents).set({
+      runCount: sql`${agents.runCount} + 1`,
+      lastRunAt: new Date(),
+    }).where(eq(agents.id, agentId));
+  }
+
+  async createMediaAsset(data: InsertMediaAsset): Promise<MediaAsset> {
+    const [m] = await db.insert(mediaAssets).values(data).returning();
+    return m;
+  }
+
+  async getMediaAssetsByTenant(tenantId: string, folder?: string): Promise<MediaAsset[]> {
+    const conditions = [eq(mediaAssets.tenantId, tenantId)];
+    if (folder !== undefined && folder !== "") {
+      conditions.push(eq(mediaAssets.folder, folder));
+    }
+    return db.select().from(mediaAssets).where(and(...conditions)).orderBy(desc(mediaAssets.createdAt));
+  }
+
+  async getMediaAsset(id: string): Promise<MediaAsset | undefined> {
+    const [m] = await db.select().from(mediaAssets).where(eq(mediaAssets.id, id));
+    return m;
+  }
+
+  async updateMediaAsset(id: string, data: Partial<InsertMediaAsset>): Promise<MediaAsset> {
+    const [m] = await db.update(mediaAssets).set(data).where(eq(mediaAssets.id, id)).returning();
+    return m;
+  }
+
+  async deleteMediaAsset(id: string): Promise<void> {
+    await db.delete(mediaAssets).where(eq(mediaAssets.id, id));
+  }
+
+  async searchMediaAssets(tenantId: string, query: string): Promise<MediaAsset[]> {
+    return db.select().from(mediaAssets).where(
+      and(
+        eq(mediaAssets.tenantId, tenantId),
+        or(
+          ilike(mediaAssets.filename, `%${query}%`),
+          ilike(mediaAssets.originalName, `%${query}%`),
+          ilike(mediaAssets.alt, `%${query}%`),
+          ilike(mediaAssets.tagsJson, `%${query}%`),
+        )
+      )
+    ).orderBy(desc(mediaAssets.createdAt));
   }
 }
 
