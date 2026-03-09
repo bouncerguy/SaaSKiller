@@ -14,6 +14,7 @@ SaaS Killer is a modular business platform designed to be a comprehensive busine
 - **Email module**: Email template management with HTML/text body, category tagging (transactional/marketing/notification), variables support, sent log viewer with status tracking (Queued/Sent/Failed/Bounced)
 - **AI Agents module**: Workflow automation with configurable triggers (Manual/Schedule/Form Submission/New Customer/New Ticket), action definitions (JSON), manual run execution, run history with status tracking (success/failed/running), status workflow (Draft→Active→Paused)
 - **Media module**: Digital asset library with grid view, image previews, file type icons, folder organization, tag-based search, metadata editing (alt text, tags, folder), URL-based asset registration
+- **Public form pages**: `/forms/:tenantSlug/:formSlug` — dynamic form renderer with field validation and branded submission
 - **First-run setup wizard**: `/setup` — creates organization, admin account, and seeds features on fresh install
 - **Authentication**: Email/password login with session-based auth (passport-local + express-session)
 - **Multi-user teams**: OWNER can add/edit/remove team members
@@ -53,6 +54,7 @@ client/src/
     hud-email.tsx          - Email templates & logs (amber accent)
     hud-agents.tsx         - AI Agents automation (cyan accent)
     hud-media.tsx          - Media asset library (pink accent)
+    public-form.tsx        - Public form renderer page
     hud-users.tsx          - Team management
     hud-settings.tsx       - Settings page
     hud-embed.tsx          - Embed SDK snippets

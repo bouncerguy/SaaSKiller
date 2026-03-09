@@ -33,6 +33,7 @@ import HudAgents from "@/pages/hud-agents";
 import HudMedia from "@/pages/hud-media";
 import PublicBooking from "@/pages/public-booking";
 import PublicTenant from "@/pages/public-tenant";
+import PublicForm from "@/pages/public-form";
 import { Redirect } from "wouter";
 
 function HudLayout({ children }: { children: React.ReactNode }) {
@@ -97,6 +98,7 @@ function Router() {
       <Route path="/auth" component={AuthPage} />
       <Route path="/book/:tenantSlug/:eventSlug" component={PublicBooking} />
       <Route path="/book/:tenantSlug" component={PublicTenant} />
+      <Route path="/forms/:tenantSlug/:formSlug" component={PublicForm} />
       <Route path="/hud">{() => <ProtectedRoute component={HudDashboard} />}</Route>
       <Route path="/hud/event-types">{() => <ProtectedRoute component={HudEventTypes} />}</Route>
       <Route path="/hud/bookings">{() => <ProtectedRoute component={HudBookings} />}</Route>

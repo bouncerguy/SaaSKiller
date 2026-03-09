@@ -18,9 +18,6 @@ import {
   Mail,
   Bot,
   Image,
-  HardDrive,
-  Database,
-  RefreshCw,
   Building2,
 } from "lucide-react";
 import { useLocation, Link } from "wouter";
@@ -102,11 +99,8 @@ const toolItems: NavItem[] = [
 
 const systemItems: NavItem[] = [
   { title: "Users & Groups", url: "/hud/users", icon: Users, enabled: true, ownerOnly: true },
-  { title: "Assets", url: "/hud/assets", icon: HardDrive, enabled: false },
   { title: "Embed", url: "/hud/embed", icon: Code, enabled: true },
   { title: "Settings", url: "/hud/settings", icon: Settings, enabled: true },
-  { title: "Backups", url: "/hud/backups", icon: Database, enabled: false },
-  { title: "Updates", url: "/hud/updates", icon: RefreshCw, enabled: false },
   { title: "Help", url: "/hud/help", icon: HelpCircle, enabled: true },
 ];
 

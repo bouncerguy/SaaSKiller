@@ -1,7 +1,7 @@
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Calendar, Users, ShoppingBag, HeadphonesIcon, DollarSign, Timer, Code, Shield, Zap, ArrowRight, Check, Layers } from "lucide-react";
+import { Calendar, Users, ShoppingBag, HeadphonesIcon, DollarSign, Timer, Code, Shield, Zap, ArrowRight, Check, Layers, FileText, Mail, Bot, Image } from "lucide-react";
 import { ThemeToggle } from "@/components/theme-toggle";
 
 const modules = [
@@ -47,6 +47,34 @@ const modules = [
     color: "text-violet-600 dark:text-violet-400",
     bg: "bg-violet-600/[0.08] dark:bg-violet-600/[0.15]",
   },
+  {
+    icon: FileText,
+    title: "Forms & Surveys",
+    desc: "Drag-and-drop form builder with public links, field validation, and submission tracking.",
+    color: "text-cyan-600 dark:text-cyan-400",
+    bg: "bg-cyan-600/[0.08] dark:bg-cyan-600/[0.15]",
+  },
+  {
+    icon: Mail,
+    title: "Email Campaigns",
+    desc: "Email templates, campaign management, and audience targeting to reach your customers directly.",
+    color: "text-pink-600 dark:text-pink-400",
+    bg: "bg-pink-600/[0.08] dark:bg-pink-600/[0.15]",
+  },
+  {
+    icon: Bot,
+    title: "AI Agents",
+    desc: "Configurable AI assistants that automate workflows, answer questions, and handle repetitive tasks.",
+    color: "text-indigo-600 dark:text-indigo-400",
+    bg: "bg-indigo-600/[0.08] dark:bg-indigo-600/[0.15]",
+  },
+  {
+    icon: Image,
+    title: "Media Library",
+    desc: "Upload, organize, and manage images, documents, and files with tagging and search.",
+    color: "text-amber-600 dark:text-amber-400",
+    bg: "bg-amber-600/[0.08] dark:bg-amber-600/[0.15]",
+  },
 ];
 
 const platformFeatures = [
@@ -56,13 +84,6 @@ const platformFeatures = [
   "Self-hostable on Replit, Docker, or any VPS",
   "Embeddable booking widgets (inline, popup, floating, iframe)",
   "Dark mode and custom branding per organization",
-];
-
-const comingSoon = [
-  "Forms & Surveys",
-  "Email Campaigns",
-  "AI Agents",
-  "Media & Asset Management",
 ];
 
 export default function Landing() {
@@ -108,7 +129,7 @@ export default function Landing() {
               Your business, your terms.
             </h1>
             <p className="mt-5 text-base sm:text-lg text-muted-foreground max-w-xl mx-auto leading-relaxed">
-              SaaS Killer replaces the stack of SaaS tools eating your margins. Scheduling, CRM, invoicing, support tickets, time tracking, and products — all in one self-hosted platform you actually own.
+              SaaS Killer replaces the stack of SaaS tools eating your margins. Scheduling, CRM, invoicing, support, time tracking, forms, email, AI agents, media, and products — all in one self-hosted platform you actually own.
             </p>
             <div className="mt-8 flex items-center gap-3 justify-center flex-wrap">
               <Link href="/hud">
@@ -130,7 +151,7 @@ export default function Landing() {
           <div className="max-w-5xl mx-auto">
             <div className="text-center mb-14">
               <h2 className="text-2xl sm:text-3xl font-semibold" data-testid="text-modules-title">
-                Six modules. One platform. Zero SaaS fees.
+                Ten modules. One platform. Zero SaaS fees.
               </h2>
               <p className="mt-3 text-muted-foreground max-w-lg mx-auto">
                 Each module works on its own or together. Add what you need, skip what you don't.
@@ -181,9 +202,14 @@ export default function Landing() {
                       {[
                         { name: "Calendly", cost: "$12/mo", module: "Scheduling" },
                         { name: "HubSpot CRM", cost: "$20/mo", module: "CRM" },
+                        { name: "Shopify", cost: "$29/mo", module: "Products" },
                         { name: "FreshBooks", cost: "$17/mo", module: "Finance" },
                         { name: "Zendesk", cost: "$19/mo", module: "Support" },
                         { name: "Toggl", cost: "$9/mo", module: "Time Tracking" },
+                        { name: "Typeform", cost: "$25/mo", module: "Forms" },
+                        { name: "Mailchimp", cost: "$13/mo", module: "Email" },
+                        { name: "Zapier", cost: "$20/mo", module: "AI Agents" },
+                        { name: "Cloudinary", cost: "$89/mo", module: "Media" },
                       ].map((item) => (
                         <div key={item.name} className="flex items-center justify-between py-2 px-3 rounded-md bg-muted/50">
                           <div>
@@ -201,24 +227,6 @@ export default function Landing() {
                   </CardContent>
                 </Card>
               </div>
-            </div>
-          </div>
-        </section>
-
-        <section className="py-16 px-6 border-t">
-          <div className="max-w-3xl mx-auto">
-            <div className="text-center mb-8">
-              <h2 className="text-2xl font-semibold">Coming soon</h2>
-              <p className="mt-2 text-muted-foreground text-sm">
-                The roadmap keeps growing. These modules are next.
-              </p>
-            </div>
-            <div className="flex items-center justify-center gap-3 flex-wrap">
-              {comingSoon.map((item) => (
-                <div key={item} className="px-4 py-2 rounded-full border text-sm text-muted-foreground">
-                  {item}
-                </div>
-              ))}
             </div>
           </div>
         </section>
