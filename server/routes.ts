@@ -1034,9 +1034,14 @@ export async function registerRoutes(
       if (!customer || customer.tenantId !== req.user!.tenantId) {
         return res.status(404).json({ message: "Customer not found" });
       }
-      const customerNotes = await storage.getNotes("customer", customer.id);
-      const activity = await storage.getActivityLog({ entityType: "customer", entityId: customer.id, limit: 50 });
-      res.json({ customer, notes: customerNotes, activity });
+      const [customerNotes, activity, customerTickets, customerInvoices, customerTimeEntries] = await Promise.all([
+        storage.getNotes("customer", customer.id, req.user!.tenantId),
+        storage.getActivityLog({ entityType: "customer", entityId: customer.id, limit: 50 }),
+        storage.getTicketsByCustomer(req.user!.tenantId, customer.id),
+        storage.getInvoicesByCustomer(req.user!.tenantId, customer.id),
+        storage.getTimeEntriesByCustomer(req.user!.tenantId, customer.id),
+      ]);
+      res.json({ customer, notes: customerNotes, activity, tickets: customerTickets, invoices: customerInvoices, timeEntries: customerTimeEntries });
     } catch (e: any) {
       res.status(500).json({ message: e.message });
     }

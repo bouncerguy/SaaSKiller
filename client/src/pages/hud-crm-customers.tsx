@@ -2,10 +2,10 @@ import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import type { Customer, Note } from "@shared/schema";
+import type { Customer, Note, Ticket, Invoice, TimeEntry } from "@shared/schema";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
@@ -13,7 +13,8 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Users, Plus, Search, Mail, Phone, Building2, MapPin, Loader2, Trash2, StickyNote } from "lucide-react";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { Users, Plus, Search, Mail, Phone, Building2, Loader2, Trash2, StickyNote, HeadphonesIcon, DollarSign, Timer, FileText, Clock, AlertCircle, CheckCircle2, Circle, Pause } from "lucide-react";
 
 function statusBadge(status: string) {
   switch (status) {
@@ -40,12 +41,49 @@ function statusDot(status: string) {
   return <span className={`inline-block w-2.5 h-2.5 rounded-full ${colors[status] || "bg-gray-400"}`} />;
 }
 
+const ticketStatusIcons: Record<string, any> = {
+  OPEN: Circle,
+  IN_PROGRESS: Clock,
+  WAITING: Pause,
+  RESOLVED: CheckCircle2,
+  CLOSED: CheckCircle2,
+};
+
+const invoiceStatusColors: Record<string, string> = {
+  DRAFT: "bg-gray-100 text-gray-700 dark:bg-gray-900/30 dark:text-gray-400",
+  SENT: "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400",
+  PAID: "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400",
+  OVERDUE: "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400",
+  CANCELLED: "bg-gray-100 text-gray-500 dark:bg-gray-900/30 dark:text-gray-500",
+};
+
+function formatCents(cents: number) {
+  return `$${(cents / 100).toFixed(2)}`;
+}
+
+function formatDuration(mins: number | null) {
+  if (!mins) return "—";
+  const h = Math.floor(mins / 60);
+  const m = mins % 60;
+  return h > 0 ? `${h}h ${m}m` : `${m}m`;
+}
+
+interface CustomerDetail {
+  customer: Customer;
+  notes: Note[];
+  activity: any[];
+  tickets: Ticket[];
+  invoices: Invoice[];
+  timeEntries: TimeEntry[];
+}
+
 export default function HudCrmCustomers() {
   const { toast } = useToast();
   const [searchQuery, setSearchQuery] = useState("");
   const [createOpen, setCreateOpen] = useState(false);
   const [selectedCustomerId, setSelectedCustomerId] = useState<string | null>(null);
   const [newNote, setNewNote] = useState("");
+  const [detailTab, setDetailTab] = useState("info");
 
   const [formData, setFormData] = useState({
     name: "",
@@ -65,7 +103,7 @@ export default function HudCrmCustomers() {
       : ["/api/admin/customers"],
   });
 
-  const customerDetailQuery = useQuery<{ customer: Customer; notes: Note[]; activity: any[] }>({
+  const customerDetailQuery = useQuery<CustomerDetail>({
     queryKey: ["/api/admin/customers", selectedCustomerId],
     enabled: !!selectedCustomerId,
   });
@@ -135,6 +173,12 @@ export default function HudCrmCustomers() {
 
   const customers = customersQuery.data || [];
   const detail = customerDetailQuery.data;
+
+  const ticketCount = detail?.tickets?.length || 0;
+  const invoiceCount = detail?.invoices?.length || 0;
+  const timeCount = detail?.timeEntries?.length || 0;
+  const invoiceTotal = detail?.invoices?.reduce((s, i) => s + i.total, 0) || 0;
+  const totalMinutes = detail?.timeEntries?.reduce((s, e) => s + (e.durationMinutes || 0), 0) || 0;
 
   return (
     <div className="p-6 max-w-6xl mx-auto space-y-6">
@@ -245,6 +289,7 @@ export default function HudCrmCustomers() {
               onClick={() => {
                 setSelectedCustomerId(customer.id);
                 setEditData(customer);
+                setDetailTab("info");
               }}
             >
               <CardContent className="py-4 flex items-center justify-between flex-wrap gap-3">
@@ -287,11 +332,11 @@ export default function HudCrmCustomers() {
       )}
 
       <Sheet open={!!selectedCustomerId} onOpenChange={(open) => { if (!open) setSelectedCustomerId(null); }}>
-        <SheetContent className="sm:max-w-lg overflow-y-auto" data-testid="sheet-customer-detail">
+        <SheetContent className="sm:max-w-xl overflow-y-auto" data-testid="sheet-customer-detail">
           <SheetHeader>
             <SheetTitle className="flex items-center gap-2">
               <Users className="h-5 w-5 text-emerald-600" />
-              Customer Details
+              {detail?.customer?.name || "Customer Details"}
             </SheetTitle>
           </SheetHeader>
           {customerDetailQuery.isLoading ? (
@@ -301,140 +346,253 @@ export default function HudCrmCustomers() {
               <Skeleton className="h-8 w-full" />
             </div>
           ) : detail ? (
-            <div className="space-y-6 mt-6">
-              <div className="space-y-3">
-                <div className="space-y-1.5">
-                  <Label>Name</Label>
-                  <Input
-                    data-testid="input-edit-name"
-                    value={editData.name || ""}
-                    onChange={(e) => setEditData({ ...editData, name: e.target.value })}
-                  />
+            <div className="mt-4">
+              {(ticketCount > 0 || invoiceCount > 0 || timeCount > 0) && (
+                <div className="grid grid-cols-3 gap-2 mb-4">
+                  <div className="p-2 rounded-md bg-rose-50 dark:bg-rose-950/20 text-center">
+                    <div className="text-lg font-bold text-rose-600 dark:text-rose-400" data-testid="text-customer-tickets">{ticketCount}</div>
+                    <div className="text-[10px] text-muted-foreground">Tickets</div>
+                  </div>
+                  <div className="p-2 rounded-md bg-emerald-50 dark:bg-emerald-950/20 text-center">
+                    <div className="text-lg font-bold text-emerald-600 dark:text-emerald-400" data-testid="text-customer-invoiced">{formatCents(invoiceTotal)}</div>
+                    <div className="text-[10px] text-muted-foreground">Invoiced</div>
+                  </div>
+                  <div className="p-2 rounded-md bg-violet-50 dark:bg-violet-950/20 text-center">
+                    <div className="text-lg font-bold text-violet-600 dark:text-violet-400" data-testid="text-customer-time">{formatDuration(totalMinutes)}</div>
+                    <div className="text-[10px] text-muted-foreground">Time</div>
+                  </div>
                 </div>
-                <div className="space-y-1.5">
-                  <Label>Email</Label>
-                  <Input
-                    data-testid="input-edit-email"
-                    value={editData.email || ""}
-                    onChange={(e) => setEditData({ ...editData, email: e.target.value })}
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <Label>Business Name</Label>
-                  <Input
-                    data-testid="input-edit-business"
-                    value={editData.businessName || ""}
-                    onChange={(e) => setEditData({ ...editData, businessName: e.target.value })}
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <Label>Phone</Label>
-                  <Input
-                    data-testid="input-edit-phone"
-                    value={editData.phone || ""}
-                    onChange={(e) => setEditData({ ...editData, phone: e.target.value })}
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <Label>Address</Label>
-                  <Input
-                    data-testid="input-edit-address"
-                    value={editData.address || ""}
-                    onChange={(e) => setEditData({ ...editData, address: e.target.value })}
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <Label>Payment Status</Label>
-                  <Select
-                    value={editData.paymentStatus || "CURRENT"}
-                    onValueChange={(v) => setEditData({ ...editData, paymentStatus: v as any })}
-                  >
-                    <SelectTrigger data-testid="select-edit-payment-status">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="CURRENT">Current</SelectItem>
-                      <SelectItem value="PAST_DUE_30">Past Due (30 days)</SelectItem>
-                      <SelectItem value="PAST_DUE_60">Past Due (60 days)</SelectItem>
-                      <SelectItem value="COLLECTIONS">Collections</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <Button
-                  className="w-full bg-emerald-600 hover:bg-emerald-700 text-white"
-                  data-testid="button-save-customer"
-                  disabled={updateMutation.isPending}
-                  onClick={() => {
-                    if (selectedCustomerId) {
-                      updateMutation.mutate({
-                        id: selectedCustomerId,
-                        data: {
-                          name: editData.name,
-                          email: editData.email,
-                          businessName: editData.businessName || null,
-                          phone: editData.phone || null,
-                          address: editData.address || null,
-                          paymentStatus: editData.paymentStatus,
-                        },
-                      });
-                    }
-                  }}
-                >
-                  {updateMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
-                  Save Changes
-                </Button>
-              </div>
+              )}
 
-              <div className="border-t pt-4">
-                <h3 className="text-sm font-medium flex items-center gap-2 mb-3">
-                  <StickyNote className="h-4 w-4" />
-                  Notes ({detail.notes.length})
-                </h3>
-                <div className="space-y-2">
-                  <div className="flex gap-2">
-                    <Textarea
-                      placeholder="Add a note..."
-                      data-testid="input-customer-note"
-                      value={newNote}
-                      onChange={(e) => setNewNote(e.target.value)}
-                      className="min-h-[60px]"
-                    />
+              <Tabs value={detailTab} onValueChange={setDetailTab}>
+                <TabsList className="w-full grid grid-cols-5">
+                  <TabsTrigger value="info" data-testid="tab-customer-info">Info</TabsTrigger>
+                  <TabsTrigger value="notes" data-testid="tab-customer-notes">
+                    Notes
+                    {detail.notes.length > 0 && <span className="ml-1 text-[10px]">({detail.notes.length})</span>}
+                  </TabsTrigger>
+                  <TabsTrigger value="tickets" data-testid="tab-customer-tickets">
+                    <HeadphonesIcon className="h-3 w-3 mr-1" />
+                    {ticketCount > 0 && <span className="text-[10px]">{ticketCount}</span>}
+                  </TabsTrigger>
+                  <TabsTrigger value="invoices" data-testid="tab-customer-invoices">
+                    <DollarSign className="h-3 w-3 mr-1" />
+                    {invoiceCount > 0 && <span className="text-[10px]">{invoiceCount}</span>}
+                  </TabsTrigger>
+                  <TabsTrigger value="time" data-testid="tab-customer-time">
+                    <Timer className="h-3 w-3 mr-1" />
+                    {timeCount > 0 && <span className="text-[10px]">{timeCount}</span>}
+                  </TabsTrigger>
+                </TabsList>
+
+                <TabsContent value="info" className="space-y-3 mt-4">
+                  <div className="space-y-1.5">
+                    <Label>Name</Label>
+                    <Input data-testid="input-edit-name" value={editData.name || ""} onChange={(e) => setEditData({ ...editData, name: e.target.value })} />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label>Email</Label>
+                    <Input data-testid="input-edit-email" value={editData.email || ""} onChange={(e) => setEditData({ ...editData, email: e.target.value })} />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label>Business Name</Label>
+                    <Input data-testid="input-edit-business" value={editData.businessName || ""} onChange={(e) => setEditData({ ...editData, businessName: e.target.value })} />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label>Phone</Label>
+                    <Input data-testid="input-edit-phone" value={editData.phone || ""} onChange={(e) => setEditData({ ...editData, phone: e.target.value })} />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label>Address</Label>
+                    <Input data-testid="input-edit-address" value={editData.address || ""} onChange={(e) => setEditData({ ...editData, address: e.target.value })} />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label>Payment Status</Label>
+                    <Select value={editData.paymentStatus || "CURRENT"} onValueChange={(v) => setEditData({ ...editData, paymentStatus: v as any })}>
+                      <SelectTrigger data-testid="select-edit-payment-status">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="CURRENT">Current</SelectItem>
+                        <SelectItem value="PAST_DUE_30">Past Due (30 days)</SelectItem>
+                        <SelectItem value="PAST_DUE_60">Past Due (60 days)</SelectItem>
+                        <SelectItem value="COLLECTIONS">Collections</SelectItem>
+                      </SelectContent>
+                    </Select>
                   </div>
                   <Button
-                    size="sm"
-                    data-testid="button-add-note"
-                    disabled={!newNote.trim() || addNoteMutation.isPending}
+                    className="w-full bg-emerald-600 hover:bg-emerald-700 text-white"
+                    data-testid="button-save-customer"
+                    disabled={updateMutation.isPending}
                     onClick={() => {
-                      if (selectedCustomerId && newNote.trim()) {
-                        addNoteMutation.mutate({ entityId: selectedCustomerId, content: newNote.trim() });
+                      if (selectedCustomerId) {
+                        updateMutation.mutate({
+                          id: selectedCustomerId,
+                          data: {
+                            name: editData.name,
+                            email: editData.email,
+                            businessName: editData.businessName || null,
+                            phone: editData.phone || null,
+                            address: editData.address || null,
+                            paymentStatus: editData.paymentStatus,
+                          },
+                        });
                       }
                     }}
                   >
-                    {addNoteMutation.isPending ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : null}
-                    Add Note
+                    {updateMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+                    Save Changes
                   </Button>
-                  {detail.notes.map((note: Note) => (
-                    <div key={note.id} className="p-3 rounded-md bg-muted/50 text-sm" data-testid={`note-${note.id}`}>
-                      <p className="whitespace-pre-wrap">{note.content}</p>
-                      <div className="flex items-center justify-between mt-2 text-xs text-muted-foreground">
-                        <span>{new Date(note.createdAt).toLocaleString()}</span>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="h-6 px-2 text-xs text-destructive hover:text-destructive"
-                          data-testid={`button-delete-note-${note.id}`}
-                          onClick={() => deleteNoteMutation.mutate(note.id)}
-                        >
-                          <Trash2 className="h-3 w-3" />
-                        </Button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
+                </TabsContent>
 
-              {detail.activity.length > 0 && (
-                <div className="border-t pt-4">
+                <TabsContent value="notes" className="mt-4">
+                  <div className="space-y-3">
+                    <div className="flex gap-2">
+                      <Textarea
+                        placeholder="Add a note..."
+                        data-testid="input-customer-note"
+                        value={newNote}
+                        onChange={(e) => setNewNote(e.target.value)}
+                        className="min-h-[60px]"
+                      />
+                    </div>
+                    <Button
+                      size="sm"
+                      data-testid="button-add-note"
+                      disabled={!newNote.trim() || addNoteMutation.isPending}
+                      onClick={() => {
+                        if (selectedCustomerId && newNote.trim()) {
+                          addNoteMutation.mutate({ entityId: selectedCustomerId, content: newNote.trim() });
+                        }
+                      }}
+                    >
+                      {addNoteMutation.isPending ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : null}
+                      Add Note
+                    </Button>
+                    {detail.notes.length === 0 ? (
+                      <p className="text-sm text-muted-foreground text-center py-4">No notes yet</p>
+                    ) : (
+                      detail.notes.map((note: Note) => (
+                        <div key={note.id} className="p-3 rounded-md bg-muted/50 text-sm" data-testid={`note-${note.id}`}>
+                          <p className="whitespace-pre-wrap">{note.content}</p>
+                          <div className="flex items-center justify-between mt-2 text-xs text-muted-foreground">
+                            <span>{new Date(note.createdAt).toLocaleString()}</span>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-6 px-2 text-xs text-destructive hover:text-destructive"
+                              data-testid={`button-delete-note-${note.id}`}
+                              onClick={() => deleteNoteMutation.mutate(note.id)}
+                            >
+                              <Trash2 className="h-3 w-3" />
+                            </Button>
+                          </div>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </TabsContent>
+
+                <TabsContent value="tickets" className="mt-4">
+                  {detail.tickets.length === 0 ? (
+                    <div className="text-center py-6">
+                      <HeadphonesIcon className="h-8 w-8 mx-auto text-muted-foreground/40 mb-2" />
+                      <p className="text-sm text-muted-foreground">No tickets for this customer</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      {detail.tickets.map((ticket) => {
+                        const StatusIcon = ticketStatusIcons[ticket.status] || Circle;
+                        return (
+                          <div key={ticket.id} className="p-3 rounded-md border text-sm" data-testid={`customer-ticket-${ticket.id}`}>
+                            <div className="flex items-start justify-between gap-2">
+                              <div className="flex items-start gap-2 min-w-0">
+                                <StatusIcon className="h-4 w-4 mt-0.5 shrink-0 text-muted-foreground" />
+                                <div className="min-w-0">
+                                  <div className="font-medium truncate">{ticket.subject}</div>
+                                  <div className="text-xs text-muted-foreground mt-0.5">
+                                    {new Date(ticket.createdAt).toLocaleDateString()}
+                                  </div>
+                                </div>
+                              </div>
+                              <div className="flex items-center gap-1.5 shrink-0">
+                                {ticket.priority === "URGENT" && <AlertCircle className="h-3 w-3 text-red-500" />}
+                                <Badge variant="secondary" className="text-[10px]">{ticket.status.replace("_", " ")}</Badge>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </TabsContent>
+
+                <TabsContent value="invoices" className="mt-4">
+                  {detail.invoices.length === 0 ? (
+                    <div className="text-center py-6">
+                      <FileText className="h-8 w-8 mx-auto text-muted-foreground/40 mb-2" />
+                      <p className="text-sm text-muted-foreground">No invoices for this customer</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      {detail.invoices.map((invoice) => (
+                        <div key={invoice.id} className="p-3 rounded-md border text-sm" data-testid={`customer-invoice-${invoice.id}`}>
+                          <div className="flex items-center justify-between gap-2">
+                            <div className="min-w-0">
+                              <div className="font-mono font-medium">{invoice.invoiceNumber}</div>
+                              <div className="text-xs text-muted-foreground mt-0.5">
+                                {invoice.dueDate ? `Due ${new Date(invoice.dueDate).toLocaleDateString()}` : new Date(invoice.createdAt).toLocaleDateString()}
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-2 shrink-0">
+                              <span className="font-semibold">{formatCents(invoice.total)}</span>
+                              <Badge className={`${invoiceStatusColors[invoice.status] || ""} border-0 text-[10px]`}>{invoice.status}</Badge>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </TabsContent>
+
+                <TabsContent value="time" className="mt-4">
+                  {detail.timeEntries.length === 0 ? (
+                    <div className="text-center py-6">
+                      <Timer className="h-8 w-8 mx-auto text-muted-foreground/40 mb-2" />
+                      <p className="text-sm text-muted-foreground">No time entries for this customer</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      {detail.timeEntries.map((entry) => (
+                        <div key={entry.id} className="p-3 rounded-md border text-sm" data-testid={`customer-time-${entry.id}`}>
+                          <div className="flex items-center justify-between gap-2">
+                            <div className="min-w-0">
+                              <div className="font-medium truncate">{entry.description || "No description"}</div>
+                              <div className="text-xs text-muted-foreground mt-0.5">
+                                {new Date(entry.startAt).toLocaleDateString()} {new Date(entry.startAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                                {entry.endAt && ` — ${new Date(entry.endAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`}
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-2 shrink-0">
+                              <span className="font-semibold">{formatDuration(entry.durationMinutes)}</span>
+                              {entry.billable ? (
+                                <Badge variant="outline" className="border-emerald-400 text-emerald-600 dark:text-emerald-400 text-[10px]">
+                                  <DollarSign className="h-3 w-3" />
+                                </Badge>
+                              ) : (
+                                <Badge variant="secondary" className="text-[10px]">Free</Badge>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </TabsContent>
+              </Tabs>
+
+              {detail.activity.length > 0 && detailTab === "info" && (
+                <div className="border-t pt-4 mt-4">
                   <h3 className="text-sm font-medium mb-3">Activity</h3>
                   <div className="space-y-2">
                     {detail.activity.map((a: any) => (

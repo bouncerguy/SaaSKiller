@@ -4,7 +4,7 @@
 SaaS Killer is a modular business platform that starts with Calendly-like scheduling and expands into a full business operating system. Current features:
 - **Public booking pages**: `/book/:tenantSlug/:eventSlug` — date/time picker, timezone selector, booking form
 - **HUD dashboard**: `/hud` — unified control center with module stats (bookings, customers, products, tickets, revenue, time logged)
-- **CRM module**: Customer management with payment status tracking, lead management with kanban pipeline boards, notes system, lead-to-customer conversion
+- **CRM module**: Customer management with payment status tracking, lead management with kanban pipeline boards, notes system, lead-to-customer conversion, cross-module linking (tickets, invoices, time entries visible in customer detail)
 - **Products module**: Product & service catalog with pricing, billing cycles (one-time/monthly/quarterly/yearly), categories, search
 - **Support module**: Ticket management with priority levels (Low/Medium/High/Urgent), status workflow (Open→In Progress→Waiting→Resolved→Closed), customer linking, team assignment
 - **Finance module**: Invoice management with auto-numbering (INV-0001), status tracking (Draft/Sent/Paid/Overdue/Cancelled), customer linking, revenue/outstanding totals

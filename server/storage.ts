@@ -121,12 +121,14 @@ export interface IStorage {
 
   createTicket(data: InsertTicket): Promise<Ticket>;
   getTicketsByTenant(tenantId: string, status?: string): Promise<Ticket[]>;
+  getTicketsByCustomer(tenantId: string, customerId: string): Promise<Ticket[]>;
   getTicket(id: string): Promise<Ticket | undefined>;
   updateTicket(id: string, data: Partial<InsertTicket>): Promise<Ticket>;
   deleteTicket(id: string): Promise<void>;
 
   createInvoice(data: InsertInvoice): Promise<Invoice>;
   getInvoicesByTenant(tenantId: string, status?: string): Promise<Invoice[]>;
+  getInvoicesByCustomer(tenantId: string, customerId: string): Promise<Invoice[]>;
   getInvoice(id: string): Promise<Invoice | undefined>;
   updateInvoice(id: string, data: Partial<InsertInvoice>): Promise<Invoice>;
   deleteInvoice(id: string): Promise<void>;
@@ -134,6 +136,7 @@ export interface IStorage {
 
   createTimeEntry(data: InsertTimeEntry): Promise<TimeEntry>;
   getTimeEntriesByTenant(tenantId: string): Promise<TimeEntry[]>;
+  getTimeEntriesByCustomer(tenantId: string, customerId: string): Promise<TimeEntry[]>;
   getTimeEntry(id: string): Promise<TimeEntry | undefined>;
   updateTimeEntry(id: string, data: Partial<InsertTimeEntry>): Promise<TimeEntry>;
   deleteTimeEntry(id: string): Promise<void>;
@@ -634,6 +637,12 @@ export class DatabaseStorage implements IStorage {
     return db.select().from(tickets).where(and(...conditions)).orderBy(desc(tickets.createdAt));
   }
 
+  async getTicketsByCustomer(tenantId: string, customerId: string): Promise<Ticket[]> {
+    return db.select().from(tickets).where(
+      and(eq(tickets.tenantId, tenantId), eq(tickets.customerId, customerId))
+    ).orderBy(desc(tickets.createdAt));
+  }
+
   async getTicket(id: string): Promise<Ticket | undefined> {
     const [t] = await db.select().from(tickets).where(eq(tickets.id, id));
     return t;
@@ -663,6 +672,12 @@ export class DatabaseStorage implements IStorage {
       conditions.push(eq(invoices.status, status as any));
     }
     return db.select().from(invoices).where(and(...conditions)).orderBy(desc(invoices.createdAt));
+  }
+
+  async getInvoicesByCustomer(tenantId: string, customerId: string): Promise<Invoice[]> {
+    return db.select().from(invoices).where(
+      and(eq(invoices.tenantId, tenantId), eq(invoices.customerId, customerId))
+    ).orderBy(desc(invoices.createdAt));
   }
 
   async getInvoice(id: string): Promise<Invoice | undefined> {
@@ -696,6 +711,12 @@ export class DatabaseStorage implements IStorage {
 
   async getTimeEntriesByTenant(tenantId: string): Promise<TimeEntry[]> {
     return db.select().from(timeEntries).where(eq(timeEntries.tenantId, tenantId)).orderBy(desc(timeEntries.startAt));
+  }
+
+  async getTimeEntriesByCustomer(tenantId: string, customerId: string): Promise<TimeEntry[]> {
+    return db.select().from(timeEntries).where(
+      and(eq(timeEntries.tenantId, tenantId), eq(timeEntries.customerId, customerId))
+    ).orderBy(desc(timeEntries.startAt));
   }
 
   async getTimeEntry(id: string): Promise<TimeEntry | undefined> {
