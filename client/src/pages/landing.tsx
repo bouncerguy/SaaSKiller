@@ -152,6 +152,11 @@ export default function Landing() {
           </Link>
           <div className="flex items-center gap-1 flex-wrap">
             <ThemeToggle />
+            <Link href="/get-started">
+              <Button variant="ghost" size="sm" data-testid="button-nav-get-started">
+                Get Started
+              </Button>
+            </Link>
             <Link href="/auth">
               <Button variant="ghost" size="sm" data-testid="button-login">
                 Log In
@@ -189,7 +194,7 @@ export default function Landing() {
                   <ArrowRight className="h-4 w-4 ml-1.5" />
                 </Button>
               </Link>
-              <Link href="/auth">
+              <Link href="/get-started">
                 <Button variant="outline" size="lg" data-testid="button-get-started">
                   Get Started
                 </Button>

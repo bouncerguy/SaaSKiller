@@ -1,132 +1,116 @@
-# SaaS Killer — Open Source Self-Hosted Business Operating System
+# SaaS Killer
+
+### Open Source Self-Hosted Business Operating System
+
+[![Deploy on Replit](https://replit.com/badge?caption=Deploy%20on%20Replit)](https://replit.com/refer/kenpcox)
+[![Deploy on DigitalOcean](https://www.deploytodo.com/do-btn-blue.svg)](https://www.digitalocean.com/?refcode=de537efcf1f1&utm_campaign=Referral_Invite&utm_medium=Referral_Program&utm_source=badge)
 
 A modular, self-hosted business platform built for small teams and solo operators. Start with scheduling, grow into CRM, support tickets, finance, and more — all from one unified dashboard. Own your data. Run it anywhere. Kill the SaaS.
+
+---
 
 ## Why SaaS Killer?
 
 Most business tools are fragmented SaaS products that hold your data hostage, charge monthly fees per module, and disappear if the company shuts down. SaaS Killer takes a different approach:
 
-- **Self-hosted**: Run it on your own server or on Replit. Your data stays yours.
-- **Modular**: Start with calendar scheduling, enable more modules as you need them.
-- **No vendor lock-in**: Uses standard protocols (ICS calendar feeds) and open formats.
-- **Multi-tenant**: One instance can serve multiple organizations.
-- **Permission system**: Groups, per-user feature overrides, and role-based access control.
+- **Self-hosted** — Run it on your own server or on Replit. Your data stays yours.
+- **Modular** — Start with calendar scheduling, enable more modules as you need them.
+- **No vendor lock-in** — Uses standard protocols (ICS calendar feeds) and open formats.
+- **Multi-tenant** — One instance can serve multiple organizations.
+- **Permission system** — Groups, per-user feature overrides, and role-based access control.
 
-## Modules
+---
 
-| Module | Status | Description |
-|--------|--------|-------------|
-| Calendar | Built | Public booking pages, availability rules, ICS integration, embed SDK |
-| CRM | Coming Soon | Contact and deal management |
-| Products | Coming Soon | Product catalog and inventory |
-| Support | Coming Soon | Ticket and helpdesk system |
-| Finance | Coming Soon | Invoicing and expense tracking |
-| Email | Coming Soon | Transactional and marketing email |
-| Forms | Coming Soon | Custom form builder |
-| AI Agents | Coming Soon | Workflow automation with AI |
-| Media | Coming Soon | Asset and media library |
-| Time Tracking | Coming Soon | Time logs and reporting |
-| Backups | Coming Soon | Automated backup management |
-| Updates | Coming Soon | Platform update manager |
+## Modules (15)
 
-## Deploy on Replit
+| Module | Description |
+|--------|-------------|
+| **Calendar & Booking** | Public booking pages, availability rules, ICS integration, timezone-aware scheduling, embed SDK |
+| **CRM — Customers** | Customer management with payment status tracking, cross-module linking (tickets, invoices, time entries) |
+| **CRM — Leads** | Lead pipeline with kanban boards, notes, lead-to-customer conversion |
+| **Products** | Product & service catalog with pricing, billing cycles, categories, search |
+| **Support** | Ticket management with priority levels, status workflow, customer & team assignment |
+| **Finance** | Invoice management with auto-numbering (INV-0001), status tracking, revenue/outstanding totals |
+| **Time Tracking** | Time entry logging with duration calculation, billable/non-billable, hourly rates, customer linking |
+| **Forms** | Form builder with multiple field types, public submissions, response viewer, status workflow |
+| **Email** | Email template management with HTML/text body, category tagging, variables, sent log with status tracking |
+| **AI Agents** | Workflow automation with configurable triggers (manual, schedule, form, customer, ticket), run history |
+| **Media** | Digital asset library with grid view, image previews, folder organization, tag-based search |
+| **Pages** | Block-based page builder with hero, text, features, CTA, testimonials blocks. Public pages served at custom URLs |
+| **Funnels** | Multi-step sales funnel builder with opt-in, sales, checkout, thank-you steps and block-based content |
+| **Phone System** | Virtual PBX with Twilio integration, call forwarding, voicemail, call logs, SMS messaging |
+| **Documents & Signing** | Document/contract creation with signer management, signing order, signature capture, activity logging |
 
-The fastest way to get started:
+---
 
-1. Fork or import this repository into Replit
-2. Replit auto-provisions a PostgreSQL database — no configuration needed
-3. Click **Run** — the app automatically creates database tables on startup
-4. The setup wizard guides you through creating your organization and admin account
-5. You're live at your Replit URL
+## Quick Start
 
-## Self-Hosted Deployment
+### Path A: Deploy on Replit (Zero Config)
 
-### Prerequisites
+The fastest way to get running — no server management, no SSH, no configuration files.
 
-- Node.js 20+
-- PostgreSQL 15+
+1. **Create a Replit account** — [Sign up here](https://replit.com/refer/kenpcox)
+2. **Fork/import** this GitHub repository on Replit
+3. **Click Run** — the app starts automatically with PostgreSQL provisioned
+4. **Visit `/setup`** — the setup wizard creates your organization and admin account
+5. **Start enabling modules** in Settings — turn on CRM, Support, Finance, and more
 
-### Setup
+### Path B: DigitalOcean + Claude (Self-Hosted)
 
-```bash
-git clone https://github.com/your-username/saas-killer.git
-cd saas-killer
+Use Claude AI to walk you through a full self-hosted deployment on your own server.
 
-npm install
+1. **Create a DigitalOcean account** — [Sign up here](https://www.digitalocean.com/?refcode=de537efcf1f1&utm_campaign=Referral_Invite&utm_medium=Referral_Program&utm_source=badge)
+2. **Create a droplet** — Recommended: 2 vCPUs, 4 GB RAM, Ubuntu 24.04
+3. **Open Claude** ([claude.ai](https://claude.ai) or Claude Code CLI) and paste the prompt below
+4. **Claude walks you through**: SSH access, installing Node.js + PostgreSQL, cloning the repo, setting environment variables, running `npm install`, `npm run db:push`, and `npm start`
+5. **Claude helps set up** Nginx reverse proxy + SSL with Let's Encrypt
+6. **Visit your domain's `/setup` page** to create your org and admin account
 
-cp .env.example .env
-# Edit .env — set DATABASE_URL and SESSION_SECRET
-
-npm run dev
-```
-
-On first run, the app automatically pushes the database schema and presents a setup wizard at the root URL. No manual migration step required.
-
-### Production Build
-
-```bash
-npm run build
-npm start
-```
-
-The app will be available at `http://localhost:5000`.
-
-## First-Run Setup
-
-When SaaS Killer starts with an empty database, it redirects to a setup wizard:
-
-1. **Step 1 — Organization**: Enter your organization name, URL slug (auto-generated, editable), and timezone
-2. **Step 2 — Admin Account**: Create the first admin user with name, email, and password
-
-The wizard creates your tenant, seeds default feature flags (only Calendar enabled), and logs you into the `/hud` dashboard.
-
-## Architecture
+#### Copy This Prompt for Claude
 
 ```
-client/src/               React frontend (Vite)
-  pages/                  Page components
-    landing.tsx           Public landing page
-    auth-page.tsx         Login page
-    setup-page.tsx        First-run setup wizard
-    public-booking.tsx    Public booking flow
-    public-tenant.tsx     Tenant event listing
-    hud-dashboard.tsx     HUD dashboard with stats
-    hud-event-types.tsx   Event type CRUD
-    hud-bookings.tsx      Bookings list (upcoming/past/canceled)
-    hud-availability.tsx  Weekly availability rules
-    hud-embed.tsx         Embed snippet generator
-    hud-settings.tsx      Tenant settings
-    hud-team.tsx          Team member management
-    hud-users.tsx         User & group management
-    hud-help.tsx          Help & FAQ
-  hooks/
-    use-auth.tsx          Auth context with setup detection
-  components/
-    app-sidebar.tsx       Module-aware sidebar navigation
-    theme-provider.tsx    Dark/light theme provider
-    theme-toggle.tsx      Theme toggle button
-server/
-  index.ts               Express server entry (auto schema push)
-  auth.ts                Passport + session config, requireAuth middleware
-  routes.ts              All API routes (auth, setup, admin, public, groups)
-  storage.ts             Database storage interface + implementations
-  db.ts                  Database connection
-  seed.ts                Dev-only seed data
-  ics-calendar.ts        ICS feed fetch, parse, cache
-shared/
-  schema.ts              Drizzle schema + Zod validation
+I just created a DigitalOcean droplet running Ubuntu 24.04. Help me deploy
+SaaS Killer from GitHub (https://github.com/your-username/saas-killer).
+
+I need you to walk me through:
+1. SSH into the droplet
+2. Install Node.js 20+ and PostgreSQL 15+
+3. Clone the repo, run npm install
+4. Set up DATABASE_URL and SESSION_SECRET environment variables
+5. Run npm run db:push to create the database schema
+6. Run npm run build && npm start for production
+7. Set up Nginx as a reverse proxy on port 80/443
+8. Configure SSL with Let's Encrypt using certbot
+9. Set up a systemd service so the app runs on reboot
+
+The app runs on port 5000 by default.
 ```
 
-### Tech Stack
+### After Setup (Both Paths)
+
+Once your instance is running:
+
+- Enable modules in **Settings** — turn on the tools you need
+- Create your first **Event Type** for scheduling
+- Share your **public booking link** with clients
+- Connect **Twilio** for the Phone module (add credentials in Settings)
+- Video conferencing works out of the box with **Jitsi** (or configure Zoom links per event)
+- Import contacts from **HubSpot** if you have an existing CRM
+
+---
+
+## Tech Stack
 
 | Layer | Technology |
 |-------|------------|
 | Frontend | React 18, Wouter, TanStack Query |
-| UI | Shadcn UI, Tailwind CSS, Lucide |
+| UI | Shadcn UI, Tailwind CSS, Lucide Icons |
 | Backend | Express.js, TypeScript |
 | Database | PostgreSQL, Drizzle ORM |
-| Auth | Passport.js (local), express-session, bcryptjs |
+| Auth | Passport.js (local strategy), express-session, bcryptjs |
 | Build | Vite |
+
+---
 
 ## Environment Variables
 
@@ -134,26 +118,14 @@ shared/
 |----------|----------|-------------|
 | `DATABASE_URL` | Yes | PostgreSQL connection string |
 | `SESSION_SECRET` | Yes | Secret for signing session cookies |
-| `PGHOST` | No | PostgreSQL host (alternative to DATABASE_URL) |
-| `PGPORT` | No | PostgreSQL port (default: 5432) |
-| `PGUSER` | No | PostgreSQL user |
-| `PGPASSWORD` | No | PostgreSQL password |
-| `PGDATABASE` | No | PostgreSQL database name |
 | `NODE_ENV` | No | Set to `production` for production builds |
+| `TWILIO_ACCOUNT_SID` | No | Twilio Account SID (for Phone module) |
+| `TWILIO_AUTH_TOKEN` | No | Twilio Auth Token (for Phone module) |
+| `HUBSPOT_ACCESS_TOKEN` | No | HubSpot Private App token (for CRM import) |
+
+---
 
 ## Development
-
-### Dev Seed Data
-
-In development mode (`NODE_ENV=development`), the app seeds sample data on startup:
-
-- **Tenant**: Acme Consulting
-- **Default login**: `alex@acmeconsulting.com` / `password123`
-- **Sample data**: 3 event types, weekday availability (9-12, 1-5), 4 sample bookings
-
-In production, seed data is skipped — use the setup wizard instead.
-
-### Running Locally
 
 ```bash
 npm run dev          # Start dev server (frontend + backend on port 5000)
@@ -163,102 +135,42 @@ npm run db:push      # Push schema changes to database
 npm run check        # TypeScript type checking
 ```
 
-## Calendar Features
+### Dev Seed Data
 
-- **Public booking pages** — Shareable links at `/book/:tenantSlug/:eventSlug`
-- **Timezone-aware scheduling** — Automatic detection with manual override
-- **Availability rules** — Weekly schedule with multiple time blocks per day
-- **ICS calendar integration** — Paste a feed URL to block busy times (Google Calendar, Outlook, Apple Calendar)
-- **Embed SDK** — Inline, popup, floating widget, and iframe options
-- **Dark mode** — Full dark mode support throughout the interface
-- **Booking management** — View upcoming/past bookings, cancel with reasons
+In development mode, the app seeds sample data on startup:
 
-### Calendar Integration
+- **Tenant**: Acme Consulting
+- **Default login**: `alex@acmeconsulting.com` / `password123`
+- **Sample data**: Event types, weekday availability, sample bookings
 
-SaaS Killer uses ICS feeds to check external calendar availability — no OAuth or API keys needed.
+In production, seed data is skipped — use the setup wizard instead.
 
-1. Go to **HUD > Settings > Calendar Integration**
-2. Paste your calendar's ICS feed URL
-3. Click **Test** to verify the connection
-4. Save — busy times are now automatically excluded from available slots
+---
 
-**Where to find your ICS URL:**
-- **Google Calendar**: Settings > Select calendar > Integrate calendar > "Secret address in iCal format"
-- **Outlook**: Calendar settings > Shared calendars > Publish a calendar > ICS link
-- **Apple Calendar**: Right-click calendar > Share Calendar > copy the URL
+## Project Structure
 
-### Embedding
+```
+client/src/
+  pages/              Page components (landing, auth, HUD modules, public pages)
+  hooks/              Auth context, theme, utilities
+  components/         App sidebar, theme provider, Shadcn UI components
+server/
+  index.ts            Express server entry (auto schema push)
+  routes.ts           All API routes (auth, setup, admin, public)
+  storage.ts          Database storage interface + Drizzle implementation
+  auth.ts             Passport config + requireAuth middleware
+  db.ts               Database connection
+shared/
+  schema.ts           Drizzle schema + Zod validation + TypeScript types
+```
 
-Generate embed snippets from the HUD **Embed** page:
-- **Inline** — Renders directly in your page
-- **Popup** — Opens in a modal overlay
-- **Floating Widget** — A persistent button that opens the booking flow
-- **iframe** — Simple iframe embed
-
-## API Reference
-
-### Setup Endpoints
-
-| Method | Path | Auth | Description |
-|--------|------|------|-------------|
-| GET | `/api/setup/status` | No | Returns `{ needsSetup: boolean }` |
-| POST | `/api/setup` | No | Create org + admin (only when needsSetup is true) |
-
-### Auth Endpoints
-
-| Method | Path | Auth | Description |
-|--------|------|------|-------------|
-| POST | `/api/auth/register` | OWNER | Register new user (first user auto-becomes OWNER) |
-| POST | `/api/auth/login` | No | Login with email + password |
-| POST | `/api/auth/logout` | Yes | Destroy session |
-| GET | `/api/auth/user` | Yes | Get current authenticated user |
-
-### Admin Endpoints
-
-| Method | Path | Auth | Description |
-|--------|------|------|-------------|
-| GET | `/api/admin/tenant` | Yes | Get tenant settings |
-| PATCH | `/api/admin/tenant` | Yes | Update tenant settings |
-| GET | `/api/admin/event-types` | Yes | List event types |
-| POST | `/api/admin/event-types` | Yes | Create event type |
-| PATCH | `/api/admin/event-types/:id` | Yes | Update event type |
-| GET | `/api/admin/bookings` | Yes | List all bookings |
-| PATCH | `/api/admin/bookings/:id/cancel` | Yes | Cancel a booking |
-| GET | `/api/admin/availability` | Yes | List availability rules |
-| POST | `/api/admin/availability` | Yes | Create availability rule |
-| DELETE | `/api/admin/availability/:id` | Yes | Delete availability rule |
-| POST | `/api/admin/calendar/test` | Yes | Test an ICS feed URL |
-| GET | `/api/admin/team` | OWNER | List team members |
-| POST | `/api/admin/team` | OWNER | Add team member |
-| PATCH | `/api/admin/team/:id` | OWNER | Update team member |
-| DELETE | `/api/admin/team/:id` | OWNER | Remove team member |
-
-### Group Management Endpoints
-
-| Method | Path | Auth | Description |
-|--------|------|------|-------------|
-| GET | `/api/hud/groups` | OWNER | List all groups |
-| POST | `/api/hud/groups` | OWNER | Create a group |
-| PATCH | `/api/hud/groups/:id` | OWNER | Update a group |
-| DELETE | `/api/hud/groups/:id` | OWNER | Delete a group |
-| GET | `/api/hud/groups/:id/members` | OWNER | List group members |
-| POST | `/api/hud/groups/:id/members` | OWNER | Add member to group |
-| DELETE | `/api/hud/groups/:id/members` | OWNER | Remove member from group |
-| GET | `/api/hud/groups/:id/features` | OWNER | List group feature permissions |
-| PATCH | `/api/hud/groups/:id/features` | OWNER | Update group feature permissions |
-
-### Public Endpoints
-
-| Method | Path | Description |
-|--------|------|-------------|
-| GET | `/api/public/:tenantSlug` | Tenant info + active event types |
-| GET | `/api/public/:tenantSlug/:eventSlug` | Event type details |
-| GET | `/api/public/:tenantSlug/:eventSlug/slots/:date/:timezone` | Available time slots |
-| POST | `/api/public/:tenantSlug/:eventSlug/book` | Create a booking |
+---
 
 ## Contributing
 
-See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines on how to contribute.
+See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
+
+---
 
 ## License
 

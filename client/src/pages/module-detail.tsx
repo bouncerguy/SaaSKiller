@@ -555,7 +555,7 @@ export default function ModuleDetail() {
             Every module is off by default. Enable only what you need — your dashboard stays clean until you say otherwise.
           </p>
           <div className="flex flex-wrap justify-center gap-3">
-            <Link href="/auth">
+            <Link href="/get-started">
               <Button size="lg" data-testid="button-get-started">
                 Get Started Free
                 <ArrowRight className="h-4 w-4 ml-2" />
