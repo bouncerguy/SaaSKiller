@@ -1,7 +1,7 @@
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Calendar, Users, ShoppingBag, HeadphonesIcon, DollarSign, Timer, Code, Shield, Zap, ArrowRight, Check, Layers, FileText, Mail, Bot, Image, Video, FileCode, GitBranch, Phone, FileSignature, Server, Cpu, HardDrive } from "lucide-react";
+import { Calendar, Users, ShoppingBag, HeadphonesIcon, DollarSign, Timer, Code, Shield, Zap, ArrowRight, Check, Layers, FileText, Mail, Bot, Image, Video, FileCode, GitBranch, Phone, FileSignature, Server, Cpu, HardDrive, Settings } from "lucide-react";
 import { ThemeToggle } from "@/components/theme-toggle";
 
 const modules = [
@@ -128,6 +128,7 @@ const modules = [
 ];
 
 const platformFeatures = [
+  "All modules off by default — enable only what you need",
   "Multi-tenant architecture with full data isolation",
   "Team management with OWNER and MEMBER roles",
   "Group-based permissions with per-user overrides",
@@ -204,7 +205,7 @@ export default function Landing() {
                 Fifteen modules. One platform. Zero SaaS fees.
               </h2>
               <p className="mt-3 text-muted-foreground max-w-lg mx-auto">
-                Each module works on its own or together. Add what you need, skip what you don't.
+                Every module is off by default — enable only what you need. No clutter, no overwhelm. Your dashboard stays clean until you decide otherwise.
               </p>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -226,6 +227,17 @@ export default function Landing() {
                   </CardContent>
                 </Card>
               ))}
+            </div>
+            <div className="mt-8 rounded-lg border bg-muted/30 p-5 flex items-start gap-4 max-w-2xl mx-auto" data-testid="callout-modular">
+              <div className="w-9 h-9 rounded-md bg-primary/[0.08] dark:bg-primary/[0.15] flex items-center justify-center flex-shrink-0 mt-0.5">
+                <Settings className="h-4 w-4 text-primary" />
+              </div>
+              <div>
+                <p className="text-sm font-medium">Fully modular — you're in control</p>
+                <p className="text-sm text-muted-foreground mt-1 leading-relaxed">
+                  All modules are disabled by default. Enable them one at a time through Settings, and they'll appear in your sidebar and dashboard. Running a simple consulting shop? Turn on Scheduling, CRM, and Invoicing. Need more later? Flip a switch. No reinstall, no migration, no bloat.
+                </p>
+              </div>
             </div>
           </div>
         </section>

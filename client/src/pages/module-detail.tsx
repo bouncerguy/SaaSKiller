@@ -548,8 +548,11 @@ export default function ModuleDetail() {
       <section className="pb-20 px-6 border-t pt-16">
         <div className="max-w-4xl mx-auto text-center">
           <h2 className="text-2xl font-semibold mb-3">Ready to get started?</h2>
-          <p className="text-muted-foreground mb-6 max-w-lg mx-auto">
+          <p className="text-muted-foreground mb-3 max-w-lg mx-auto">
             Stop paying {mod.replacesCost} for {mod.replaces}. Get {mod.title} and 14 other modules with SaaS Killer — free and self-hosted.
+          </p>
+          <p className="text-sm text-muted-foreground mb-6 max-w-md mx-auto">
+            Every module is off by default. Enable only what you need — your dashboard stays clean until you say otherwise.
           </p>
           <div className="flex flex-wrap justify-center gap-3">
             <Link href="/auth">
