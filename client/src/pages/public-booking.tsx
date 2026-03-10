@@ -205,6 +205,22 @@ export default function PublicBooking() {
                 <Globe className="h-4 w-4 text-muted-foreground flex-shrink-0" />
                 <span className="text-muted-foreground">{timezone.replace(/_/g, " ")}</span>
               </div>
+              {confirmedBooking?.meetingUrl && (
+                <div className="pt-3 border-t">
+                  <Button
+                    className="w-full gap-2"
+                    style={{ backgroundColor: brandColor, borderColor: brandColor }}
+                    onClick={() => window.open(confirmedBooking.meetingUrl, "_blank")}
+                    data-testid="button-join-meeting"
+                  >
+                    <Video className="h-4 w-4" />
+                    Join Meeting
+                  </Button>
+                  <p className="text-xs text-muted-foreground mt-2 text-center">
+                    The meeting link will be available at the scheduled time.
+                  </p>
+                </div>
+              )}
             </CardContent>
           </Card>
         </div>

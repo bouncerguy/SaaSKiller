@@ -343,6 +343,41 @@ export async function registerRoutes(
     }
   });
 
+  app.get("/api/admin/video-settings", requireAuth, async (req, res) => {
+    try {
+      const tenantId = req.user!.tenantId;
+      const videoProvider = await storage.getSetting(`video_provider:${tenantId}`);
+      const jitsiServerUrl = await storage.getSetting(`jitsi_server_url:${tenantId}`);
+      res.json({
+        videoProvider: videoProvider || "none",
+        jitsiServerUrl: jitsiServerUrl || "",
+      });
+    } catch (e: any) {
+      res.status(500).json({ message: e.message });
+    }
+  });
+
+  app.patch("/api/admin/video-settings", requireAuth, async (req, res) => {
+    try {
+      const tenantId = req.user!.tenantId;
+      const schema = z.object({
+        videoProvider: z.enum(["none", "jitsi", "zoom"]),
+        jitsiServerUrl: z.string().optional(),
+      });
+      const parsed = schema.parse(req.body);
+      await storage.setSetting(`video_provider:${tenantId}`, parsed.videoProvider, "video");
+      if (parsed.jitsiServerUrl !== undefined) {
+        await storage.setSetting(`jitsi_server_url:${tenantId}`, parsed.jitsiServerUrl, "video");
+      }
+      res.json({ videoProvider: parsed.videoProvider, jitsiServerUrl: parsed.jitsiServerUrl || "" });
+    } catch (e: any) {
+      if (e.name === "ZodError") {
+        return res.status(400).json({ message: e.errors[0]?.message || "Validation failed" });
+      }
+      res.status(500).json({ message: e.message });
+    }
+  });
+
   app.get("/api/admin/event-types", requireAuth, async (req, res) => {
     try {
       const events = await storage.getEventTypesByTenant(req.user!.tenantId);
@@ -380,8 +415,28 @@ export async function registerRoutes(
 
   app.get("/api/admin/bookings", requireAuth, async (req, res) => {
     try {
-      const bookingsList = await storage.getBookingsByTenant(req.user!.tenantId);
-      res.json(bookingsList);
+      const tenantId = req.user!.tenantId;
+      const bookingsList = await storage.getBookingsByTenant(tenantId);
+      const videoProvider = await storage.getSetting(`video_provider:${tenantId}`);
+      const jitsiServerUrl = await storage.getSetting(`jitsi_server_url:${tenantId}`);
+      const tenant = await storage.getTenant(tenantId);
+      const eventTypesList = await storage.getEventTypesByTenant(tenantId);
+      const eventTypesMap = new Map(eventTypesList.map(et => [et.id, et]));
+
+      const enriched = bookingsList.map(booking => {
+        const et = eventTypesMap.get(booking.eventTypeId);
+        let meetingUrl: string | null = null;
+        if (videoProvider === "jitsi" && et?.locationType === "VIDEO" && et.locationValue === "Jitsi Meet" && jitsiServerUrl) {
+          const baseUrl = jitsiServerUrl.replace(/\/+$/, "");
+          const roomName = `${tenant?.slug || "meet"}-${et.slug}-${booking.id.substring(0, 8)}`;
+          meetingUrl = `${baseUrl}/${roomName}`;
+        } else if (videoProvider === "zoom" && et?.locationType === "VIDEO" && et.locationValue?.startsWith("http")) {
+          meetingUrl = et.locationValue;
+        }
+        return { ...booking, meetingUrl };
+      });
+
+      res.json(enriched);
     } catch (e: any) {
       res.status(500).json({ message: e.message });
     }
@@ -677,7 +732,20 @@ export async function registerRoutes(
         cancelReason: null,
       });
 
-      res.json(booking);
+      let meetingUrl: string | null = null;
+      const videoProvider = await storage.getSetting(`video_provider:${tenant.id}`);
+      if (videoProvider === "jitsi" && eventType.locationType === "VIDEO" && eventType.locationValue === "Jitsi Meet") {
+        const jitsiServerUrl = await storage.getSetting(`jitsi_server_url:${tenant.id}`);
+        if (jitsiServerUrl) {
+          const baseUrl = jitsiServerUrl.replace(/\/+$/, "");
+          const roomName = `${tenant.slug}-${eventType.slug}-${booking.id.substring(0, 8)}`;
+          meetingUrl = `${baseUrl}/${roomName}`;
+        }
+      } else if (videoProvider === "zoom" && eventType.locationType === "VIDEO" && eventType.locationValue?.startsWith("http")) {
+        meetingUrl = eventType.locationValue;
+      }
+
+      res.json({ ...booking, meetingUrl });
     } catch (e: any) {
       if (e.name === "ZodError") {
         return res.status(400).json({ message: e.errors[0]?.message || "Validation failed" });

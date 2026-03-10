@@ -3,10 +3,15 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
-import { Calendar, CalendarCheck, Clock, Users, ArrowRight, TrendingUp, XCircle, ShoppingBag, HeadphonesIcon, DollarSign, Timer, FileText, Mail, Bot, ImageIcon } from "lucide-react";
+import { Calendar, CalendarCheck, Clock, Users, ArrowRight, TrendingUp, XCircle, ShoppingBag, HeadphonesIcon, DollarSign, Timer, FileText, Mail, Bot, ImageIcon, Video } from "lucide-react";
 import { format } from "date-fns";
 import { Link } from "wouter";
 import type { Booking, EventType, Customer, Product, Ticket, Invoice, TimeEntry, Form, EmailTemplate, Agent, MediaAsset } from "@shared/schema";
+
+interface VideoSettings {
+  videoProvider: "none" | "jitsi" | "zoom";
+  jitsiServerUrl: string;
+}
 
 export default function AdminDashboard() {
   const { data: bookings, isLoading: loadingBookings } = useQuery<Booking[]>({
@@ -51,6 +56,10 @@ export default function AdminDashboard() {
 
   const { data: mediaData } = useQuery<MediaAsset[]>({
     queryKey: ["/api/admin/media"],
+  });
+
+  const { data: videoSettings } = useQuery<VideoSettings>({
+    queryKey: ["/api/admin/video-settings"],
   });
 
   const upcomingBookings = bookings
@@ -184,6 +193,15 @@ export default function AdminDashboard() {
       href: "/hud/media",
       color: "text-pink-600 dark:text-pink-400",
       bg: "bg-pink-600/[0.08] dark:bg-pink-600/[0.15]",
+    },
+    {
+      label: "Video",
+      value: videoSettings?.videoProvider === "jitsi" ? "Jitsi" : videoSettings?.videoProvider === "zoom" ? "Zoom" : "Off",
+      icon: Video,
+      testId: "text-video-status",
+      href: "/hud/settings",
+      color: "text-teal-600 dark:text-teal-400",
+      bg: "bg-teal-600/[0.08] dark:bg-teal-600/[0.15]",
     },
   ];
 

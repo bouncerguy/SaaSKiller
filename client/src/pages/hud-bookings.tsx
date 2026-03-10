@@ -17,15 +17,19 @@ import {
 } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { Calendar, Mail, Clock, X, CalendarCheck, User } from "lucide-react";
+import { Calendar, Mail, Clock, X, CalendarCheck, User, Video, ExternalLink } from "lucide-react";
 import { format } from "date-fns";
 import type { Booking } from "@shared/schema";
+
+interface BookingWithMeeting extends Booking {
+  meetingUrl?: string | null;
+}
 
 export default function AdminBookings() {
   const [cancelId, setCancelId] = useState<string | null>(null);
   const { toast } = useToast();
 
-  const { data: bookings, isLoading } = useQuery<Booking[]>({
+  const { data: bookings, isLoading } = useQuery<BookingWithMeeting[]>({
     queryKey: ["/api/admin/bookings"],
   });
 
@@ -52,7 +56,7 @@ export default function AdminBookings() {
   const canceled = bookings?.filter((b) => b.status === "CANCELED")
     .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()) || [];
 
-  const renderBookingCard = (booking: Booking, showCancel = false) => (
+  const renderBookingCard = (booking: BookingWithMeeting, showCancel = false) => (
     <Card
       key={booking.id}
       className="overflow-visible"
@@ -89,6 +93,21 @@ export default function AdminBookings() {
               <p className="text-xs text-muted-foreground mt-2 leading-relaxed">
                 {booking.notes}
               </p>
+            )}
+            {booking.meetingUrl && booking.status === "CONFIRMED" && (
+              <div className="mt-2.5">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-7 text-xs gap-1.5"
+                  onClick={() => window.open(booking.meetingUrl!, "_blank")}
+                  data-testid={`button-join-meeting-${booking.id}`}
+                >
+                  <Video className="h-3 w-3" />
+                  Join Meeting
+                  <ExternalLink className="h-2.5 w-2.5" />
+                </Button>
+              </div>
             )}
           </div>
           {showCancel && (

@@ -5,18 +5,42 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { Save, Globe, Palette, Building2, Image, CalendarClock, CheckCircle2, XCircle, Loader2 } from "lucide-react";
+import { Save, Globe, Palette, Building2, Image, CalendarClock, CheckCircle2, XCircle, Loader2, Video } from "lucide-react";
 import type { Tenant } from "@shared/schema";
+
+interface VideoSettings {
+  videoProvider: "none" | "jitsi" | "zoom";
+  jitsiServerUrl: string;
+}
 
 export default function AdminSettings() {
   const { toast } = useToast();
   const [calTestResult, setCalTestResult] = useState<{ valid: boolean; eventCount: number; error?: string } | null>(null);
-
   const { data: tenant, isLoading } = useQuery<Tenant>({
     queryKey: ["/api/admin/tenant"],
   });
+
+  const { data: videoSettingsData, isLoading: loadingVideoSettings } = useQuery<VideoSettings>({
+    queryKey: ["/api/admin/video-settings"],
+  });
+
+  const [videoProviderOverride, setVideoProviderOverride] = useState<string | null>(null);
+  const [jitsiServerUrlOverride, setJitsiServerUrlOverride] = useState<string | null>(null);
+
+  const videoProvider = videoProviderOverride ?? videoSettingsData?.videoProvider ?? "none";
+  const jitsiServerUrl = jitsiServerUrlOverride ?? videoSettingsData?.jitsiServerUrl ?? "";
+
+  const setVideoProvider = (val: string) => setVideoProviderOverride(val);
+  const setJitsiServerUrl = (val: string) => setJitsiServerUrlOverride(val);
 
   const updateMutation = useMutation({
     mutationFn: async (data: Record<string, unknown>) => {
@@ -26,6 +50,20 @@ export default function AdminSettings() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/tenant"] });
       toast({ title: "Settings saved" });
+    },
+    onError: (err: Error) => {
+      toast({ title: "Error", description: err.message, variant: "destructive" });
+    },
+  });
+
+  const videoMutation = useMutation({
+    mutationFn: async (data: Record<string, unknown>) => {
+      const res = await apiRequest("PATCH", "/api/admin/video-settings", data);
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/video-settings"] });
+      toast({ title: "Video settings saved" });
     },
     onError: (err: Error) => {
       toast({ title: "Error", description: err.message, variant: "destructive" });
@@ -60,6 +98,13 @@ export default function AdminSettings() {
       timezone: formData.get("timezone") as string,
       logoUrl: formData.get("logoUrl") as string || undefined,
       calendarIcsUrl: formData.get("calendarIcsUrl") as string || null,
+    });
+  };
+
+  const handleSaveVideo = () => {
+    videoMutation.mutate({
+      videoProvider,
+      jitsiServerUrl: videoProvider === "jitsi" ? jitsiServerUrl : "",
     });
   };
 
@@ -245,6 +290,73 @@ export default function AdminSettings() {
           </Button>
         </form>
       )}
+
+      <Card className="overflow-visible">
+        <CardHeader className="pb-4">
+          <CardTitle className="text-base font-medium flex items-center gap-2">
+            <Video className="h-4 w-4 text-muted-foreground" />
+            Video Conferencing
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-5">
+          {loadingVideoSettings ? (
+            <div className="space-y-2">
+              <Skeleton className="h-4 w-24" />
+              <Skeleton className="h-9 w-full" />
+            </div>
+          ) : (
+            <>
+              <div className="space-y-2">
+                <Label>Provider</Label>
+                <Select value={videoProvider} onValueChange={setVideoProvider}>
+                  <SelectTrigger data-testid="select-video-provider">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">None (disabled)</SelectItem>
+                    <SelectItem value="jitsi">Jitsi Meet</SelectItem>
+                    <SelectItem value="zoom">Zoom</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {videoProvider === "jitsi" && (
+                <div className="space-y-2">
+                  <Label htmlFor="jitsiServerUrl">Jitsi Server URL</Label>
+                  <Input
+                    id="jitsiServerUrl"
+                    value={jitsiServerUrl}
+                    onChange={(e) => setJitsiServerUrl(e.target.value)}
+                    placeholder="https://meet.jit.si"
+                    data-testid="input-jitsi-server-url"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Use the public Jitsi server (https://meet.jit.si) or your own self-hosted instance. Meeting rooms are auto-generated for each booking.
+                  </p>
+                </div>
+              )}
+
+              {videoProvider === "zoom" && (
+                <div className="rounded-md bg-muted/50 p-3">
+                  <p className="text-sm text-muted-foreground">
+                    Zoom meeting links are entered per event type. When creating or editing an event type, select "Video Call" as the location and paste your Zoom link.
+                  </p>
+                </div>
+              )}
+
+              <Button
+                type="button"
+                onClick={handleSaveVideo}
+                disabled={videoMutation.isPending}
+                data-testid="button-save-video-settings"
+              >
+                <Save className="h-4 w-4 mr-2" />
+                {videoMutation.isPending ? "Saving..." : "Save Video Settings"}
+              </Button>
+            </>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }

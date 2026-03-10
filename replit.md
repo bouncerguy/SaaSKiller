@@ -4,7 +4,7 @@
 SaaS Killer is a modular business platform designed to be a comprehensive business operating system. The project offers an open-source, self-hosted alternative to proprietary SaaS solutions. Current modules:
 
 - **Public booking pages**: `/book/:tenantSlug/:eventSlug` — date/time picker, timezone selector, booking form
-- **HUD dashboard**: `/hud` — unified control center with module stats (bookings, customers, products, tickets, revenue, time, forms, templates, agents, media)
+- **HUD dashboard**: `/hud` — unified control center with module stats (bookings, customers, products, tickets, revenue, time, forms, templates, agents, media, video)
 - **CRM module**: Customer management with payment status tracking, lead management with kanban pipeline boards, notes system, lead-to-customer conversion, cross-module linking (tickets, invoices, time entries visible in customer detail)
 - **Products module**: Product & service catalog with pricing, billing cycles (one-time/monthly/quarterly/yearly), categories, search
 - **Support module**: Ticket management with priority levels (Low/Medium/High/Urgent), status workflow (Open→In Progress→Waiting→Resolved→Closed), customer linking, team assignment
@@ -14,6 +14,7 @@ SaaS Killer is a modular business platform designed to be a comprehensive busine
 - **Email module**: Email template management with HTML/text body, category tagging (transactional/marketing/notification), variables support, sent log viewer with status tracking (Queued/Sent/Failed/Bounced)
 - **AI Agents module**: Workflow automation with configurable triggers (Manual/Schedule/Form Submission/New Customer/New Ticket), action definitions (JSON), manual run execution, run history with status tracking (success/failed/running), status workflow (Draft→Active→Paused)
 - **Media module**: Digital asset library with grid view, image previews, file type icons, folder organization, tag-based search, metadata editing (alt text, tags, folder), URL-based asset registration
+- **Video Conferencing module**: Jitsi Meet integration with auto-generated meeting rooms per booking, Zoom link support per event type, configurable via Settings (provider selector + Jitsi server URL), "Join Meeting" buttons on booking confirmation and admin bookings list
 - **Public form pages**: `/forms/:tenantSlug/:formSlug` — dynamic form renderer with field validation and branded submission
 - **First-run setup wizard**: `/setup` — creates organization, admin account, and seeds features on fresh install
 - **Authentication**: Email/password login with session-based auth (passport-local + express-session)
@@ -102,6 +103,7 @@ shared/
 - **Bookings**: GET /bookings
 - **Users**: GET/POST /team, PATCH/DELETE /team/:id
 - **Settings**: GET/PATCH /settings
+- **Video Settings**: GET/PATCH /video-settings
 
 ### Public (prefix: /api/public)
 - GET /:tenantSlug — Tenant info + active event types

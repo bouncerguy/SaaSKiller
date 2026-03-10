@@ -33,6 +33,11 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Plus, Clock, Video, Phone, MapPin, Settings, Copy, ExternalLink, Calendar, Check, Code } from "lucide-react";
 import type { EventType } from "@shared/schema";
 
+interface VideoSettings {
+  videoProvider: "none" | "jitsi" | "zoom";
+  jitsiServerUrl: string;
+}
+
 const locationIcons: Record<string, typeof Video> = {
   VIDEO: Video,
   PHONE: Phone,
@@ -54,6 +59,10 @@ export default function AdminEventTypes() {
 
   const { data: eventTypes, isLoading } = useQuery<EventType[]>({
     queryKey: ["/api/admin/event-types"],
+  });
+
+  const { data: videoSettings } = useQuery<VideoSettings>({
+    queryKey: ["/api/admin/video-settings"],
   });
 
   const createMutation = useMutation({
@@ -99,13 +108,20 @@ export default function AdminEventTypes() {
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
+    const locationType = formData.get("locationType") as string || "VIDEO";
+    let locationValue = formData.get("locationValue") as string || undefined;
+
+    if (locationType === "VIDEO" && videoSettings?.videoProvider === "jitsi") {
+      locationValue = "Jitsi Meet";
+    }
+
     const data = {
       title: formData.get("title") as string,
       slug: (formData.get("title") as string).toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, ""),
       description: formData.get("description") as string || undefined,
       durationMinutes: parseInt(formData.get("durationMinutes") as string) || 30,
-      locationType: formData.get("locationType") as string || "VIDEO",
-      locationValue: formData.get("locationValue") as string || undefined,
+      locationType,
+      locationValue,
       color: formData.get("color") as string || "#5b4cdb",
     };
 
@@ -131,6 +147,16 @@ export default function AdminEventTypes() {
   const getEmbedSnippet = (slug: string) =>
     `<iframe src="${window.location.origin}/book/default/${slug}" style="width:100%;height:700px;border:none;border-radius:8px;" title="Book a meeting"></iframe>`;
 
+  const getLocationDetail = (et: EventType) => {
+    if (et.locationType === "VIDEO" && et.locationValue === "Jitsi Meet") {
+      return "Jitsi Meet";
+    }
+    if (et.locationType === "VIDEO" && et.locationValue?.startsWith("http")) {
+      return "Zoom";
+    }
+    return locationLabels[et.locationType];
+  };
+
   return (
     <div className="p-6 lg:p-8 space-y-8 max-w-5xl mx-auto">
       <div className="flex items-center justify-between gap-4 flex-wrap" data-testid="header-event-types">
@@ -154,6 +180,7 @@ export default function AdminEventTypes() {
             <EventTypeForm
               onSubmit={handleSubmit}
               isPending={createMutation.isPending}
+              videoSettings={videoSettings}
             />
           </DialogContent>
         </Dialog>
@@ -218,7 +245,7 @@ export default function AdminEventTypes() {
                           </span>
                           <span className="flex items-center gap-1 text-xs text-muted-foreground">
                             <LocationIcon className="h-3 w-3" />
-                            {locationLabels[et.locationType]}
+                            {getLocationDetail(et)}
                           </span>
                           <Badge
                             variant={et.isActive ? "secondary" : "outline"}
@@ -332,6 +359,7 @@ export default function AdminEventTypes() {
               defaultValues={editingEvent}
               onSubmit={handleSubmit}
               isPending={updateMutation.isPending}
+              videoSettings={videoSettings}
             />
           )}
         </DialogContent>
@@ -344,11 +372,32 @@ function EventTypeForm({
   defaultValues,
   onSubmit,
   isPending,
+  videoSettings,
 }: {
   defaultValues?: EventType;
   onSubmit: (e: React.FormEvent<HTMLFormElement>) => void;
   isPending: boolean;
+  videoSettings?: VideoSettings;
 }) {
+  const [locationType, setLocationType] = useState(defaultValues?.locationType || "VIDEO");
+  const provider = videoSettings?.videoProvider || "none";
+
+  const showLocationInput = (() => {
+    if (locationType !== "VIDEO") return true;
+    if (provider === "jitsi") return false;
+    return true;
+  })();
+
+  const locationPlaceholder = (() => {
+    if (locationType === "VIDEO") {
+      if (provider === "zoom") return "https://zoom.us/j/123456789";
+      return "e.g., Google Meet or Zoom link";
+    }
+    if (locationType === "PHONE") return "e.g., +1 (555) 123-4567";
+    if (locationType === "IN_PERSON") return "e.g., 123 Main St, Suite 100";
+    return "Custom location details";
+  })();
+
   return (
     <form onSubmit={onSubmit} className="space-y-5">
       <div className="space-y-2">
@@ -390,7 +439,7 @@ function EventTypeForm({
         </div>
         <div className="space-y-2">
           <Label htmlFor="locationType">Location</Label>
-          <Select name="locationType" defaultValue={defaultValues?.locationType || "VIDEO"}>
+          <Select name="locationType" defaultValue={locationType} onValueChange={setLocationType}>
             <SelectTrigger data-testid="select-location">
               <SelectValue />
             </SelectTrigger>
@@ -403,16 +452,32 @@ function EventTypeForm({
           </Select>
         </div>
       </div>
-      <div className="space-y-2">
-        <Label htmlFor="locationValue">Location Details</Label>
-        <Input
-          id="locationValue"
-          name="locationValue"
-          defaultValue={defaultValues?.locationValue || ""}
-          placeholder="e.g., Zoom link, phone number, or address"
-          data-testid="input-location-value"
-        />
-      </div>
+
+      {locationType === "VIDEO" && provider === "jitsi" && (
+        <div className="rounded-md bg-teal-50 dark:bg-teal-950/30 border border-teal-200 dark:border-teal-800 p-3">
+          <div className="flex items-center gap-2 text-sm text-teal-700 dark:text-teal-300">
+            <Video className="h-4 w-4" />
+            <span className="font-medium">Jitsi Meet</span>
+          </div>
+          <p className="text-xs text-teal-600 dark:text-teal-400 mt-1">
+            A unique meeting room will be auto-generated for each booking.
+          </p>
+        </div>
+      )}
+
+      {showLocationInput && (
+        <div className="space-y-2">
+          <Label htmlFor="locationValue">Location Details</Label>
+          <Input
+            id="locationValue"
+            name="locationValue"
+            defaultValue={defaultValues?.locationValue === "Jitsi Meet" ? "" : (defaultValues?.locationValue || "")}
+            placeholder={locationPlaceholder}
+            data-testid="input-location-value"
+          />
+        </div>
+      )}
+
       <div className="space-y-2">
         <Label htmlFor="color">Color</Label>
         <div className="flex items-center gap-3">
