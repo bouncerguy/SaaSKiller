@@ -26,7 +26,7 @@ import {
   Phone,
 } from "lucide-react";
 
-const claudePrompt = `I just created a DigitalOcean droplet running Ubuntu 24.04. Help me deploy SaaS Killer from GitHub (https://github.com/your-username/saas-killer).
+const claudePrompt = `I just created a DigitalOcean droplet running Ubuntu 24.04. Help me deploy SaaS Killer from GitHub (https://github.com/bouncerguy/SaaSKiller).
 
 I need you to walk me through:
 1. SSH into the droplet

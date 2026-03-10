@@ -70,7 +70,7 @@ Use Claude AI to walk you through a full self-hosted deployment on your own serv
 
 ```
 I just created a DigitalOcean droplet running Ubuntu 24.04. Help me deploy
-SaaS Killer from GitHub (https://github.com/your-username/saas-killer).
+SaaS Killer from GitHub (https://github.com/bouncerguy/SaaSKiller).
 
 I need you to walk me through:
 1. SSH into the droplet
