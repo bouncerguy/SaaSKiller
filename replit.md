@@ -4,7 +4,7 @@
 SaaS Killer is a modular business platform designed to be a comprehensive business operating system. The project offers an open-source, self-hosted alternative to proprietary SaaS solutions. Current modules:
 
 - **Public booking pages**: `/book/:tenantSlug/:eventSlug` — date/time picker, timezone selector, booking form
-- **HUD dashboard**: `/hud` — unified control center with module stats (bookings, customers, products, tickets, revenue, time, forms, templates, agents, media, video, pages, funnels)
+- **HUD dashboard**: `/hud` — unified control center with module stats (bookings, customers, products, tickets, revenue, time, forms, templates, agents, media, video, pages, funnels, phone lines)
 - **CRM module**: Customer management with payment status tracking, lead management with kanban pipeline boards, notes system, lead-to-customer conversion, cross-module linking (tickets, invoices, time entries visible in customer detail)
 - **Products module**: Product & service catalog with pricing, billing cycles (one-time/monthly/quarterly/yearly), categories, search
 - **Support module**: Ticket management with priority levels (Low/Medium/High/Urgent), status workflow (Open→In Progress→Waiting→Resolved→Closed), customer linking, team assignment
@@ -18,6 +18,7 @@ SaaS Killer is a modular business platform designed to be a comprehensive busine
 - **Website & Domains module**: Custom domain management with add/remove/set-primary, server IP display with copy-to-clipboard, step-by-step DNS setup instructions (A record + CNAME), public pages directory
 - **Pages module**: Block-based page builder with hero, text, features grid, CTA, testimonials, and image blocks. Status workflow (Draft→Published→Archived), homepage toggle, preview capability. Public pages at `/s/:tenantSlug/:pageSlug`
 - **Funnels module**: Multi-step sales funnel builder with step types (opt_in/sales/checkout/thank_you/custom), block-based content per step, visual step pipeline, reordering. Public funnels at `/f/:tenantSlug/:funnelSlug` with step navigation
+- **Phone System module**: Virtual PBX with Twilio integration, phone number management, call forwarding, voicemail, call logs with direction/status/duration, SMS messaging with compose/receive, Twilio credential configuration per tenant, webhook endpoints for incoming calls/SMS
 - **HubSpot Integration**: Import contacts as customers or leads, import workflows as AI agents. Requires `HUBSPOT_ACCESS_TOKEN` Private App token. Duplicate detection by email. Imported workflows start as Draft agents.
 - **Public form pages**: `/forms/:tenantSlug/:formSlug` — dynamic form renderer with field validation and branded submission
 - **First-run setup wizard**: `/setup` — creates organization, admin account, and seeds features on fresh install
@@ -62,6 +63,7 @@ client/src/
     hud-domains.tsx        - Website & domain management
     hud-pages.tsx          - Website pages builder (lime accent)
     hud-funnels.tsx        - Sales funnels builder (fuchsia accent)
+    hud-phone.tsx          - Phone system & PBX (teal accent)
     public-form.tsx        - Public form renderer page
     public-page.tsx        - Public page renderer
     public-funnel.tsx      - Public funnel renderer
@@ -118,6 +120,10 @@ shared/
 - **Pages**: GET/POST /pages, GET/PATCH/DELETE /pages/:id
 - **Funnels**: GET/POST /funnels, GET/PATCH/DELETE /funnels/:id
 - **Funnel Steps**: GET/POST /funnels/:id/steps, PATCH/DELETE /funnels/:id/steps/:stepId
+- **Phone Settings**: GET/PATCH /phone-settings, POST /phone-settings/test
+- **Phone Numbers**: GET/POST /phone-numbers, PATCH/DELETE /phone-numbers/:id, GET /phone-numbers/available
+- **Call Logs**: GET /call-logs, GET /call-logs/:id, POST /calls (outbound)
+- **SMS**: GET/POST /sms, GET /sms/:id
 - **HubSpot**: GET /hubspot/status, GET /hubspot/contacts, POST /hubspot/import-customers, POST /hubspot/import-leads, GET /hubspot/workflows, POST /hubspot/import-workflows
 
 ### Public (prefix: /api/public)
@@ -131,7 +137,7 @@ shared/
 - GET /:tenantSlug/funnels/:funnelSlug — Funnel with all steps
 
 ## Database Schema
-Key tables: tenants, users, groups, user_groups, features, group_features, user_features, settings, activity_log, event_types, availability_rules, bookings, customers, leads, pipelines, notes, products, tickets, invoices, time_entries, forms, form_responses, email_templates, email_logs, agents, agent_runs, media_assets, pages, funnels, funnel_steps, session
+Key tables: tenants, users, groups, user_groups, features, group_features, user_features, settings, activity_log, event_types, availability_rules, bookings, customers, leads, pipelines, notes, products, tickets, invoices, time_entries, forms, form_responses, email_templates, email_logs, agents, agent_runs, media_assets, pages, funnels, funnel_steps, phone_numbers, call_logs, sms_messages, session
 
 ## Design System
 - **Primary**: Warm indigo, Inter font

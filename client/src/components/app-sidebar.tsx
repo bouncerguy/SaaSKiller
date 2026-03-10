@@ -22,6 +22,7 @@ import {
   Building2,
   Globe,
   GitBranch,
+  Phone,
 } from "lucide-react";
 import { useLocation, Link } from "wouter";
 import { useAuth } from "@/hooks/use-auth";
@@ -91,6 +92,7 @@ const operationsItems: NavItem[] = [
   { title: "Support", url: "/hud/support", icon: HeadphonesIcon, enabled: true },
   { title: "Time Tracking", url: "/hud/time-tracking", icon: Timer, enabled: true },
   { title: "Finance", url: "/hud/finance", icon: DollarSign, enabled: true },
+  { title: "Phone", url: "/hud/phone", icon: Phone, enabled: true },
 ];
 
 const toolItems: NavItem[] = [

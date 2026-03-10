@@ -5,7 +5,7 @@ import {
   groups, userGroups, features, groupFeatures, userFeatures, settings, activityLog,
   customers, leads, pipelines, notes, products, tickets, invoices, timeEntries,
   forms, formResponses, emailTemplates, emailLogs, agents, agentRuns, mediaAssets, domains,
-  pages, funnels, funnelSteps,
+  pages, funnels, funnelSteps, phoneNumbers, callLogs, smsMessages,
   type Tenant, type InsertTenant,
   type User, type InsertUser,
   type EventType, type InsertEventType,
@@ -37,6 +37,9 @@ import {
   type Page, type InsertPage,
   type Funnel, type InsertFunnel,
   type FunnelStep, type InsertFunnelStep,
+  type PhoneNumber, type InsertPhoneNumber,
+  type CallLog, type InsertCallLog,
+  type SmsMessage, type InsertSmsMessage,
 } from "@shared/schema";
 
 export interface IStorage {
@@ -212,6 +215,27 @@ export interface IStorage {
   createStep(data: InsertFunnelStep): Promise<FunnelStep>;
   updateStep(id: string, data: Partial<InsertFunnelStep>): Promise<FunnelStep>;
   deleteStep(id: string): Promise<void>;
+
+  getPhoneNumbersByTenant(tenantId: string): Promise<PhoneNumber[]>;
+  getPhoneNumber(id: string): Promise<PhoneNumber | undefined>;
+  getPhoneNumberByNumber(tenantId: string, number: string): Promise<PhoneNumber | undefined>;
+  createPhoneNumber(data: InsertPhoneNumber): Promise<PhoneNumber>;
+  updatePhoneNumber(id: string, data: Partial<InsertPhoneNumber>): Promise<PhoneNumber>;
+  deletePhoneNumber(id: string): Promise<void>;
+
+  getCallLogsByTenant(tenantId: string): Promise<CallLog[]>;
+  getCallLog(id: string): Promise<CallLog | undefined>;
+  getCallLogByCallSid(callSid: string): Promise<CallLog | undefined>;
+  createCallLog(data: InsertCallLog): Promise<CallLog>;
+  updateCallLog(id: string, data: Partial<InsertCallLog>): Promise<CallLog>;
+
+  getSmsByTenant(tenantId: string): Promise<SmsMessage[]>;
+  getSms(id: string): Promise<SmsMessage | undefined>;
+  getSmsByMessageSid(messageSid: string): Promise<SmsMessage | undefined>;
+  createSms(data: InsertSmsMessage): Promise<SmsMessage>;
+  updateSms(id: string, data: Partial<InsertSmsMessage>): Promise<SmsMessage>;
+
+  getPhoneNumberByNumberGlobal(number: string): Promise<PhoneNumber | undefined>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -1057,6 +1081,87 @@ export class DatabaseStorage implements IStorage {
 
   async deleteStep(id: string): Promise<void> {
     await db.delete(funnelSteps).where(eq(funnelSteps.id, id));
+  }
+
+  async getPhoneNumbersByTenant(tenantId: string): Promise<PhoneNumber[]> {
+    return db.select().from(phoneNumbers).where(eq(phoneNumbers.tenantId, tenantId)).orderBy(desc(phoneNumbers.createdAt));
+  }
+
+  async getPhoneNumber(id: string): Promise<PhoneNumber | undefined> {
+    const [p] = await db.select().from(phoneNumbers).where(eq(phoneNumbers.id, id));
+    return p;
+  }
+
+  async getPhoneNumberByNumber(tenantId: string, number: string): Promise<PhoneNumber | undefined> {
+    const [p] = await db.select().from(phoneNumbers).where(and(eq(phoneNumbers.tenantId, tenantId), eq(phoneNumbers.number, number)));
+    return p;
+  }
+
+  async createPhoneNumber(data: InsertPhoneNumber): Promise<PhoneNumber> {
+    const [p] = await db.insert(phoneNumbers).values(data).returning();
+    return p;
+  }
+
+  async updatePhoneNumber(id: string, data: Partial<InsertPhoneNumber>): Promise<PhoneNumber> {
+    const [p] = await db.update(phoneNumbers).set({ ...data, updatedAt: new Date() }).where(eq(phoneNumbers.id, id)).returning();
+    return p;
+  }
+
+  async deletePhoneNumber(id: string): Promise<void> {
+    await db.delete(phoneNumbers).where(eq(phoneNumbers.id, id));
+  }
+
+  async getCallLogsByTenant(tenantId: string): Promise<CallLog[]> {
+    return db.select().from(callLogs).where(eq(callLogs.tenantId, tenantId)).orderBy(desc(callLogs.createdAt));
+  }
+
+  async getCallLog(id: string): Promise<CallLog | undefined> {
+    const [c] = await db.select().from(callLogs).where(eq(callLogs.id, id));
+    return c;
+  }
+
+  async createCallLog(data: InsertCallLog): Promise<CallLog> {
+    const [c] = await db.insert(callLogs).values(data).returning();
+    return c;
+  }
+
+  async updateCallLog(id: string, data: Partial<InsertCallLog>): Promise<CallLog> {
+    const [c] = await db.update(callLogs).set(data).where(eq(callLogs.id, id)).returning();
+    return c;
+  }
+
+  async getSmsByTenant(tenantId: string): Promise<SmsMessage[]> {
+    return db.select().from(smsMessages).where(eq(smsMessages.tenantId, tenantId)).orderBy(desc(smsMessages.createdAt));
+  }
+
+  async getSms(id: string): Promise<SmsMessage | undefined> {
+    const [s] = await db.select().from(smsMessages).where(eq(smsMessages.id, id));
+    return s;
+  }
+
+  async createSms(data: InsertSmsMessage): Promise<SmsMessage> {
+    const [s] = await db.insert(smsMessages).values(data).returning();
+    return s;
+  }
+
+  async updateSms(id: string, data: Partial<InsertSmsMessage>): Promise<SmsMessage> {
+    const [s] = await db.update(smsMessages).set(data).where(eq(smsMessages.id, id)).returning();
+    return s;
+  }
+
+  async getCallLogByCallSid(callSid: string): Promise<CallLog | undefined> {
+    const [c] = await db.select().from(callLogs).where(eq(callLogs.callSid, callSid));
+    return c;
+  }
+
+  async getSmsByMessageSid(messageSid: string): Promise<SmsMessage | undefined> {
+    const [s] = await db.select().from(smsMessages).where(eq(smsMessages.messageSid, messageSid));
+    return s;
+  }
+
+  async getPhoneNumberByNumberGlobal(number: string): Promise<PhoneNumber | undefined> {
+    const [p] = await db.select().from(phoneNumbers).where(eq(phoneNumbers.number, number));
+    return p;
   }
 }
 
