@@ -16,8 +16,9 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Target, Plus, Loader2, Trash2, StickyNote, UserCheck, ChevronLeft, ChevronRight,
-  Mail, Phone, Globe, Settings2, ArrowRightLeft
+  Mail, Phone, Globe, Settings2, ArrowRightLeft, Download
 } from "lucide-react";
+import { HubSpotContactImportDialog } from "@/components/hubspot-import-dialog";
 
 function timeAgo(date: string | Date) {
   const d = new Date(date);
@@ -50,6 +51,7 @@ export default function HudCrmLeads() {
 
   const [newPipelineName, setNewPipelineName] = useState("");
   const [newPipelineStages, setNewPipelineStages] = useState("New Lead, Contacted, Qualified, Proposal, Won, Lost");
+  const [hubspotImportOpen, setHubspotImportOpen] = useState(false);
 
   const pipelinesQuery = useQuery<Pipeline[]>({
     queryKey: ["/api/admin/pipelines"],
@@ -233,6 +235,14 @@ export default function HudCrmLeads() {
           <Button variant="outline" size="icon" data-testid="button-manage-pipelines" onClick={() => setPipelineManageOpen(true)}>
             <Settings2 className="h-4 w-4" />
           </Button>
+          <Button
+            variant="outline"
+            onClick={() => setHubspotImportOpen(true)}
+            data-testid="button-import-hubspot-leads"
+          >
+            <Download className="h-4 w-4 mr-2" />
+            Import from HubSpot
+          </Button>
           <Dialog open={createOpen} onOpenChange={setCreateOpen}>
             <DialogTrigger asChild>
               <Button data-testid="button-create-lead" className="bg-blue-600 hover:bg-blue-700 text-white">
@@ -290,6 +300,14 @@ export default function HudCrmLeads() {
           </Dialog>
         </div>
       </div>
+
+      <HubSpotContactImportDialog
+        open={hubspotImportOpen}
+        onOpenChange={setHubspotImportOpen}
+        mode="leads"
+        pipelineId={activePipelineId}
+        existingEmails={leads.filter((l) => l.email).map((l) => l.email!)}
+      />
 
       {pipelinesQuery.isLoading || leadsQuery.isLoading ? (
         <div className="flex gap-4 overflow-x-auto flex-1">

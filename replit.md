@@ -16,6 +16,7 @@ SaaS Killer is a modular business platform designed to be a comprehensive busine
 - **Media module**: Digital asset library with grid view, image previews, file type icons, folder organization, tag-based search, metadata editing (alt text, tags, folder), URL-based asset registration
 - **Video Conferencing module**: Jitsi Meet integration with auto-generated meeting rooms per booking, Zoom link support per event type, configurable via Settings (provider selector + Jitsi server URL), "Join Meeting" buttons on booking confirmation and admin bookings list
 - **Website & Domains module**: Custom domain management with add/remove/set-primary, server IP display with copy-to-clipboard, step-by-step DNS setup instructions (A record + CNAME), public pages directory
+- **HubSpot Integration**: Import contacts as customers or leads, import workflows as AI agents. Requires `HUBSPOT_ACCESS_TOKEN` Private App token. Duplicate detection by email. Imported workflows start as Draft agents.
 - **Public form pages**: `/forms/:tenantSlug/:formSlug` — dynamic form renderer with field validation and branded submission
 - **First-run setup wizard**: `/setup` — creates organization, admin account, and seeds features on fresh install
 - **Authentication**: Email/password login with session-based auth (passport-local + express-session)
@@ -108,6 +109,7 @@ shared/
 - **Video Settings**: GET/PATCH /video-settings
 - **Domains**: GET/POST /domains, PATCH/DELETE /domains/:id
 - **Server Info**: GET /server-info
+- **HubSpot**: GET /hubspot/status, GET /hubspot/contacts, POST /hubspot/import-customers, POST /hubspot/import-leads, GET /hubspot/workflows, POST /hubspot/import-workflows
 
 ### Public (prefix: /api/public)
 - GET /:tenantSlug — Tenant info + active event types

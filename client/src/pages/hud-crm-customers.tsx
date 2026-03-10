@@ -14,7 +14,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { Users, Plus, Search, Mail, Phone, Building2, Loader2, Trash2, StickyNote, HeadphonesIcon, DollarSign, Timer, FileText, Clock, AlertCircle, CheckCircle2, Circle, Pause } from "lucide-react";
+import { Users, Plus, Search, Mail, Phone, Building2, Loader2, Trash2, StickyNote, HeadphonesIcon, DollarSign, Timer, FileText, Clock, AlertCircle, CheckCircle2, Circle, Pause, Download } from "lucide-react";
+import { HubSpotContactImportDialog } from "@/components/hubspot-import-dialog";
 
 function statusBadge(status: string) {
   switch (status) {
@@ -84,6 +85,7 @@ export default function HudCrmCustomers() {
   const [selectedCustomerId, setSelectedCustomerId] = useState<string | null>(null);
   const [newNote, setNewNote] = useState("");
   const [detailTab, setDetailTab] = useState("info");
+  const [hubspotImportOpen, setHubspotImportOpen] = useState(false);
 
   const [formData, setFormData] = useState({
     name: "",
@@ -192,7 +194,16 @@ export default function HudCrmCustomers() {
             Manage your customer relationships
           </p>
         </div>
-        <Dialog open={createOpen} onOpenChange={setCreateOpen}>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            onClick={() => setHubspotImportOpen(true)}
+            data-testid="button-import-hubspot-customers"
+          >
+            <Download className="h-4 w-4 mr-2" />
+            Import from HubSpot
+          </Button>
+          <Dialog open={createOpen} onOpenChange={setCreateOpen}>
           <DialogTrigger asChild>
             <Button data-testid="button-create-customer" className="bg-emerald-600 hover:bg-emerald-700 text-white">
               <Plus className="h-4 w-4 mr-2" />
@@ -251,7 +262,15 @@ export default function HudCrmCustomers() {
             </form>
           </DialogContent>
         </Dialog>
+        </div>
       </div>
+
+      <HubSpotContactImportDialog
+        open={hubspotImportOpen}
+        onOpenChange={setHubspotImportOpen}
+        mode="customers"
+        existingEmails={customers.map((c) => c.email)}
+      />
 
       <div className="relative">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />

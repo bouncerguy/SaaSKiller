@@ -29,7 +29,9 @@ import {
   UserPlus,
   HeadphonesIcon,
   RotateCw,
+  Download,
 } from "lucide-react";
+import { HubSpotWorkflowImportDialog } from "@/components/hubspot-import-dialog";
 
 const statusConfig: Record<string, { label: string; badgeClass: string }> = {
   ACTIVE: { label: "Active", badgeClass: "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 border-0" },
@@ -71,6 +73,7 @@ export default function HudAgents() {
   const [createOpen, setCreateOpen] = useState(false);
   const [selectedAgentId, setSelectedAgentId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState("config");
+  const [hubspotImportOpen, setHubspotImportOpen] = useState(false);
 
   const [formData, setFormData] = useState({
     name: "",
@@ -216,7 +219,16 @@ export default function HudAgents() {
             {activeCount > 0 && <Badge variant="secondary" className="ml-2 text-[10px]">{activeCount} active</Badge>}
           </p>
         </div>
-        <Dialog open={createOpen} onOpenChange={setCreateOpen}>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            onClick={() => setHubspotImportOpen(true)}
+            data-testid="button-import-hubspot-workflows"
+          >
+            <Download className="h-4 w-4 mr-2" />
+            Import from HubSpot
+          </Button>
+          <Dialog open={createOpen} onOpenChange={setCreateOpen}>
           <DialogTrigger asChild>
             <Button data-testid="button-create-agent" className="bg-cyan-500 hover:bg-cyan-600 text-white border-cyan-600">
               <Plus className="h-4 w-4 mr-2" />
@@ -281,7 +293,13 @@ export default function HudAgents() {
             </form>
           </DialogContent>
         </Dialog>
+        </div>
       </div>
+
+      <HubSpotWorkflowImportDialog
+        open={hubspotImportOpen}
+        onOpenChange={setHubspotImportOpen}
+      />
 
       {agentsQuery.isLoading ? (
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
