@@ -19,6 +19,7 @@ import {
   Bot,
   Image,
   Building2,
+  Globe,
 } from "lucide-react";
 import { useLocation, Link } from "wouter";
 import { useAuth } from "@/hooks/use-auth";
@@ -98,6 +99,7 @@ const toolItems: NavItem[] = [
 ];
 
 const systemItems: NavItem[] = [
+  { title: "Website & Domains", url: "/hud/domains", icon: Globe, enabled: true },
   { title: "Users & Groups", url: "/hud/users", icon: Users, enabled: true, ownerOnly: true },
   { title: "Embed", url: "/hud/embed", icon: Code, enabled: true },
   { title: "Settings", url: "/hud/settings", icon: Settings, enabled: true },

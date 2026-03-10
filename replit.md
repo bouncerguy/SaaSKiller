@@ -15,6 +15,7 @@ SaaS Killer is a modular business platform designed to be a comprehensive busine
 - **AI Agents module**: Workflow automation with configurable triggers (Manual/Schedule/Form Submission/New Customer/New Ticket), action definitions (JSON), manual run execution, run history with status tracking (success/failed/running), status workflow (Draft→Active→Paused)
 - **Media module**: Digital asset library with grid view, image previews, file type icons, folder organization, tag-based search, metadata editing (alt text, tags, folder), URL-based asset registration
 - **Video Conferencing module**: Jitsi Meet integration with auto-generated meeting rooms per booking, Zoom link support per event type, configurable via Settings (provider selector + Jitsi server URL), "Join Meeting" buttons on booking confirmation and admin bookings list
+- **Website & Domains module**: Custom domain management with add/remove/set-primary, server IP display with copy-to-clipboard, step-by-step DNS setup instructions (A record + CNAME), public pages directory
 - **Public form pages**: `/forms/:tenantSlug/:formSlug` — dynamic form renderer with field validation and branded submission
 - **First-run setup wizard**: `/setup` — creates organization, admin account, and seeds features on fresh install
 - **Authentication**: Email/password login with session-based auth (passport-local + express-session)
@@ -55,6 +56,7 @@ client/src/
     hud-email.tsx          - Email templates & logs (amber accent)
     hud-agents.tsx         - AI Agents automation (cyan accent)
     hud-media.tsx          - Media asset library (pink accent)
+    hud-domains.tsx        - Website & domain management
     public-form.tsx        - Public form renderer page
     hud-users.tsx          - Team management
     hud-settings.tsx       - Settings page
@@ -104,6 +106,8 @@ shared/
 - **Users**: GET/POST /team, PATCH/DELETE /team/:id
 - **Settings**: GET/PATCH /settings
 - **Video Settings**: GET/PATCH /video-settings
+- **Domains**: GET/POST /domains, PATCH/DELETE /domains/:id
+- **Server Info**: GET /server-info
 
 ### Public (prefix: /api/public)
 - GET /:tenantSlug — Tenant info + active event types

@@ -4,7 +4,7 @@ import {
   tenants, users, eventTypes, availabilityRules, bookings,
   groups, userGroups, features, groupFeatures, userFeatures, settings, activityLog,
   customers, leads, pipelines, notes, products, tickets, invoices, timeEntries,
-  forms, formResponses, emailTemplates, emailLogs, agents, agentRuns, mediaAssets,
+  forms, formResponses, emailTemplates, emailLogs, agents, agentRuns, mediaAssets, domains,
   type Tenant, type InsertTenant,
   type User, type InsertUser,
   type EventType, type InsertEventType,
@@ -32,6 +32,7 @@ import {
   type Agent, type InsertAgent,
   type AgentRun, type InsertAgentRun,
   type MediaAsset, type InsertMediaAsset,
+  type Domain, type InsertDomain,
 } from "@shared/schema";
 
 export interface IStorage {
@@ -182,6 +183,11 @@ export interface IStorage {
   updateMediaAsset(id: string, data: Partial<InsertMediaAsset>): Promise<MediaAsset>;
   deleteMediaAsset(id: string): Promise<void>;
   searchMediaAssets(tenantId: string, query: string): Promise<MediaAsset[]>;
+
+  getDomainsByTenant(tenantId: string): Promise<Domain[]>;
+  createDomain(data: InsertDomain): Promise<Domain>;
+  updateDomain(id: string, data: Partial<InsertDomain>): Promise<Domain>;
+  deleteDomain(id: string): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -930,6 +936,23 @@ export class DatabaseStorage implements IStorage {
         )
       )
     ).orderBy(desc(mediaAssets.createdAt));
+  }
+  async getDomainsByTenant(tenantId: string): Promise<Domain[]> {
+    return db.select().from(domains).where(eq(domains.tenantId, tenantId)).orderBy(desc(domains.createdAt));
+  }
+
+  async createDomain(data: InsertDomain): Promise<Domain> {
+    const [d] = await db.insert(domains).values(data).returning();
+    return d;
+  }
+
+  async updateDomain(id: string, data: Partial<InsertDomain>): Promise<Domain> {
+    const [d] = await db.update(domains).set(data).where(eq(domains.id, id)).returning();
+    return d;
+  }
+
+  async deleteDomain(id: string): Promise<void> {
+    await db.delete(domains).where(eq(domains.id, id));
   }
 }
 
