@@ -1,7 +1,7 @@
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Calendar, Users, ShoppingBag, HeadphonesIcon, DollarSign, Timer, Code, Shield, Zap, ArrowRight, Check, Layers, FileText, Mail, Bot, Image, Video } from "lucide-react";
+import { Calendar, Users, ShoppingBag, HeadphonesIcon, DollarSign, Timer, Code, Shield, Zap, ArrowRight, Check, Layers, FileText, Mail, Bot, Image, Video, FileCode, GitBranch } from "lucide-react";
 import { ThemeToggle } from "@/components/theme-toggle";
 
 const modules = [
@@ -82,6 +82,20 @@ const modules = [
     color: "text-teal-600 dark:text-teal-400",
     bg: "bg-teal-600/[0.08] dark:bg-teal-600/[0.15]",
   },
+  {
+    icon: FileCode,
+    title: "Website Pages",
+    desc: "Block-based page builder with hero, text, features, CTA, testimonials, and image blocks. Publish public pages instantly.",
+    color: "text-lime-600 dark:text-lime-400",
+    bg: "bg-lime-600/[0.08] dark:bg-lime-600/[0.15]",
+  },
+  {
+    icon: GitBranch,
+    title: "Funnels",
+    desc: "Multi-step sales funnels with opt-in, sales, checkout, and thank-you pages. Guide visitors to conversion.",
+    color: "text-fuchsia-600 dark:text-fuchsia-400",
+    bg: "bg-fuchsia-600/[0.08] dark:bg-fuchsia-600/[0.15]",
+  },
 ];
 
 const platformFeatures = [
@@ -158,7 +172,7 @@ export default function Landing() {
           <div className="max-w-5xl mx-auto">
             <div className="text-center mb-14">
               <h2 className="text-2xl sm:text-3xl font-semibold" data-testid="text-modules-title">
-                Eleven modules. One platform. Zero SaaS fees.
+                Thirteen modules. One platform. Zero SaaS fees.
               </h2>
               <p className="mt-3 text-muted-foreground max-w-lg mx-auto">
                 Each module works on its own or together. Add what you need, skip what you don't.
@@ -218,6 +232,8 @@ export default function Landing() {
                         { name: "Zapier", cost: "$20/mo", module: "AI Agents" },
                         { name: "Cloudinary", cost: "$89/mo", module: "Media" },
                         { name: "Zoom", cost: "$13/mo", module: "Video" },
+                        { name: "Leadpages", cost: "$37/mo", module: "Pages" },
+                        { name: "ClickFunnels", cost: "$97/mo", module: "Funnels" },
                       ].map((item) => (
                         <div key={item.name} className="flex items-center justify-between py-2 px-3 rounded-md bg-muted/50">
                           <div>

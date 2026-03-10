@@ -3,10 +3,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
-import { Calendar, CalendarCheck, Clock, Users, ArrowRight, TrendingUp, XCircle, ShoppingBag, HeadphonesIcon, DollarSign, Timer, FileText, Mail, Bot, ImageIcon, Video } from "lucide-react";
+import { Calendar, CalendarCheck, Clock, Users, ArrowRight, TrendingUp, XCircle, ShoppingBag, HeadphonesIcon, DollarSign, Timer, FileText, Mail, Bot, ImageIcon, Video, FileCode, GitBranch } from "lucide-react";
 import { format } from "date-fns";
 import { Link } from "wouter";
-import type { Booking, EventType, Customer, Product, Ticket, Invoice, TimeEntry, Form, EmailTemplate, Agent, MediaAsset } from "@shared/schema";
+import type { Booking, EventType, Customer, Product, Ticket, Invoice, TimeEntry, Form, EmailTemplate, Agent, MediaAsset, Page, Funnel } from "@shared/schema";
 
 interface VideoSettings {
   videoProvider: "none" | "jitsi" | "zoom";
@@ -62,6 +62,14 @@ export default function AdminDashboard() {
     queryKey: ["/api/admin/video-settings"],
   });
 
+  const { data: pagesData } = useQuery<Page[]>({
+    queryKey: ["/api/admin/pages"],
+  });
+
+  const { data: funnelsData } = useQuery<Funnel[]>({
+    queryKey: ["/api/admin/funnels"],
+  });
+
   const upcomingBookings = bookings
     ?.filter((b) => b.status === "CONFIRMED" && new Date(b.startAt) > new Date())
     .sort((a, b) => new Date(a.startAt).getTime() - new Date(b.startAt).getTime())
@@ -80,6 +88,8 @@ export default function AdminDashboard() {
   const totalEmailTemplates = emailTemplatesData?.length || 0;
   const activeAgents = agentsData?.filter((a) => a.status === "ACTIVE").length || 0;
   const totalMedia = mediaData?.length || 0;
+  const publishedPages = pagesData?.filter((p) => p.status === "PUBLISHED").length || 0;
+  const totalFunnels = funnelsData?.length || 0;
 
   const isLoading = loadingBookings || loadingEvents;
 
@@ -202,6 +212,24 @@ export default function AdminDashboard() {
       href: "/hud/settings",
       color: "text-teal-600 dark:text-teal-400",
       bg: "bg-teal-600/[0.08] dark:bg-teal-600/[0.15]",
+    },
+    {
+      label: "Pages",
+      value: publishedPages,
+      icon: FileCode,
+      testId: "text-published-pages",
+      href: "/hud/pages",
+      color: "text-lime-600 dark:text-lime-400",
+      bg: "bg-lime-600/[0.08] dark:bg-lime-600/[0.15]",
+    },
+    {
+      label: "Funnels",
+      value: totalFunnels,
+      icon: GitBranch,
+      testId: "text-total-funnels",
+      href: "/hud/funnels",
+      color: "text-fuchsia-600 dark:text-fuchsia-400",
+      bg: "bg-fuchsia-600/[0.08] dark:bg-fuchsia-600/[0.15]",
     },
   ];
 

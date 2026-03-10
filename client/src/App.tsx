@@ -32,9 +32,13 @@ import HudEmail from "@/pages/hud-email";
 import HudAgents from "@/pages/hud-agents";
 import HudMedia from "@/pages/hud-media";
 import HudDomains from "@/pages/hud-domains";
+import HudPages from "@/pages/hud-pages";
+import HudFunnels from "@/pages/hud-funnels";
 import PublicBooking from "@/pages/public-booking";
 import PublicTenant from "@/pages/public-tenant";
 import PublicForm from "@/pages/public-form";
+import PublicPage from "@/pages/public-page";
+import PublicFunnel from "@/pages/public-funnel";
 import { Redirect } from "wouter";
 
 function HudLayout({ children }: { children: React.ReactNode }) {
@@ -100,6 +104,8 @@ function Router() {
       <Route path="/book/:tenantSlug/:eventSlug" component={PublicBooking} />
       <Route path="/book/:tenantSlug" component={PublicTenant} />
       <Route path="/forms/:tenantSlug/:formSlug" component={PublicForm} />
+      <Route path="/s/:tenantSlug/:pageSlug" component={PublicPage} />
+      <Route path="/f/:tenantSlug/:funnelSlug" component={PublicFunnel} />
       <Route path="/hud">{() => <ProtectedRoute component={HudDashboard} />}</Route>
       <Route path="/hud/event-types">{() => <ProtectedRoute component={HudEventTypes} />}</Route>
       <Route path="/hud/bookings">{() => <ProtectedRoute component={HudBookings} />}</Route>
@@ -121,6 +127,8 @@ function Router() {
       <Route path="/hud/agents">{() => <ProtectedRoute component={HudAgents} />}</Route>
       <Route path="/hud/media">{() => <ProtectedRoute component={HudMedia} />}</Route>
       <Route path="/hud/domains">{() => <ProtectedRoute component={HudDomains} />}</Route>
+      <Route path="/hud/pages">{() => <ProtectedRoute component={HudPages} />}</Route>
+      <Route path="/hud/funnels">{() => <ProtectedRoute component={HudFunnels} />}</Route>
       <Route component={NotFound} />
     </Switch>
   );

@@ -5,6 +5,7 @@ import {
   groups, userGroups, features, groupFeatures, userFeatures, settings, activityLog,
   customers, leads, pipelines, notes, products, tickets, invoices, timeEntries,
   forms, formResponses, emailTemplates, emailLogs, agents, agentRuns, mediaAssets, domains,
+  pages, funnels, funnelSteps,
   type Tenant, type InsertTenant,
   type User, type InsertUser,
   type EventType, type InsertEventType,
@@ -33,6 +34,9 @@ import {
   type AgentRun, type InsertAgentRun,
   type MediaAsset, type InsertMediaAsset,
   type Domain, type InsertDomain,
+  type Page, type InsertPage,
+  type Funnel, type InsertFunnel,
+  type FunnelStep, type InsertFunnelStep,
 } from "@shared/schema";
 
 export interface IStorage {
@@ -188,6 +192,26 @@ export interface IStorage {
   createDomain(data: InsertDomain): Promise<Domain>;
   updateDomain(id: string, data: Partial<InsertDomain>): Promise<Domain>;
   deleteDomain(id: string): Promise<void>;
+
+  getPagesByTenant(tenantId: string): Promise<Page[]>;
+  getPage(id: string): Promise<Page | undefined>;
+  getPageBySlug(tenantId: string, slug: string): Promise<Page | undefined>;
+  createPage(data: InsertPage): Promise<Page>;
+  updatePage(id: string, data: Partial<InsertPage>): Promise<Page>;
+  deletePage(id: string): Promise<void>;
+
+  getFunnelsByTenant(tenantId: string): Promise<Funnel[]>;
+  getFunnel(id: string): Promise<Funnel | undefined>;
+  getFunnelBySlug(tenantId: string, slug: string): Promise<Funnel | undefined>;
+  createFunnel(data: InsertFunnel): Promise<Funnel>;
+  updateFunnel(id: string, data: Partial<InsertFunnel>): Promise<Funnel>;
+  deleteFunnel(id: string): Promise<void>;
+
+  getStepsByFunnel(funnelId: string): Promise<FunnelStep[]>;
+  getStep(id: string): Promise<FunnelStep | undefined>;
+  createStep(data: InsertFunnelStep): Promise<FunnelStep>;
+  updateStep(id: string, data: Partial<InsertFunnelStep>): Promise<FunnelStep>;
+  deleteStep(id: string): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -953,6 +977,86 @@ export class DatabaseStorage implements IStorage {
 
   async deleteDomain(id: string): Promise<void> {
     await db.delete(domains).where(eq(domains.id, id));
+  }
+
+  async getPagesByTenant(tenantId: string): Promise<Page[]> {
+    return db.select().from(pages).where(eq(pages.tenantId, tenantId)).orderBy(desc(pages.updatedAt));
+  }
+
+  async getPage(id: string): Promise<Page | undefined> {
+    const [p] = await db.select().from(pages).where(eq(pages.id, id));
+    return p;
+  }
+
+  async getPageBySlug(tenantId: string, slug: string): Promise<Page | undefined> {
+    const [p] = await db.select().from(pages).where(and(eq(pages.tenantId, tenantId), eq(pages.slug, slug)));
+    return p;
+  }
+
+  async createPage(data: InsertPage): Promise<Page> {
+    const [p] = await db.insert(pages).values(data).returning();
+    return p;
+  }
+
+  async updatePage(id: string, data: Partial<InsertPage>): Promise<Page> {
+    const [p] = await db.update(pages).set({ ...data, updatedAt: new Date() }).where(eq(pages.id, id)).returning();
+    return p;
+  }
+
+  async deletePage(id: string): Promise<void> {
+    await db.delete(pages).where(eq(pages.id, id));
+  }
+
+  async getFunnelsByTenant(tenantId: string): Promise<Funnel[]> {
+    return db.select().from(funnels).where(eq(funnels.tenantId, tenantId)).orderBy(desc(funnels.updatedAt));
+  }
+
+  async getFunnel(id: string): Promise<Funnel | undefined> {
+    const [f] = await db.select().from(funnels).where(eq(funnels.id, id));
+    return f;
+  }
+
+  async getFunnelBySlug(tenantId: string, slug: string): Promise<Funnel | undefined> {
+    const [f] = await db.select().from(funnels).where(and(eq(funnels.tenantId, tenantId), eq(funnels.slug, slug)));
+    return f;
+  }
+
+  async createFunnel(data: InsertFunnel): Promise<Funnel> {
+    const [f] = await db.insert(funnels).values(data).returning();
+    return f;
+  }
+
+  async updateFunnel(id: string, data: Partial<InsertFunnel>): Promise<Funnel> {
+    const [f] = await db.update(funnels).set({ ...data, updatedAt: new Date() }).where(eq(funnels.id, id)).returning();
+    return f;
+  }
+
+  async deleteFunnel(id: string): Promise<void> {
+    await db.delete(funnelSteps).where(eq(funnelSteps.funnelId, id));
+    await db.delete(funnels).where(eq(funnels.id, id));
+  }
+
+  async getStepsByFunnel(funnelId: string): Promise<FunnelStep[]> {
+    return db.select().from(funnelSteps).where(eq(funnelSteps.funnelId, funnelId)).orderBy(funnelSteps.stepOrder);
+  }
+
+  async getStep(id: string): Promise<FunnelStep | undefined> {
+    const [s] = await db.select().from(funnelSteps).where(eq(funnelSteps.id, id));
+    return s;
+  }
+
+  async createStep(data: InsertFunnelStep): Promise<FunnelStep> {
+    const [s] = await db.insert(funnelSteps).values(data).returning();
+    return s;
+  }
+
+  async updateStep(id: string, data: Partial<InsertFunnelStep>): Promise<FunnelStep> {
+    const [s] = await db.update(funnelSteps).set({ ...data, updatedAt: new Date() }).where(eq(funnelSteps.id, id)).returning();
+    return s;
+  }
+
+  async deleteStep(id: string): Promise<void> {
+    await db.delete(funnelSteps).where(eq(funnelSteps.id, id));
   }
 }
 

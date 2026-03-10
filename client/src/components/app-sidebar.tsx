@@ -15,11 +15,13 @@ import {
   Timer,
   DollarSign,
   FileText,
+  ClipboardList,
   Mail,
   Bot,
   Image,
   Building2,
   Globe,
+  GitBranch,
 } from "lucide-react";
 import { useLocation, Link } from "wouter";
 import { useAuth } from "@/hooks/use-auth";
@@ -92,7 +94,9 @@ const operationsItems: NavItem[] = [
 ];
 
 const toolItems: NavItem[] = [
-  { title: "Forms", url: "/hud/forms", icon: FileText, enabled: true },
+  { title: "Pages", url: "/hud/pages", icon: FileText, enabled: true },
+  { title: "Funnels", url: "/hud/funnels", icon: GitBranch, enabled: true },
+  { title: "Forms", url: "/hud/forms", icon: ClipboardList, enabled: true },
   { title: "Email", url: "/hud/email", icon: Mail, enabled: true },
   { title: "AI Agents", url: "/hud/agents", icon: Bot, enabled: true },
   { title: "Media", url: "/hud/media", icon: Image, enabled: true },

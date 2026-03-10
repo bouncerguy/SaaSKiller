@@ -491,6 +491,282 @@ export async function registerRoutes(
     }
   });
 
+  // Pages Routes
+  app.get("/api/admin/pages", requireAuth, async (req, res) => {
+    try {
+      const result = await storage.getPagesByTenant(req.user!.tenantId);
+      res.json(result);
+    } catch (e: any) {
+      res.status(500).json({ message: e.message });
+    }
+  });
+
+  app.post("/api/admin/pages", requireAuth, async (req, res) => {
+    try {
+      const schema = z.object({
+        title: z.string().min(1),
+        slug: z.string().min(1),
+        content: z.string().optional(),
+        metaDescription: z.string().optional(),
+        status: z.enum(["DRAFT", "PUBLISHED", "ARCHIVED"]).optional(),
+        isHomepage: z.boolean().optional(),
+      });
+      const parsed = schema.parse(req.body);
+      const tenantId = req.user!.tenantId;
+
+      if (parsed.isHomepage) {
+        const existing = await storage.getPagesByTenant(tenantId);
+        for (const p of existing) {
+          if (p.isHomepage) {
+            await storage.updatePage(p.id, { isHomepage: false });
+          }
+        }
+      }
+
+      const page = await storage.createPage({
+        tenantId,
+        title: parsed.title,
+        slug: parsed.slug,
+        content: parsed.content || "[]",
+        metaDescription: parsed.metaDescription || null,
+        status: parsed.status || "DRAFT",
+        isHomepage: parsed.isHomepage || false,
+      });
+      res.json(page);
+    } catch (e: any) {
+      if (e.name === "ZodError") {
+        return res.status(400).json({ message: e.errors[0]?.message || "Validation failed" });
+      }
+      res.status(500).json({ message: e.message });
+    }
+  });
+
+  app.get("/api/admin/pages/:id", requireAuth, async (req, res) => {
+    try {
+      const page = await storage.getPage(req.params.id);
+      if (!page || page.tenantId !== req.user!.tenantId) {
+        return res.status(404).json({ message: "Page not found" });
+      }
+      res.json(page);
+    } catch (e: any) {
+      res.status(500).json({ message: e.message });
+    }
+  });
+
+  app.patch("/api/admin/pages/:id", requireAuth, async (req, res) => {
+    try {
+      const page = await storage.getPage(req.params.id);
+      if (!page || page.tenantId !== req.user!.tenantId) {
+        return res.status(404).json({ message: "Page not found" });
+      }
+      const schema = z.object({
+        title: z.string().min(1).optional(),
+        slug: z.string().min(1).optional(),
+        content: z.string().optional(),
+        metaDescription: z.string().nullable().optional(),
+        status: z.enum(["DRAFT", "PUBLISHED", "ARCHIVED"]).optional(),
+        isHomepage: z.boolean().optional(),
+      });
+      const parsed = schema.parse(req.body);
+
+      if (parsed.isHomepage) {
+        const existing = await storage.getPagesByTenant(req.user!.tenantId);
+        for (const p of existing) {
+          if (p.isHomepage && p.id !== req.params.id) {
+            await storage.updatePage(p.id, { isHomepage: false });
+          }
+        }
+      }
+
+      const updated = await storage.updatePage(req.params.id, parsed);
+      res.json(updated);
+    } catch (e: any) {
+      if (e.name === "ZodError") {
+        return res.status(400).json({ message: e.errors[0]?.message || "Validation failed" });
+      }
+      res.status(500).json({ message: e.message });
+    }
+  });
+
+  app.delete("/api/admin/pages/:id", requireAuth, async (req, res) => {
+    try {
+      const page = await storage.getPage(req.params.id);
+      if (!page || page.tenantId !== req.user!.tenantId) {
+        return res.status(404).json({ message: "Page not found" });
+      }
+      await storage.deletePage(req.params.id);
+      res.json({ ok: true });
+    } catch (e: any) {
+      res.status(500).json({ message: e.message });
+    }
+  });
+
+  // Funnels Routes
+  app.get("/api/admin/funnels", requireAuth, async (req, res) => {
+    try {
+      const result = await storage.getFunnelsByTenant(req.user!.tenantId);
+      res.json(result);
+    } catch (e: any) {
+      res.status(500).json({ message: e.message });
+    }
+  });
+
+  app.post("/api/admin/funnels", requireAuth, async (req, res) => {
+    try {
+      const schema = z.object({
+        name: z.string().min(1),
+        slug: z.string().min(1),
+        description: z.string().optional(),
+        status: z.enum(["DRAFT", "PUBLISHED", "ARCHIVED"]).optional(),
+      });
+      const parsed = schema.parse(req.body);
+      const funnel = await storage.createFunnel({
+        tenantId: req.user!.tenantId,
+        name: parsed.name,
+        slug: parsed.slug,
+        description: parsed.description || null,
+        status: parsed.status || "DRAFT",
+      });
+      res.json(funnel);
+    } catch (e: any) {
+      if (e.name === "ZodError") {
+        return res.status(400).json({ message: e.errors[0]?.message || "Validation failed" });
+      }
+      res.status(500).json({ message: e.message });
+    }
+  });
+
+  app.get("/api/admin/funnels/:id", requireAuth, async (req, res) => {
+    try {
+      const funnel = await storage.getFunnel(req.params.id);
+      if (!funnel || funnel.tenantId !== req.user!.tenantId) {
+        return res.status(404).json({ message: "Funnel not found" });
+      }
+      const steps = await storage.getStepsByFunnel(funnel.id);
+      res.json({ ...funnel, steps });
+    } catch (e: any) {
+      res.status(500).json({ message: e.message });
+    }
+  });
+
+  app.patch("/api/admin/funnels/:id", requireAuth, async (req, res) => {
+    try {
+      const funnel = await storage.getFunnel(req.params.id);
+      if (!funnel || funnel.tenantId !== req.user!.tenantId) {
+        return res.status(404).json({ message: "Funnel not found" });
+      }
+      const schema = z.object({
+        name: z.string().min(1).optional(),
+        slug: z.string().min(1).optional(),
+        description: z.string().nullable().optional(),
+        status: z.enum(["DRAFT", "PUBLISHED", "ARCHIVED"]).optional(),
+      });
+      const parsed = schema.parse(req.body);
+      const updated = await storage.updateFunnel(req.params.id, parsed);
+      res.json(updated);
+    } catch (e: any) {
+      if (e.name === "ZodError") {
+        return res.status(400).json({ message: e.errors[0]?.message || "Validation failed" });
+      }
+      res.status(500).json({ message: e.message });
+    }
+  });
+
+  app.delete("/api/admin/funnels/:id", requireAuth, async (req, res) => {
+    try {
+      const funnel = await storage.getFunnel(req.params.id);
+      if (!funnel || funnel.tenantId !== req.user!.tenantId) {
+        return res.status(404).json({ message: "Funnel not found" });
+      }
+      await storage.deleteFunnel(req.params.id);
+      res.json({ ok: true });
+    } catch (e: any) {
+      res.status(500).json({ message: e.message });
+    }
+  });
+
+  // Funnel Steps Routes
+  app.get("/api/admin/funnels/:id/steps", requireAuth, async (req, res) => {
+    try {
+      const funnel = await storage.getFunnel(req.params.id);
+      if (!funnel || funnel.tenantId !== req.user!.tenantId) {
+        return res.status(404).json({ message: "Funnel not found" });
+      }
+      const steps = await storage.getStepsByFunnel(req.params.id);
+      res.json(steps);
+    } catch (e: any) {
+      res.status(500).json({ message: e.message });
+    }
+  });
+
+  app.post("/api/admin/funnels/:id/steps", requireAuth, async (req, res) => {
+    try {
+      const funnel = await storage.getFunnel(req.params.id);
+      if (!funnel || funnel.tenantId !== req.user!.tenantId) {
+        return res.status(404).json({ message: "Funnel not found" });
+      }
+      const schema = z.object({
+        title: z.string().min(1),
+        stepType: z.enum(["opt_in", "sales", "checkout", "thank_you", "custom"]).optional(),
+        content: z.string().optional(),
+        stepOrder: z.number().optional(),
+      });
+      const parsed = schema.parse(req.body);
+
+      const existingSteps = await storage.getStepsByFunnel(req.params.id);
+      const step = await storage.createStep({
+        funnelId: req.params.id,
+        tenantId: req.user!.tenantId,
+        title: parsed.title,
+        stepType: parsed.stepType || "custom",
+        content: parsed.content || "[]",
+        stepOrder: parsed.stepOrder ?? existingSteps.length,
+      });
+      res.json(step);
+    } catch (e: any) {
+      if (e.name === "ZodError") {
+        return res.status(400).json({ message: e.errors[0]?.message || "Validation failed" });
+      }
+      res.status(500).json({ message: e.message });
+    }
+  });
+
+  app.patch("/api/admin/funnels/:funnelId/steps/:stepId", requireAuth, async (req, res) => {
+    try {
+      const step = await storage.getStep(req.params.stepId);
+      if (!step || step.tenantId !== req.user!.tenantId) {
+        return res.status(404).json({ message: "Step not found" });
+      }
+      const schema = z.object({
+        title: z.string().min(1).optional(),
+        stepType: z.enum(["opt_in", "sales", "checkout", "thank_you", "custom"]).optional(),
+        content: z.string().optional(),
+        stepOrder: z.number().optional(),
+      });
+      const parsed = schema.parse(req.body);
+      const updated = await storage.updateStep(req.params.stepId, parsed);
+      res.json(updated);
+    } catch (e: any) {
+      if (e.name === "ZodError") {
+        return res.status(400).json({ message: e.errors[0]?.message || "Validation failed" });
+      }
+      res.status(500).json({ message: e.message });
+    }
+  });
+
+  app.delete("/api/admin/funnels/:funnelId/steps/:stepId", requireAuth, async (req, res) => {
+    try {
+      const step = await storage.getStep(req.params.stepId);
+      if (!step || step.tenantId !== req.user!.tenantId) {
+        return res.status(404).json({ message: "Step not found" });
+      }
+      await storage.deleteStep(req.params.stepId);
+      res.json({ ok: true });
+    } catch (e: any) {
+      res.status(500).json({ message: e.message });
+    }
+  });
+
   // HubSpot Integration Routes
   app.get("/api/admin/hubspot/status", requireAuth, async (_req, res) => {
     res.json({ configured: isHubSpotConfigured() });
@@ -2321,6 +2597,36 @@ export async function registerRoutes(
       });
       await storage.incrementFormResponseCount(form.id);
       res.json({ success: true, id: response.id });
+    } catch (e: any) {
+      res.status(500).json({ message: e.message });
+    }
+  });
+
+  // Public Pages & Funnels
+  app.get("/api/public/:tenantSlug/pages/:pageSlug", async (req, res) => {
+    try {
+      const tenant = await storage.getTenantBySlug(req.params.tenantSlug as string);
+      if (!tenant) return res.status(404).json({ message: "Not found" });
+      const page = await storage.getPageBySlug(tenant.id, req.params.pageSlug as string);
+      if (!page || page.status !== "PUBLISHED") {
+        return res.status(404).json({ message: "Page not found" });
+      }
+      res.json({ page, tenant: { name: tenant.name, slug: tenant.slug, brandColor: tenant.brandColor, logoUrl: tenant.logoUrl } });
+    } catch (e: any) {
+      res.status(500).json({ message: e.message });
+    }
+  });
+
+  app.get("/api/public/:tenantSlug/funnels/:funnelSlug", async (req, res) => {
+    try {
+      const tenant = await storage.getTenantBySlug(req.params.tenantSlug as string);
+      if (!tenant) return res.status(404).json({ message: "Not found" });
+      const funnel = await storage.getFunnelBySlug(tenant.id, req.params.funnelSlug as string);
+      if (!funnel || funnel.status !== "PUBLISHED") {
+        return res.status(404).json({ message: "Funnel not found" });
+      }
+      const steps = await storage.getStepsByFunnel(funnel.id);
+      res.json({ funnel, steps, tenant: { name: tenant.name, slug: tenant.slug, brandColor: tenant.brandColor, logoUrl: tenant.logoUrl } });
     } catch (e: any) {
       res.status(500).json({ message: e.message });
     }

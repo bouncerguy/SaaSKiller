@@ -4,7 +4,7 @@
 SaaS Killer is a modular business platform designed to be a comprehensive business operating system. The project offers an open-source, self-hosted alternative to proprietary SaaS solutions. Current modules:
 
 - **Public booking pages**: `/book/:tenantSlug/:eventSlug` — date/time picker, timezone selector, booking form
-- **HUD dashboard**: `/hud` — unified control center with module stats (bookings, customers, products, tickets, revenue, time, forms, templates, agents, media, video)
+- **HUD dashboard**: `/hud` — unified control center with module stats (bookings, customers, products, tickets, revenue, time, forms, templates, agents, media, video, pages, funnels)
 - **CRM module**: Customer management with payment status tracking, lead management with kanban pipeline boards, notes system, lead-to-customer conversion, cross-module linking (tickets, invoices, time entries visible in customer detail)
 - **Products module**: Product & service catalog with pricing, billing cycles (one-time/monthly/quarterly/yearly), categories, search
 - **Support module**: Ticket management with priority levels (Low/Medium/High/Urgent), status workflow (Open→In Progress→Waiting→Resolved→Closed), customer linking, team assignment
@@ -16,6 +16,8 @@ SaaS Killer is a modular business platform designed to be a comprehensive busine
 - **Media module**: Digital asset library with grid view, image previews, file type icons, folder organization, tag-based search, metadata editing (alt text, tags, folder), URL-based asset registration
 - **Video Conferencing module**: Jitsi Meet integration with auto-generated meeting rooms per booking, Zoom link support per event type, configurable via Settings (provider selector + Jitsi server URL), "Join Meeting" buttons on booking confirmation and admin bookings list
 - **Website & Domains module**: Custom domain management with add/remove/set-primary, server IP display with copy-to-clipboard, step-by-step DNS setup instructions (A record + CNAME), public pages directory
+- **Pages module**: Block-based page builder with hero, text, features grid, CTA, testimonials, and image blocks. Status workflow (Draft→Published→Archived), homepage toggle, preview capability. Public pages at `/s/:tenantSlug/:pageSlug`
+- **Funnels module**: Multi-step sales funnel builder with step types (opt_in/sales/checkout/thank_you/custom), block-based content per step, visual step pipeline, reordering. Public funnels at `/f/:tenantSlug/:funnelSlug` with step navigation
 - **HubSpot Integration**: Import contacts as customers or leads, import workflows as AI agents. Requires `HUBSPOT_ACCESS_TOKEN` Private App token. Duplicate detection by email. Imported workflows start as Draft agents.
 - **Public form pages**: `/forms/:tenantSlug/:formSlug` — dynamic form renderer with field validation and branded submission
 - **First-run setup wizard**: `/setup` — creates organization, admin account, and seeds features on fresh install
@@ -58,7 +60,11 @@ client/src/
     hud-agents.tsx         - AI Agents automation (cyan accent)
     hud-media.tsx          - Media asset library (pink accent)
     hud-domains.tsx        - Website & domain management
+    hud-pages.tsx          - Website pages builder (lime accent)
+    hud-funnels.tsx        - Sales funnels builder (fuchsia accent)
     public-form.tsx        - Public form renderer page
+    public-page.tsx        - Public page renderer
+    public-funnel.tsx      - Public funnel renderer
     hud-users.tsx          - Team management
     hud-settings.tsx       - Settings page
     hud-embed.tsx          - Embed SDK snippets
@@ -109,6 +115,9 @@ shared/
 - **Video Settings**: GET/PATCH /video-settings
 - **Domains**: GET/POST /domains, PATCH/DELETE /domains/:id
 - **Server Info**: GET /server-info
+- **Pages**: GET/POST /pages, GET/PATCH/DELETE /pages/:id
+- **Funnels**: GET/POST /funnels, GET/PATCH/DELETE /funnels/:id
+- **Funnel Steps**: GET/POST /funnels/:id/steps, PATCH/DELETE /funnels/:id/steps/:stepId
 - **HubSpot**: GET /hubspot/status, GET /hubspot/contacts, POST /hubspot/import-customers, POST /hubspot/import-leads, GET /hubspot/workflows, POST /hubspot/import-workflows
 
 ### Public (prefix: /api/public)
@@ -118,13 +127,15 @@ shared/
 - POST /:tenantSlug/:eventSlug/book — Create booking
 - GET /forms/:tenantSlug/:formSlug — Get published form
 - POST /forms/:tenantSlug/:formSlug/submit — Submit form response
+- GET /:tenantSlug/pages/:pageSlug — Published page content
+- GET /:tenantSlug/funnels/:funnelSlug — Funnel with all steps
 
 ## Database Schema
-Key tables: tenants, users, groups, user_groups, features, group_features, user_features, settings, activity_log, event_types, availability_rules, bookings, customers, leads, pipelines, notes, products, tickets, invoices, time_entries, forms, form_responses, email_templates, email_logs, agents, agent_runs, media_assets, session
+Key tables: tenants, users, groups, user_groups, features, group_features, user_features, settings, activity_log, event_types, availability_rules, bookings, customers, leads, pipelines, notes, products, tickets, invoices, time_entries, forms, form_responses, email_templates, email_logs, agents, agent_runs, media_assets, pages, funnels, funnel_steps, session
 
 ## Design System
 - **Primary**: Warm indigo, Inter font
-- **Module accents**: CRM (emerald), Products (orange), Support (rose), Finance (emerald), Time Tracking (violet), Forms (sky), Email (amber), AI Agents (cyan), Media (pink)
+- **Module accents**: CRM (emerald), Products (orange), Support (rose), Finance (emerald), Time Tracking (violet), Forms (sky), Email (amber), AI Agents (cyan), Media (pink), Pages (lime), Funnels (fuchsia)
 - **Dark mode**: Full support via ThemeProvider + class-based toggling
 - Prices stored in cents, invoice auto-numbered INV-0001+
 
