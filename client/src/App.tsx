@@ -42,6 +42,7 @@ import PublicForm from "@/pages/public-form";
 import PublicPage from "@/pages/public-page";
 import PublicFunnel from "@/pages/public-funnel";
 import PublicDocument from "@/pages/public-document";
+import ModuleDetail from "@/pages/module-detail";
 import { Redirect } from "wouter";
 
 function HudLayout({ children }: { children: React.ReactNode }) {
@@ -102,6 +103,7 @@ function Router() {
   return (
     <Switch>
       <Route path="/" component={Landing} />
+      <Route path="/modules/:moduleSlug" component={ModuleDetail} />
       <Route path="/setup" component={SetupPage} />
       <Route path="/auth" component={AuthPage} />
       <Route path="/book/:tenantSlug/:eventSlug" component={PublicBooking} />

@@ -44,7 +44,8 @@ Clear, concise, structured. Explain "why" not just "what." Iterative development
 ```
 client/src/
   pages/
-    landing.tsx            - Public landing page with BOS positioning
+    landing.tsx            - Public landing page with BOS positioning + Learn More buttons
+    module-detail.tsx      - Individual module feature pages (/modules/:slug)
     auth-page.tsx          - Login/register page
     setup-page.tsx         - First-run setup wizard
     hud-dashboard.tsx      - Dashboard with module stat cards

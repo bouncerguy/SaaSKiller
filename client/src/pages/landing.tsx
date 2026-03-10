@@ -8,6 +8,7 @@ const modules = [
   {
     icon: Calendar,
     title: "Scheduling",
+    slug: "scheduling",
     desc: "Event types, availability rules, timezone-aware booking, and embeddable widgets for any site.",
     color: "text-primary",
     bg: "bg-primary/[0.08] dark:bg-primary/[0.15]",
@@ -15,6 +16,7 @@ const modules = [
   {
     icon: Users,
     title: "CRM",
+    slug: "crm",
     desc: "Customer management, lead pipelines with kanban boards, notes, and lead-to-customer conversion.",
     color: "text-emerald-600 dark:text-emerald-400",
     bg: "bg-emerald-600/[0.08] dark:bg-emerald-600/[0.15]",
@@ -22,6 +24,7 @@ const modules = [
   {
     icon: ShoppingBag,
     title: "Products & Services",
+    slug: "products",
     desc: "Product catalog with pricing, billing cycles, categories, and active/inactive management.",
     color: "text-orange-600 dark:text-orange-400",
     bg: "bg-orange-600/[0.08] dark:bg-orange-600/[0.15]",
@@ -29,6 +32,7 @@ const modules = [
   {
     icon: HeadphonesIcon,
     title: "Support Tickets",
+    slug: "support",
     desc: "Ticket management with priority levels, status workflow, customer linking, and team assignment.",
     color: "text-rose-600 dark:text-rose-400",
     bg: "bg-rose-600/[0.08] dark:bg-rose-600/[0.15]",
@@ -36,6 +40,7 @@ const modules = [
   {
     icon: DollarSign,
     title: "Finance & Invoicing",
+    slug: "finance",
     desc: "Invoice management with auto-numbering, status tracking, revenue dashboards, and customer billing.",
     color: "text-emerald-600 dark:text-emerald-400",
     bg: "bg-emerald-600/[0.08] dark:bg-emerald-600/[0.15]",
@@ -43,6 +48,7 @@ const modules = [
   {
     icon: Timer,
     title: "Time Tracking",
+    slug: "time-tracking",
     desc: "Log billable and non-billable hours, set rates, link to customers, and track estimated earnings.",
     color: "text-violet-600 dark:text-violet-400",
     bg: "bg-violet-600/[0.08] dark:bg-violet-600/[0.15]",
@@ -50,6 +56,7 @@ const modules = [
   {
     icon: FileText,
     title: "Forms & Surveys",
+    slug: "forms",
     desc: "Drag-and-drop form builder with public links, field validation, and submission tracking.",
     color: "text-cyan-600 dark:text-cyan-400",
     bg: "bg-cyan-600/[0.08] dark:bg-cyan-600/[0.15]",
@@ -57,6 +64,7 @@ const modules = [
   {
     icon: Mail,
     title: "Email Campaigns",
+    slug: "email",
     desc: "Email templates, campaign management, and audience targeting to reach your customers directly.",
     color: "text-pink-600 dark:text-pink-400",
     bg: "bg-pink-600/[0.08] dark:bg-pink-600/[0.15]",
@@ -64,6 +72,7 @@ const modules = [
   {
     icon: Bot,
     title: "AI Agents",
+    slug: "ai-agents",
     desc: "Configurable AI assistants that automate workflows, answer questions, and handle repetitive tasks.",
     color: "text-indigo-600 dark:text-indigo-400",
     bg: "bg-indigo-600/[0.08] dark:bg-indigo-600/[0.15]",
@@ -71,6 +80,7 @@ const modules = [
   {
     icon: Image,
     title: "Media Library",
+    slug: "media",
     desc: "Upload, organize, and manage images, documents, and files with tagging and search.",
     color: "text-amber-600 dark:text-amber-400",
     bg: "bg-amber-600/[0.08] dark:bg-amber-600/[0.15]",
@@ -78,6 +88,7 @@ const modules = [
   {
     icon: Video,
     title: "Video Conferencing",
+    slug: "video",
     desc: "Built-in Jitsi Meet integration with auto-generated rooms, or bring your own Zoom links per event.",
     color: "text-teal-600 dark:text-teal-400",
     bg: "bg-teal-600/[0.08] dark:bg-teal-600/[0.15]",
@@ -85,6 +96,7 @@ const modules = [
   {
     icon: FileCode,
     title: "Website Pages",
+    slug: "pages",
     desc: "Block-based page builder with hero, text, features, CTA, testimonials, and image blocks. Publish public pages instantly.",
     color: "text-lime-600 dark:text-lime-400",
     bg: "bg-lime-600/[0.08] dark:bg-lime-600/[0.15]",
@@ -92,6 +104,7 @@ const modules = [
   {
     icon: GitBranch,
     title: "Funnels",
+    slug: "funnels",
     desc: "Multi-step sales funnels with opt-in, sales, checkout, and thank-you pages. Guide visitors to conversion.",
     color: "text-fuchsia-600 dark:text-fuchsia-400",
     bg: "bg-fuchsia-600/[0.08] dark:bg-fuchsia-600/[0.15]",
@@ -99,6 +112,7 @@ const modules = [
   {
     icon: Phone,
     title: "Phone System",
+    slug: "phone",
     desc: "Virtual PBX with Twilio integration. Phone numbers, call forwarding, voicemail, SMS messaging, and call logs.",
     color: "text-teal-600 dark:text-teal-400",
     bg: "bg-teal-600/[0.08] dark:bg-teal-600/[0.15]",
@@ -106,6 +120,7 @@ const modules = [
   {
     icon: FileSignature,
     title: "Documents & Signing",
+    slug: "documents",
     desc: "Create contracts and documents, add signers, and capture legally-binding electronic signatures via a secure public signing page.",
     color: "text-indigo-600 dark:text-indigo-400",
     bg: "bg-indigo-600/[0.08] dark:bg-indigo-600/[0.15]",
@@ -195,12 +210,19 @@ export default function Landing() {
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
               {modules.map((mod) => (
                 <Card key={mod.title} className="overflow-visible hover-elevate transition-colors">
-                  <CardContent className="p-6">
+                  <CardContent className="p-6 flex flex-col h-full">
                     <div className={`w-10 h-10 rounded-md ${mod.bg} flex items-center justify-center mb-4`}>
                       <mod.icon className={`h-5 w-5 ${mod.color}`} />
                     </div>
                     <h3 className="font-medium text-[15px]">{mod.title}</h3>
-                    <p className="text-sm text-muted-foreground mt-1.5 leading-relaxed">{mod.desc}</p>
+                    <p className="text-sm text-muted-foreground mt-1.5 leading-relaxed flex-1">{mod.desc}</p>
+                    <div className="mt-4">
+                      <Link href={`/modules/${mod.slug}`}>
+                        <Button variant="ghost" size="sm" className={`px-0 h-auto py-1 ${mod.color} hover:${mod.color}`} data-testid={`button-learn-more-${mod.slug}`}>
+                          Learn More <ArrowRight className="h-3.5 w-3.5 ml-1" />
+                        </Button>
+                      </Link>
+                    </div>
                   </CardContent>
                 </Card>
               ))}
