@@ -172,6 +172,14 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
 
 ---
 
+## Built By
+
+SaaS Killer is developed by [kencox.com](https://kencox.com).
+
+Need help deploying or integrating SaaS Killer into your company? Visit [vrroom.io](https://vrroom.io) for professional setup, customization, and support.
+
+---
+
 ## License
 
 [MIT](LICENSE) — Use it however you want. Fork it, modify it, ship it.

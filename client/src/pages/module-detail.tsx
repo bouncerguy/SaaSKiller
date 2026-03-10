@@ -610,8 +610,16 @@ export default function ModuleDetail() {
         </section>
       )}
 
-      <footer className="border-t py-8 text-center text-xs text-muted-foreground">
-        SaaS Killer — Open Source Business Operating System. MIT Licensed.
+      <footer className="border-t py-8 px-6">
+        <div className="max-w-4xl mx-auto flex flex-col gap-3">
+          <p className="text-center text-xs text-muted-foreground">
+            SaaS Killer — Open Source Business Operating System. MIT Licensed.
+          </p>
+          <div className="flex items-center justify-center gap-4 flex-wrap text-xs text-muted-foreground">
+            <span>Built by <a href="https://kencox.com" target="_blank" rel="noopener noreferrer" className="text-foreground hover:text-primary underline underline-offset-2">kencox.com</a></span>
+            <span>Need help? <a href="https://vrroom.io" target="_blank" rel="noopener noreferrer" className="text-foreground hover:text-primary underline underline-offset-2">vrroom.io</a></span>
+          </div>
+        </div>
       </footer>
     </div>
   );

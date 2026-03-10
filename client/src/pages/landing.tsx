@@ -418,16 +418,26 @@ export default function Landing() {
       </main>
 
       <footer className="border-t py-8 px-6" data-testid="footer">
-        <div className="max-w-6xl mx-auto flex items-center justify-between gap-4 flex-wrap">
-          <div className="flex items-center gap-2">
-            <div className="w-6 h-6 rounded bg-primary flex items-center justify-center">
-              <Layers className="h-3 w-3 text-primary-foreground" />
+        <div className="max-w-6xl mx-auto flex flex-col gap-4">
+          <div className="flex items-center justify-between gap-4 flex-wrap">
+            <div className="flex items-center gap-2">
+              <div className="w-6 h-6 rounded bg-primary flex items-center justify-center">
+                <Layers className="h-3 w-3 text-primary-foreground" />
+              </div>
+              <span className="text-sm font-medium">SaaS Killer</span>
             </div>
-            <span className="text-sm font-medium">SaaS Killer</span>
+            <p className="text-xs text-muted-foreground">
+              Open-source business operating system. MIT Licensed.
+            </p>
           </div>
-          <p className="text-xs text-muted-foreground">
-            Open-source business operating system. MIT Licensed.
-          </p>
+          <div className="flex items-center justify-between gap-4 flex-wrap border-t pt-4">
+            <p className="text-xs text-muted-foreground" data-testid="text-developer-credit">
+              Built by <a href="https://kencox.com" target="_blank" rel="noopener noreferrer" className="text-foreground hover:text-primary underline underline-offset-2">kencox.com</a>
+            </p>
+            <p className="text-xs text-muted-foreground" data-testid="text-consulting-link">
+              Need help deploying or integrating SaaS Killer? Visit <a href="https://vrroom.io" target="_blank" rel="noopener noreferrer" className="text-foreground hover:text-primary underline underline-offset-2">vrroom.io</a>
+            </p>
+          </div>
         </div>
       </footer>
     </div>
