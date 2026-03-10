@@ -1,7 +1,7 @@
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Calendar, Users, ShoppingBag, HeadphonesIcon, DollarSign, Timer, Code, Shield, Zap, ArrowRight, Check, Layers, FileText, Mail, Bot, Image, Video, FileCode, GitBranch, Phone, FileSignature } from "lucide-react";
+import { Calendar, Users, ShoppingBag, HeadphonesIcon, DollarSign, Timer, Code, Shield, Zap, ArrowRight, Check, Layers, FileText, Mail, Bot, Image, Video, FileCode, GitBranch, Phone, FileSignature, Server, Cpu, HardDrive } from "lucide-react";
 import { ThemeToggle } from "@/components/theme-toggle";
 
 const modules = [
@@ -289,6 +289,90 @@ export default function Landing() {
                   </CardContent>
                 </Card>
               </div>
+            </div>
+          </div>
+        </section>
+
+        <section className="py-20 px-6 border-t" data-testid="section-hosting">
+          <div className="max-w-5xl mx-auto">
+            <div className="text-center mb-10">
+              <h2 className="text-2xl font-semibold">Recommended Hosting</h2>
+              <p className="mt-3 text-muted-foreground max-w-lg mx-auto">
+                Deploy SaaS Killer on DigitalOcean in minutes. Pick a plan that fits your team size.
+              </p>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              {[
+                {
+                  tier: "Starter",
+                  price: "$12/mo",
+                  icon: Server,
+                  specs: "1 vCPU · 2 GB RAM · 25 GB SSD",
+                  fit: "1–5 users, light usage",
+                  features: ["Node.js + PostgreSQL on one box", "Perfect for solo operators", "All 15 modules included"],
+                },
+                {
+                  tier: "Recommended",
+                  price: "$24/mo",
+                  icon: Cpu,
+                  specs: "2 vCPUs · 4 GB RAM · 50 GB SSD",
+                  fit: "5–25 users, moderate usage",
+                  features: ["Handles concurrent API traffic", "Room for media & documents", "Twilio webhooks + AI agents"],
+                  highlight: true,
+                },
+                {
+                  tier: "Production",
+                  price: "$48/mo",
+                  icon: HardDrive,
+                  specs: "4 vCPUs · 8 GB RAM · 100 GB SSD",
+                  fit: "25+ users, heavy traffic",
+                  features: ["Separate managed database", "Public pages & funnels at scale", "Enterprise-grade performance"],
+                },
+              ].map((plan) => (
+                <Card key={plan.tier} className={`overflow-visible transition-colors ${plan.highlight ? "border-primary shadow-sm" : ""}`} data-testid={`card-hosting-${plan.tier.toLowerCase()}`}>
+                  <CardContent className="p-6 flex flex-col h-full">
+                    {plan.highlight && (
+                      <span className="text-[10px] uppercase tracking-widest font-semibold text-primary mb-3">Most Popular</span>
+                    )}
+                    <div className="flex items-center gap-3 mb-3">
+                      <div className="w-9 h-9 rounded-md bg-primary/[0.08] dark:bg-primary/[0.15] flex items-center justify-center">
+                        <plan.icon className="h-4 w-4 text-primary" />
+                      </div>
+                      <div>
+                        <h3 className="font-medium text-[15px]">{plan.tier}</h3>
+                        <p className="text-xs text-muted-foreground">{plan.fit}</p>
+                      </div>
+                    </div>
+                    <p className="text-2xl font-bold mb-1">{plan.price}</p>
+                    <p className="text-xs text-muted-foreground mb-4">{plan.specs}</p>
+                    <ul className="space-y-2 flex-1">
+                      {plan.features.map((f) => (
+                        <li key={f} className="flex items-start gap-2 text-sm">
+                          <Check className="h-3.5 w-3.5 text-primary mt-0.5 flex-shrink-0" />
+                          <span>{f}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+            <div className="mt-8 flex flex-col items-center gap-4">
+              <a
+                href="https://www.digitalocean.com/?refcode=de537efcf1f1&utm_campaign=Referral_Invite&utm_medium=Referral_Program&utm_source=badge"
+                target="_blank"
+                rel="noopener noreferrer"
+                data-testid="link-digitalocean-referral"
+              >
+                <img
+                  src="https://web-platforms.sfo2.cdn.digitaloceanspaces.com/WWW/Badge%201.svg"
+                  alt="DigitalOcean Referral Badge"
+                  className="h-12"
+                />
+              </a>
+              <p className="text-xs text-muted-foreground text-center max-w-md">
+                SaaS Killer runs on any Linux server, Docker container, or VPS. We recommend DigitalOcean for its simplicity and predictable pricing.
+              </p>
             </div>
           </div>
         </section>

@@ -19,6 +19,9 @@ import {
   HelpCircle,
   ExternalLink,
   Zap,
+  Server,
+  Cpu,
+  HardDrive,
 } from "lucide-react";
 
 const quickStartSteps = [
@@ -236,6 +239,59 @@ export default function AdminHelp() {
           </Card>
         ))}
       </div>
+
+      <Card data-testid="card-hosting">
+        <CardHeader className="pb-4">
+          <CardTitle className="flex items-center gap-2 text-base">
+            <Server className="h-4 w-4 text-primary" />
+            Recommended Hosting
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p className="text-sm text-muted-foreground mb-4">
+            SaaS Killer runs on any Linux server, Docker container, or VPS. Here are recommended specs for self-hosting on DigitalOcean:
+          </p>
+          <div className="grid gap-3 sm:grid-cols-3">
+            {[
+              { tier: "Starter", icon: Server, price: "$12/mo", specs: "1 vCPU · 2 GB RAM · 25 GB SSD", fit: "1–5 users" },
+              { tier: "Recommended", icon: Cpu, price: "$24/mo", specs: "2 vCPUs · 4 GB RAM · 50 GB SSD", fit: "5–25 users", highlight: true },
+              { tier: "Production", icon: HardDrive, price: "$48/mo", specs: "4 vCPUs · 8 GB RAM · 100 GB SSD", fit: "25+ users" },
+            ].map((plan) => (
+              <div
+                key={plan.tier}
+                className={`p-3 rounded-lg border bg-muted/30 ${plan.highlight ? "border-primary" : ""}`}
+                data-testid={`hosting-tier-${plan.tier.toLowerCase()}`}
+              >
+                <div className="flex items-center gap-2 mb-1">
+                  <plan.icon className="h-3.5 w-3.5 text-primary" />
+                  <span className="text-sm font-medium">{plan.tier}</span>
+                  {plan.highlight && <Badge variant="secondary" className="text-[10px] px-1.5 py-0">Popular</Badge>}
+                </div>
+                <p className="text-lg font-bold">{plan.price}</p>
+                <p className="text-xs text-muted-foreground">{plan.specs}</p>
+                <p className="text-xs text-muted-foreground mt-1">{plan.fit}</p>
+              </div>
+            ))}
+          </div>
+          <div className="mt-4 pt-4 border-t flex items-center gap-3">
+            <a
+              href="https://www.digitalocean.com/?refcode=de537efcf1f1&utm_campaign=Referral_Invite&utm_medium=Referral_Program&utm_source=badge"
+              target="_blank"
+              rel="noopener noreferrer"
+              data-testid="link-digitalocean-help"
+            >
+              <img
+                src="https://web-platforms.sfo2.cdn.digitaloceanspaces.com/WWW/Badge%201.svg"
+                alt="DigitalOcean Referral Badge"
+                className="h-10"
+              />
+            </a>
+            <p className="text-xs text-muted-foreground">
+              We recommend DigitalOcean for its simplicity and predictable pricing.
+            </p>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }
