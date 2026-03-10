@@ -3,10 +3,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
-import { Calendar, CalendarCheck, Clock, Users, ArrowRight, TrendingUp, XCircle, ShoppingBag, HeadphonesIcon, DollarSign, Timer, FileText, Mail, Bot, ImageIcon, Video, FileCode, GitBranch, Phone } from "lucide-react";
+import { Calendar, CalendarCheck, Clock, Users, ArrowRight, TrendingUp, XCircle, ShoppingBag, HeadphonesIcon, DollarSign, Timer, FileText, Mail, Bot, ImageIcon, Video, FileCode, GitBranch, Phone, FileSignature } from "lucide-react";
 import { format } from "date-fns";
 import { Link } from "wouter";
-import type { Booking, EventType, Customer, Product, Ticket, Invoice, TimeEntry, Form, EmailTemplate, Agent, MediaAsset, Page, Funnel, PhoneNumber } from "@shared/schema";
+import type { Booking, EventType, Customer, Product, Ticket, Invoice, TimeEntry, Form, EmailTemplate, Agent, MediaAsset, Page, Funnel, PhoneNumber, Document } from "@shared/schema";
 
 interface VideoSettings {
   videoProvider: "none" | "jitsi" | "zoom";
@@ -74,6 +74,10 @@ export default function AdminDashboard() {
     queryKey: ["/api/admin/phone-numbers"],
   });
 
+  const { data: documentsData } = useQuery<Document[]>({
+    queryKey: ["/api/admin/documents"],
+  });
+
   const upcomingBookings = bookings
     ?.filter((b) => b.status === "CONFIRMED" && new Date(b.startAt) > new Date())
     .sort((a, b) => new Date(a.startAt).getTime() - new Date(b.startAt).getTime())
@@ -95,6 +99,7 @@ export default function AdminDashboard() {
   const publishedPages = pagesData?.filter((p) => p.status === "PUBLISHED").length || 0;
   const totalFunnels = funnelsData?.length || 0;
   const activePhoneNumbers = phoneNumbersData?.filter((p) => p.isActive).length || 0;
+  const totalDocuments = documentsData?.length || 0;
 
   const isLoading = loadingBookings || loadingEvents;
 
@@ -244,6 +249,15 @@ export default function AdminDashboard() {
       href: "/hud/phone",
       color: "text-teal-600 dark:text-teal-400",
       bg: "bg-teal-600/[0.08] dark:bg-teal-600/[0.15]",
+    },
+    {
+      label: "Documents",
+      value: totalDocuments,
+      icon: FileSignature,
+      testId: "text-total-documents",
+      href: "/hud/documents",
+      color: "text-indigo-600 dark:text-indigo-400",
+      bg: "bg-indigo-600/[0.08] dark:bg-indigo-600/[0.15]",
     },
   ];
 

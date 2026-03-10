@@ -6,6 +6,7 @@ import {
   customers, leads, pipelines, notes, products, tickets, invoices, timeEntries,
   forms, formResponses, emailTemplates, emailLogs, agents, agentRuns, mediaAssets, domains,
   pages, funnels, funnelSteps, phoneNumbers, callLogs, smsMessages,
+  documents, documentSigners, documentActivityLog,
   type Tenant, type InsertTenant,
   type User, type InsertUser,
   type EventType, type InsertEventType,
@@ -40,6 +41,9 @@ import {
   type PhoneNumber, type InsertPhoneNumber,
   type CallLog, type InsertCallLog,
   type SmsMessage, type InsertSmsMessage,
+  type Document, type InsertDocument,
+  type DocumentSigner, type InsertDocumentSigner,
+  type DocumentActivity, type InsertDocumentActivity,
 } from "@shared/schema";
 
 export interface IStorage {
@@ -236,6 +240,22 @@ export interface IStorage {
   updateSms(id: string, data: Partial<InsertSmsMessage>): Promise<SmsMessage>;
 
   getPhoneNumberByNumberGlobal(number: string): Promise<PhoneNumber | undefined>;
+
+  getDocumentsByTenant(tenantId: string): Promise<Document[]>;
+  getDocument(id: string): Promise<Document | undefined>;
+  getDocumentBySlug(tenantId: string, slug: string): Promise<Document | undefined>;
+  createDocument(data: InsertDocument): Promise<Document>;
+  updateDocument(id: string, data: Partial<InsertDocument>): Promise<Document>;
+  deleteDocument(id: string): Promise<void>;
+
+  getSignersByDocument(documentId: string): Promise<DocumentSigner[]>;
+  getSigner(id: string): Promise<DocumentSigner | undefined>;
+  createSigner(data: InsertDocumentSigner): Promise<DocumentSigner>;
+  updateSigner(id: string, data: Partial<InsertDocumentSigner>): Promise<DocumentSigner>;
+  deleteSigner(id: string): Promise<void>;
+
+  getDocumentActivity(documentId: string): Promise<DocumentActivity[]>;
+  createDocumentActivity(data: InsertDocumentActivity): Promise<DocumentActivity>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -1162,6 +1182,69 @@ export class DatabaseStorage implements IStorage {
   async getPhoneNumberByNumberGlobal(number: string): Promise<PhoneNumber | undefined> {
     const [p] = await db.select().from(phoneNumbers).where(eq(phoneNumbers.number, number));
     return p;
+  }
+
+  async getDocumentsByTenant(tenantId: string): Promise<Document[]> {
+    return db.select().from(documents).where(eq(documents.tenantId, tenantId)).orderBy(desc(documents.createdAt));
+  }
+
+  async getDocument(id: string): Promise<Document | undefined> {
+    const [d] = await db.select().from(documents).where(eq(documents.id, id));
+    return d;
+  }
+
+  async getDocumentBySlug(tenantId: string, slug: string): Promise<Document | undefined> {
+    const [d] = await db.select().from(documents).where(and(eq(documents.tenantId, tenantId), eq(documents.slug, slug)));
+    return d;
+  }
+
+  async createDocument(data: InsertDocument): Promise<Document> {
+    const [d] = await db.insert(documents).values(data).returning();
+    return d;
+  }
+
+  async updateDocument(id: string, data: Partial<InsertDocument>): Promise<Document> {
+    const [d] = await db.update(documents).set({ ...data, updatedAt: new Date() }).where(eq(documents.id, id)).returning();
+    return d;
+  }
+
+  async deleteDocument(id: string): Promise<void> {
+    await db.delete(documentActivityLog).where(eq(documentActivityLog.documentId, id));
+    await db.delete(documentSigners).where(eq(documentSigners.documentId, id));
+    await db.delete(documents).where(eq(documents.id, id));
+  }
+
+  async getSignersByDocument(documentId: string): Promise<DocumentSigner[]> {
+    return db.select().from(documentSigners).where(eq(documentSigners.documentId, documentId)).orderBy(documentSigners.order);
+  }
+
+  async getSigner(id: string): Promise<DocumentSigner | undefined> {
+    const [s] = await db.select().from(documentSigners).where(eq(documentSigners.id, id));
+    return s;
+  }
+
+  async createSigner(data: InsertDocumentSigner): Promise<DocumentSigner> {
+    const [s] = await db.insert(documentSigners).values(data).returning();
+    return s;
+  }
+
+  async updateSigner(id: string, data: Partial<InsertDocumentSigner>): Promise<DocumentSigner> {
+    const [s] = await db.update(documentSigners).set(data).where(eq(documentSigners.id, id)).returning();
+    return s;
+  }
+
+  async deleteSigner(id: string): Promise<void> {
+    await db.delete(documentActivityLog).where(eq(documentActivityLog.signerId, id));
+    await db.delete(documentSigners).where(eq(documentSigners.id, id));
+  }
+
+  async getDocumentActivity(documentId: string): Promise<DocumentActivity[]> {
+    return db.select().from(documentActivityLog).where(eq(documentActivityLog.documentId, documentId)).orderBy(desc(documentActivityLog.createdAt));
+  }
+
+  async createDocumentActivity(data: InsertDocumentActivity): Promise<DocumentActivity> {
+    const [a] = await db.insert(documentActivityLog).values(data).returning();
+    return a;
   }
 }
 
