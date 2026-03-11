@@ -13,7 +13,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
-  Lock, Loader2, Search, Send, Eye, ArrowLeft,
+  Lock, Loader2, Trash2, Search, Send, Eye, ArrowLeft,
   Clock, CheckCircle2, Mail, Copy, XCircle, AlertCircle
 } from "lucide-react";
 import { format } from "date-fns";
@@ -60,16 +60,26 @@ export default function HudSecureMessages() {
         <Tabs value={activeTab} onValueChange={setActiveTab}>
           <TabsList data-testid="tabs-secure-messages">
             <TabsTrigger value="compose" data-testid="tab-compose">Compose</TabsTrigger>
+            <TabsTrigger value="drafts" data-testid="tab-drafts">Drafts</TabsTrigger>
             <TabsTrigger value="sent" data-testid="tab-sent">Sent</TabsTrigger>
           </TabsList>
           <TabsContent value="compose" className="mt-4">
             <ComposeForm />
           </TabsContent>
-          <TabsContent value="sent" className="mt-4">
-            <SentList
+          <TabsContent value="drafts" className="mt-4">
+            <MessageList
               onSelect={setSelectedMsgId}
               searchQuery={searchQuery}
               setSearchQuery={setSearchQuery}
+              statusFilter="DRAFT"
+            />
+          </TabsContent>
+          <TabsContent value="sent" className="mt-4">
+            <MessageList
+              onSelect={setSelectedMsgId}
+              searchQuery={searchQuery}
+              setSearchQuery={setSearchQuery}
+              statusFilter="sent"
             />
           </TabsContent>
         </Tabs>
@@ -253,19 +263,37 @@ function ComposeForm() {
   );
 }
 
-function SentList({ onSelect, searchQuery, setSearchQuery }: {
+function MessageList({ onSelect, searchQuery, setSearchQuery, statusFilter }: {
   onSelect: (id: string) => void;
   searchQuery: string;
   setSearchQuery: (q: string) => void;
+  statusFilter: "DRAFT" | "sent";
 }) {
+  const { toast } = useToast();
   const [page, setPage] = useState(0);
 
   const { data: messages, isLoading } = useQuery<SecureMessage[]>({
     queryKey: ["/api/admin/secure-messages"],
   });
 
-  const sentMessages = (messages || []).filter(m => m.status !== "DRAFT");
-  const filtered = sentMessages.filter(msg => {
+  const deleteMutation = useMutation({
+    mutationFn: async (id: string) => {
+      await apiRequest("DELETE", `/api/admin/secure-messages/${id}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/secure-messages"] });
+      toast({ title: "Draft deleted" });
+    },
+    onError: (e: Error) => {
+      toast({ title: "Error", description: e.message, variant: "destructive" });
+    },
+  });
+
+  const baseMessages = statusFilter === "DRAFT"
+    ? (messages || []).filter(m => m.status === "DRAFT")
+    : (messages || []).filter(m => m.status !== "DRAFT");
+
+  const filtered = baseMessages.filter(msg => {
     if (!searchQuery) return true;
     const q = searchQuery.toLowerCase();
     return msg.subject.toLowerCase().includes(q) ||
@@ -276,8 +304,10 @@ function SentList({ onSelect, searchQuery, setSearchQuery }: {
   const totalPages = Math.ceil(filtered.length / PAGE_SIZE);
   const paged = filtered.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
 
-  const sentCount = (messages || []).filter(m => m.status === "SENT").length;
-  const readCount = (messages || []).filter(m => m.status === "READ").length;
+  const isDraft = statusFilter === "DRAFT";
+  const emptyLabel = isDraft ? "No drafts" : "No sent messages yet";
+  const emptyDesc = isDraft ? "Save a draft from the Compose tab" : "Messages you send will appear here";
+  const searchPlaceholder = isDraft ? "Search drafts..." : "Search sent messages...";
 
   if (isLoading) {
     return <div className="space-y-3">{Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-20 w-full" />)}</div>;
@@ -285,46 +315,10 @@ function SentList({ onSelect, searchQuery, setSearchQuery }: {
 
   return (
     <div className="space-y-4">
-      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-        <Card>
-          <CardContent className="p-4 flex items-center gap-3">
-            <div className="w-9 h-9 rounded-md bg-slate-600/[0.08] dark:bg-slate-600/[0.15] flex items-center justify-center">
-              <Mail className="h-4 w-4 text-slate-600 dark:text-slate-400" />
-            </div>
-            <div>
-              <p className="text-2xl font-bold" data-testid="text-total-sent">{sentMessages.length}</p>
-              <p className="text-xs text-muted-foreground">Total Sent</p>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4 flex items-center gap-3">
-            <div className="w-9 h-9 rounded-md bg-blue-600/[0.08] dark:bg-blue-600/[0.15] flex items-center justify-center">
-              <Send className="h-4 w-4 text-blue-600 dark:text-blue-400" />
-            </div>
-            <div>
-              <p className="text-2xl font-bold" data-testid="text-sent-count">{sentCount}</p>
-              <p className="text-xs text-muted-foreground">Awaiting</p>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4 flex items-center gap-3">
-            <div className="w-9 h-9 rounded-md bg-green-600/[0.08] dark:bg-green-600/[0.15] flex items-center justify-center">
-              <Eye className="h-4 w-4 text-green-600 dark:text-green-400" />
-            </div>
-            <div>
-              <p className="text-2xl font-bold" data-testid="text-read-count">{readCount}</p>
-              <p className="text-xs text-muted-foreground">Read</p>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
       <div className="relative">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
         <Input
-          placeholder="Search sent messages..."
+          placeholder={searchPlaceholder}
           value={searchQuery}
           onChange={e => { setSearchQuery(e.target.value); setPage(0); }}
           className="pl-10"
@@ -336,8 +330,8 @@ function SentList({ onSelect, searchQuery, setSearchQuery }: {
         <Card>
           <CardContent className="py-12 text-center">
             <Lock className="h-12 w-12 text-muted-foreground mx-auto mb-3" />
-            <p className="text-sm font-medium" data-testid="text-no-messages">No sent messages yet</p>
-            <p className="text-xs text-muted-foreground mt-1">Messages you send will appear here</p>
+            <p className="text-sm font-medium" data-testid="text-no-messages">{emptyLabel}</p>
+            <p className="text-xs text-muted-foreground mt-1">{emptyDesc}</p>
           </CardContent>
         </Card>
       ) : (
@@ -368,15 +362,30 @@ function SentList({ onSelect, searchQuery, setSearchQuery }: {
                       )}
                     </div>
                   </div>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={(e) => { e.stopPropagation(); onSelect(msg.id); }}
-                    data-testid={`button-view-msg-${msg.id}`}
-                  >
-                    <Eye className="h-3.5 w-3.5 mr-1" />
-                    View
-                  </Button>
+                  <div className="flex items-center gap-1">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={(e) => { e.stopPropagation(); onSelect(msg.id); }}
+                      data-testid={`button-view-msg-${msg.id}`}
+                    >
+                      <Eye className="h-3.5 w-3.5 mr-1" />
+                      View
+                    </Button>
+                    {isDraft && (
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (confirm("Delete this draft?")) deleteMutation.mutate(msg.id);
+                        }}
+                        data-testid={`button-delete-msg-${msg.id}`}
+                      >
+                        <Trash2 className="h-4 w-4 text-destructive" />
+                      </Button>
+                    )}
+                  </div>
                 </CardContent>
               </Card>
             ))}

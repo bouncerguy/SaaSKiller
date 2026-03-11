@@ -60,6 +60,13 @@ app.use((req, res, next) => {
 });
 
 (async () => {
+  const { ensureSecureMessagingSchema } = await import("./db");
+  try {
+    await ensureSecureMessagingSchema();
+  } catch (e) {
+    console.error("Schema migration error:", e);
+  }
+
   if (process.env.NODE_ENV !== "production") {
     const { seedDatabase } = await import("./seed");
     try {
