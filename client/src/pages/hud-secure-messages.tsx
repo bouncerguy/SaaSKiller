@@ -8,13 +8,12 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
-  Lock, Plus, Loader2, Trash2, Search, Send, Eye, ArrowLeft,
+  Lock, Loader2, Trash2, Search, Send, Eye, ArrowLeft,
   Clock, CheckCircle2, Mail, Copy, XCircle, AlertCircle
 } from "lucide-react";
 import { format } from "date-fns";
@@ -64,19 +63,13 @@ export default function HudSecureMessages() {
             <TabsTrigger value="sent" data-testid="tab-sent">Sent</TabsTrigger>
           </TabsList>
           <TabsContent value="compose" className="mt-4">
-            <MessagesList
-              onSelect={setSelectedMsgId}
-              searchQuery={searchQuery}
-              setSearchQuery={setSearchQuery}
-              filter="compose"
-            />
+            <ComposeForm />
           </TabsContent>
           <TabsContent value="sent" className="mt-4">
-            <MessagesList
+            <SentList
               onSelect={setSelectedMsgId}
               searchQuery={searchQuery}
               setSearchQuery={setSearchQuery}
-              filter="sent"
             />
           </TabsContent>
         </Tabs>
@@ -85,14 +78,10 @@ export default function HudSecureMessages() {
   );
 }
 
-function MessagesList({ onSelect, searchQuery, setSearchQuery, filter }: {
-  onSelect: (id: string) => void;
-  searchQuery: string;
-  setSearchQuery: (q: string) => void;
-  filter: "compose" | "sent";
-}) {
+const PAGE_SIZE = 10;
+
+function ComposeForm() {
   const { toast } = useToast();
-  const [composeOpen, setComposeOpen] = useState(false);
   const [formRecipientName, setFormRecipientName] = useState("");
   const [formRecipientEmail, setFormRecipientEmail] = useState("");
   const [formSubject, setFormSubject] = useState("");
@@ -100,15 +89,22 @@ function MessagesList({ onSelect, searchQuery, setSearchQuery, filter }: {
   const [formCustomerId, setFormCustomerId] = useState("");
   const [formExpiresAt, setFormExpiresAt] = useState("");
 
-  const { data: messages, isLoading } = useQuery<SecureMessage[]>({
-    queryKey: ["/api/admin/secure-messages"],
-  });
-
   const { data: customers } = useQuery<Customer[]>({
     queryKey: ["/api/admin/customers"],
   });
 
-  const createMutation = useMutation({
+  const resetForm = () => {
+    setFormRecipientName("");
+    setFormRecipientEmail("");
+    setFormSubject("");
+    setFormBody("");
+    setFormCustomerId("");
+    setFormExpiresAt("");
+  };
+
+  const formValid = formRecipientName.trim() && formRecipientEmail.trim() && formSubject.trim() && formBody.trim();
+
+  const saveDraftMutation = useMutation({
     mutationFn: async () => {
       const res = await apiRequest("POST", "/api/admin/secure-messages", {
         recipientName: formRecipientName,
@@ -122,18 +118,151 @@ function MessagesList({ onSelect, searchQuery, setSearchQuery, filter }: {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/secure-messages"] });
-      setComposeOpen(false);
-      setFormRecipientName("");
-      setFormRecipientEmail("");
-      setFormSubject("");
-      setFormBody("");
-      setFormCustomerId("");
-      setFormExpiresAt("");
-      toast({ title: "Secure message created" });
+      resetForm();
+      toast({ title: "Draft saved" });
     },
     onError: (e: Error) => {
       toast({ title: "Error", description: e.message, variant: "destructive" });
     },
+  });
+
+  const sendNowMutation = useMutation({
+    mutationFn: async () => {
+      const createRes = await apiRequest("POST", "/api/admin/secure-messages", {
+        recipientName: formRecipientName,
+        recipientEmail: formRecipientEmail,
+        subject: formSubject,
+        body: formBody,
+        customerId: formCustomerId && formCustomerId !== "none" ? formCustomerId : null,
+        expiresAt: formExpiresAt || null,
+      });
+      const created = await createRes.json();
+      await apiRequest("POST", `/api/admin/secure-messages/${created.id}/send`);
+      return created;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/secure-messages"] });
+      resetForm();
+      toast({ title: "Message sent securely" });
+    },
+    onError: (e: Error) => {
+      toast({ title: "Error", description: e.message, variant: "destructive" });
+    },
+  });
+
+  const isBusy = saveDraftMutation.isPending || sendNowMutation.isPending;
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-lg flex items-center gap-2">
+          <Lock className="h-5 w-5 text-slate-600 dark:text-slate-400" />
+          Compose Secure Message
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div className="grid grid-cols-2 gap-3">
+          <div className="space-y-1.5">
+            <Label>Recipient Name</Label>
+            <Input
+              placeholder="John Doe"
+              value={formRecipientName}
+              onChange={e => setFormRecipientName(e.target.value)}
+              data-testid="input-recipient-name"
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label>Recipient Email</Label>
+            <Input
+              type="email"
+              placeholder="john@example.com"
+              value={formRecipientEmail}
+              onChange={e => setFormRecipientEmail(e.target.value)}
+              data-testid="input-recipient-email"
+            />
+          </div>
+        </div>
+        <div className="space-y-1.5">
+          <Label>Subject</Label>
+          <Input
+            placeholder="Confidential: Account Update"
+            value={formSubject}
+            onChange={e => setFormSubject(e.target.value)}
+            data-testid="input-message-subject"
+          />
+        </div>
+        <div className="space-y-1.5">
+          <Label>Message Body</Label>
+          <Textarea
+            placeholder="Enter the secure message content..."
+            value={formBody}
+            onChange={e => setFormBody(e.target.value)}
+            className="resize-y min-h-[120px]"
+            data-testid="input-message-body"
+          />
+        </div>
+        <div className="grid grid-cols-2 gap-3">
+          <div className="space-y-1.5">
+            <Label>Link to Customer (optional)</Label>
+            <Select value={formCustomerId} onValueChange={setFormCustomerId}>
+              <SelectTrigger data-testid="select-message-customer">
+                <SelectValue placeholder="Select customer..." />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">No customer</SelectItem>
+                {(customers || []).map(c => (
+                  <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-1.5">
+            <Label>Expires At (optional)</Label>
+            <Input
+              type="date"
+              value={formExpiresAt}
+              onChange={e => setFormExpiresAt(e.target.value)}
+              data-testid="input-message-expires"
+            />
+          </div>
+        </div>
+        <div className="flex gap-3">
+          <Button
+            variant="outline"
+            className="flex-1"
+            onClick={() => saveDraftMutation.mutate()}
+            disabled={!formValid || isBusy}
+            data-testid="button-save-draft"
+          >
+            {saveDraftMutation.isPending && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
+            Save as Draft
+          </Button>
+          <Button
+            className="flex-1"
+            onClick={() => sendNowMutation.mutate()}
+            disabled={!formValid || isBusy}
+            data-testid="button-send-now"
+          >
+            {sendNowMutation.isPending && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
+            <Send className="h-4 w-4 mr-2" />
+            Send Now
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+function SentList({ onSelect, searchQuery, setSearchQuery }: {
+  onSelect: (id: string) => void;
+  searchQuery: string;
+  setSearchQuery: (q: string) => void;
+}) {
+  const { toast } = useToast();
+  const [page, setPage] = useState(0);
+
+  const { data: messages, isLoading } = useQuery<SecureMessage[]>({
+    queryKey: ["/api/admin/secure-messages"],
   });
 
   const deleteMutation = useMutation({
@@ -149,9 +278,8 @@ function MessagesList({ onSelect, searchQuery, setSearchQuery, filter }: {
     },
   });
 
-  const filtered = (messages || []).filter(msg => {
-    if (filter === "compose" && msg.status !== "DRAFT") return false;
-    if (filter === "sent" && msg.status === "DRAFT") return false;
+  const sentMessages = (messages || []).filter(m => m.status !== "DRAFT");
+  const filtered = sentMessages.filter(msg => {
     if (!searchQuery) return true;
     const q = searchQuery.toLowerCase();
     return msg.subject.toLowerCase().includes(q) ||
@@ -159,9 +287,11 @@ function MessagesList({ onSelect, searchQuery, setSearchQuery, filter }: {
       msg.recipientEmail.toLowerCase().includes(q);
   });
 
+  const totalPages = Math.ceil(filtered.length / PAGE_SIZE);
+  const paged = filtered.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
+
   const sentCount = (messages || []).filter(m => m.status === "SENT").length;
   const readCount = (messages || []).filter(m => m.status === "READ").length;
-  const draftCount = (messages || []).filter(m => m.status === "DRAFT").length;
 
   if (isLoading) {
     return <div className="space-y-3">{Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-20 w-full" />)}</div>;
@@ -169,15 +299,15 @@ function MessagesList({ onSelect, searchQuery, setSearchQuery, filter }: {
 
   return (
     <div className="space-y-4">
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
         <Card>
           <CardContent className="p-4 flex items-center gap-3">
             <div className="w-9 h-9 rounded-md bg-slate-600/[0.08] dark:bg-slate-600/[0.15] flex items-center justify-center">
               <Mail className="h-4 w-4 text-slate-600 dark:text-slate-400" />
             </div>
             <div>
-              <p className="text-2xl font-bold" data-testid="text-total-messages">{(messages || []).length}</p>
-              <p className="text-xs text-muted-foreground">Total</p>
+              <p className="text-2xl font-bold" data-testid="text-total-sent">{sentMessages.length}</p>
+              <p className="text-xs text-muted-foreground">Total Sent</p>
             </div>
           </CardContent>
         </Card>
@@ -188,7 +318,7 @@ function MessagesList({ onSelect, searchQuery, setSearchQuery, filter }: {
             </div>
             <div>
               <p className="text-2xl font-bold" data-testid="text-sent-count">{sentCount}</p>
-              <p className="text-xs text-muted-foreground">Sent</p>
+              <p className="text-xs text-muted-foreground">Awaiting</p>
             </div>
           </CardContent>
         </Card>
@@ -203,175 +333,109 @@ function MessagesList({ onSelect, searchQuery, setSearchQuery, filter }: {
             </div>
           </CardContent>
         </Card>
-        <Card>
-          <CardContent className="p-4 flex items-center gap-3">
-            <div className="w-9 h-9 rounded-md bg-gray-600/[0.08] dark:bg-gray-600/[0.15] flex items-center justify-center">
-              <Clock className="h-4 w-4 text-gray-600 dark:text-gray-400" />
-            </div>
-            <div>
-              <p className="text-2xl font-bold" data-testid="text-draft-count">{draftCount}</p>
-              <p className="text-xs text-muted-foreground">Drafts</p>
-            </div>
-          </CardContent>
-        </Card>
       </div>
 
-      <div className="flex items-center gap-3 flex-wrap">
-        <div className="relative flex-1 min-w-[200px]">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder={filter === "compose" ? "Search drafts..." : "Search sent messages..."}
-            value={searchQuery}
-            onChange={e => setSearchQuery(e.target.value)}
-            className="pl-10"
-            data-testid="input-search-messages"
-          />
-        </div>
-        {filter === "compose" && <Dialog open={composeOpen} onOpenChange={setComposeOpen}>
-          <DialogTrigger asChild>
-            <Button data-testid="button-compose-message">
-              <Plus className="h-4 w-4 mr-2" />
-              Compose Message
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="max-w-lg">
-            <DialogHeader><DialogTitle>Compose Secure Message</DialogTitle></DialogHeader>
-            <div className="space-y-4 mt-4">
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-1.5">
-                  <Label>Recipient Name</Label>
-                  <Input
-                    placeholder="John Doe"
-                    value={formRecipientName}
-                    onChange={e => setFormRecipientName(e.target.value)}
-                    data-testid="input-recipient-name"
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <Label>Recipient Email</Label>
-                  <Input
-                    type="email"
-                    placeholder="john@example.com"
-                    value={formRecipientEmail}
-                    onChange={e => setFormRecipientEmail(e.target.value)}
-                    data-testid="input-recipient-email"
-                  />
-                </div>
-              </div>
-              <div className="space-y-1.5">
-                <Label>Subject</Label>
-                <Input
-                  placeholder="Confidential: Account Update"
-                  value={formSubject}
-                  onChange={e => setFormSubject(e.target.value)}
-                  data-testid="input-message-subject"
-                />
-              </div>
-              <div className="space-y-1.5">
-                <Label>Message Body</Label>
-                <Textarea
-                  placeholder="Enter the secure message content..."
-                  value={formBody}
-                  onChange={e => setFormBody(e.target.value)}
-                  className="resize-y min-h-[120px]"
-                  data-testid="input-message-body"
-                />
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-1.5">
-                  <Label>Link to Customer (optional)</Label>
-                  <Select value={formCustomerId} onValueChange={setFormCustomerId}>
-                    <SelectTrigger data-testid="select-message-customer">
-                      <SelectValue placeholder="Select customer..." />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="none">No customer</SelectItem>
-                      {(customers || []).map(c => (
-                        <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-1.5">
-                  <Label>Expires At (optional)</Label>
-                  <Input
-                    type="date"
-                    value={formExpiresAt}
-                    onChange={e => setFormExpiresAt(e.target.value)}
-                    data-testid="input-message-expires"
-                  />
-                </div>
-              </div>
-              <Button
-                className="w-full"
-                onClick={() => createMutation.mutate()}
-                disabled={!formRecipientName.trim() || !formRecipientEmail.trim() || !formSubject.trim() || !formBody.trim() || createMutation.isPending}
-                data-testid="button-save-message"
-              >
-                {createMutation.isPending && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
-                Create Message
-              </Button>
-            </div>
-          </DialogContent>
-        </Dialog>}
+      <div className="relative">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+        <Input
+          placeholder="Search sent messages..."
+          value={searchQuery}
+          onChange={e => { setSearchQuery(e.target.value); setPage(0); }}
+          className="pl-10"
+          data-testid="input-search-messages"
+        />
       </div>
 
-      {filtered.length === 0 ? (
+      {paged.length === 0 ? (
         <Card>
           <CardContent className="py-12 text-center">
             <Lock className="h-12 w-12 text-muted-foreground mx-auto mb-3" />
-            <p className="text-sm font-medium" data-testid="text-no-messages">
-              {filter === "compose" ? "No draft messages" : "No sent messages yet"}
-            </p>
-            <p className="text-xs text-muted-foreground mt-1">
-              {filter === "compose"
-                ? "Compose a message to send confidential information securely"
-                : "Messages you send will appear here"}
-            </p>
+            <p className="text-sm font-medium" data-testid="text-no-messages">No sent messages yet</p>
+            <p className="text-xs text-muted-foreground mt-1">Messages you send will appear here</p>
           </CardContent>
         </Card>
       ) : (
-        <div className="space-y-3">
-          {filtered.map(msg => (
-            <Card key={msg.id} className="hover-elevate cursor-pointer" data-testid={`card-message-${msg.id}`}>
-              <CardContent className="p-4 flex items-center gap-4" onClick={() => onSelect(msg.id)}>
-                <div className="w-10 h-10 rounded-md bg-slate-600/[0.08] dark:bg-slate-600/[0.15] flex items-center justify-center flex-shrink-0">
-                  <Lock className="h-5 w-5 text-slate-600 dark:text-slate-400" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <span className="font-semibold text-sm" data-testid={`text-msg-subject-${msg.id}`}>{msg.subject}</span>
-                    {statusBadge(msg.status)}
+        <>
+          <div className="space-y-3">
+            {paged.map(msg => (
+              <Card key={msg.id} className="hover-elevate cursor-pointer" data-testid={`card-message-${msg.id}`}>
+                <CardContent className="p-4 flex items-center gap-4" onClick={() => onSelect(msg.id)}>
+                  <div className="w-10 h-10 rounded-md bg-slate-600/[0.08] dark:bg-slate-600/[0.15] flex items-center justify-center flex-shrink-0">
+                    <Lock className="h-5 w-5 text-slate-600 dark:text-slate-400" />
                   </div>
-                  <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground flex-wrap">
-                    <span className="flex items-center gap-1">
-                      <Mail className="h-3 w-3" />
-                      {msg.recipientName} ({msg.recipientEmail})
-                    </span>
-                    <span>{format(new Date(msg.createdAt), "MMM d, yyyy")}</span>
-                    {msg.readAt && (
-                      <span className="flex items-center gap-1 text-green-600 dark:text-green-400">
-                        <Eye className="h-3 w-3" />
-                        Read {format(new Date(msg.readAt), "MMM d")}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="font-semibold text-sm" data-testid={`text-msg-subject-${msg.id}`}>{msg.subject}</span>
+                      {statusBadge(msg.status)}
+                    </div>
+                    <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground flex-wrap">
+                      <span className="flex items-center gap-1">
+                        <Mail className="h-3 w-3" />
+                        {msg.recipientName} ({msg.recipientEmail})
                       </span>
-                    )}
+                      <span>{format(new Date(msg.createdAt), "MMM d, yyyy")}</span>
+                      {msg.readAt && (
+                        <span className="flex items-center gap-1 text-green-600 dark:text-green-400">
+                          <Eye className="h-3 w-3" />
+                          Read {format(new Date(msg.readAt), "MMM d")}
+                        </span>
+                      )}
+                    </div>
                   </div>
-                </div>
+                  <div className="flex items-center gap-1">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={(e) => { e.stopPropagation(); onSelect(msg.id); }}
+                      data-testid={`button-view-msg-${msg.id}`}
+                    >
+                      <Eye className="h-3.5 w-3.5 mr-1" />
+                      View
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (confirm("Delete this message?")) deleteMutation.mutate(msg.id);
+                      }}
+                      data-testid={`button-delete-msg-${msg.id}`}
+                    >
+                      <Trash2 className="h-4 w-4 text-destructive" />
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+          {totalPages > 1 && (
+            <div className="flex items-center justify-between pt-2">
+              <p className="text-xs text-muted-foreground">
+                Showing {page * PAGE_SIZE + 1}–{Math.min((page + 1) * PAGE_SIZE, filtered.length)} of {filtered.length}
+              </p>
+              <div className="flex gap-2">
                 <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    if (confirm("Delete this message?")) deleteMutation.mutate(msg.id);
-                  }}
-                  data-testid={`button-delete-msg-${msg.id}`}
+                  variant="outline"
+                  size="sm"
+                  disabled={page === 0}
+                  onClick={() => setPage(p => p - 1)}
+                  data-testid="button-prev-page"
                 >
-                  <Trash2 className="h-4 w-4 text-destructive" />
+                  Previous
                 </Button>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={page >= totalPages - 1}
+                  onClick={() => setPage(p => p + 1)}
+                  data-testid="button-next-page"
+                >
+                  Next
+                </Button>
+              </div>
+            </div>
+          )}
+        </>
       )}
     </div>
   );
