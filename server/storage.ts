@@ -285,7 +285,7 @@ export interface IStorage {
   getSecureMessage(id: string): Promise<SecureMessage | undefined>;
   getSecureMessageByToken(token: string): Promise<SecureMessage | undefined>;
   createSecureMessage(data: InsertSecureMessage): Promise<SecureMessage>;
-  updateSecureMessage(id: string, data: Partial<InsertSecureMessage>): Promise<SecureMessage>;
+  updateSecureMessage(id: string, data: Partial<InsertSecureMessage> & { status?: string; sentAt?: Date | null; readAt?: Date | null }): Promise<SecureMessage>;
   deleteSecureMessage(id: string): Promise<void>;
 
   getSecureMessageActivity(messageId: string): Promise<SecureMessageActivity[]>;
@@ -1372,7 +1372,7 @@ export class DatabaseStorage implements IStorage {
     return m;
   }
 
-  async updateSecureMessage(id: string, data: Partial<InsertSecureMessage>): Promise<SecureMessage> {
+  async updateSecureMessage(id: string, data: Partial<InsertSecureMessage> & { status?: string; sentAt?: Date | null; readAt?: Date | null }): Promise<SecureMessage> {
     const [m] = await db.update(secureMessages).set({ ...data, updatedAt: new Date() }).where(eq(secureMessages.id, id)).returning();
     return m;
   }

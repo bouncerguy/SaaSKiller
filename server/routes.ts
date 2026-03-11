@@ -3866,8 +3866,7 @@ export async function registerRoutes(
   // ── Secure Messages (Admin) ──
   app.get("/api/admin/secure-messages", requireAuth, async (req, res) => {
     try {
-      const user = req.user as any;
-      const messages = await storage.getSecureMessagesByTenant(user.tenantId);
+      const messages = await storage.getSecureMessagesByTenant(req.user!.tenantId);
       res.json(messages);
     } catch (e: any) {
       res.status(500).json({ message: e.message });
@@ -3876,14 +3875,13 @@ export async function registerRoutes(
 
   app.post("/api/admin/secure-messages", requireAuth, async (req, res) => {
     try {
-      const user = req.user as any;
       const { recipientName, recipientEmail, subject, body, customerId, expiresAt } = req.body;
       if (!recipientName || !recipientEmail || !subject || !body) {
         return res.status(400).json({ message: "recipientName, recipientEmail, subject, and body are required" });
       }
       const msg = await storage.createSecureMessage({
-        tenantId: user.tenantId,
-        createdByUserId: user.id,
+        tenantId: req.user!.tenantId,
+        createdByUserId: req.user!.id,
         recipientName,
         recipientEmail,
         subject,
@@ -3902,9 +3900,8 @@ export async function registerRoutes(
 
   app.get("/api/admin/secure-messages/:id", requireAuth, async (req, res) => {
     try {
-      const user = req.user as any;
       const msg = await storage.getSecureMessage(req.params.id);
-      if (!msg || msg.tenantId !== user.tenantId) return res.status(404).json({ message: "Message not found" });
+      if (!msg || msg.tenantId !== req.user!.tenantId) return res.status(404).json({ message: "Message not found" });
       const activity = await storage.getSecureMessageActivity(msg.id);
       const tenant = await storage.getTenant(msg.tenantId);
       res.json({ ...msg, activity, tenantSlug: tenant?.slug });
@@ -3915,9 +3912,8 @@ export async function registerRoutes(
 
   app.patch("/api/admin/secure-messages/:id", requireAuth, async (req, res) => {
     try {
-      const user = req.user as any;
       const existing = await storage.getSecureMessage(req.params.id);
-      if (!existing || existing.tenantId !== user.tenantId) return res.status(404).json({ message: "Message not found" });
+      if (!existing || existing.tenantId !== req.user!.tenantId) return res.status(404).json({ message: "Message not found" });
       const { recipientName, recipientEmail, subject, body, customerId, expiresAt } = req.body;
       const msg = await storage.updateSecureMessage(req.params.id, {
         ...(recipientName !== undefined && { recipientName }),
@@ -3935,9 +3931,8 @@ export async function registerRoutes(
 
   app.delete("/api/admin/secure-messages/:id", requireAuth, async (req, res) => {
     try {
-      const user = req.user as any;
       const msg = await storage.getSecureMessage(req.params.id);
-      if (!msg || msg.tenantId !== user.tenantId) return res.status(404).json({ message: "Message not found" });
+      if (!msg || msg.tenantId !== req.user!.tenantId) return res.status(404).json({ message: "Message not found" });
       await storage.deleteSecureMessage(req.params.id);
       res.json({ success: true });
     } catch (e: any) {
@@ -3947,15 +3942,15 @@ export async function registerRoutes(
 
   app.post("/api/admin/secure-messages/:id/send", requireAuth, async (req, res) => {
     try {
-      const user = req.user as any;
       const msg = await storage.getSecureMessage(req.params.id);
-      if (!msg || msg.tenantId !== user.tenantId) return res.status(404).json({ message: "Message not found" });
+      if (!msg || msg.tenantId !== req.user!.tenantId) return res.status(404).json({ message: "Message not found" });
       if (msg.status !== "DRAFT") return res.status(400).json({ message: "Only draft messages can be sent" });
-      const tenant = await storage.getTenant(user.tenantId);
+      const tenant = await storage.getTenant(req.user!.tenantId);
+      const secureLink = `/secure/${tenant?.slug || msg.tenantId}/${msg.accessToken}`;
       const updated = await storage.updateSecureMessage(msg.id, {
         status: "SENT",
         sentAt: new Date(),
-      } as any);
+      });
       await storage.createSecureMessageActivity({
         tenantId: msg.tenantId,
         messageId: msg.id,
@@ -3967,7 +3962,7 @@ export async function registerRoutes(
         templateId: null,
         toEmail: msg.recipientEmail,
         toName: msg.recipientName,
-        subject: `Secure message from ${tenant?.name || "your organization"}: ${msg.subject}`,
+        subject: `You have a secure message from ${tenant?.name || "your organization"}: ${msg.subject}. View it at: ${secureLink}`,
         status: "QUEUED",
       });
       res.json(updated);
@@ -3978,9 +3973,8 @@ export async function registerRoutes(
 
   app.get("/api/admin/secure-messages/:id/activity", requireAuth, async (req, res) => {
     try {
-      const user = req.user as any;
       const msg = await storage.getSecureMessage(req.params.id);
-      if (!msg || msg.tenantId !== user.tenantId) return res.status(404).json({ message: "Message not found" });
+      if (!msg || msg.tenantId !== req.user!.tenantId) return res.status(404).json({ message: "Message not found" });
       const activity = await storage.getSecureMessageActivity(req.params.id);
       res.json(activity);
     } catch (e: any) {
@@ -3998,7 +3992,7 @@ export async function registerRoutes(
       if (msg.status === "DRAFT") return res.status(404).json({ message: "Message not found" });
       if (msg.status === "EXPIRED" || (msg.expiresAt && new Date(msg.expiresAt) < new Date())) {
         if (msg.status !== "EXPIRED") {
-          await storage.updateSecureMessage(msg.id, { status: "EXPIRED" } as any);
+          await storage.updateSecureMessage(msg.id, { status: "EXPIRED" });
         }
         return res.status(410).json({ message: "This message has expired" });
       }
@@ -4041,13 +4035,20 @@ export async function registerRoutes(
         await storage.updateSecureMessage(msg.id, {
           status: "READ",
           readAt: new Date(),
-        } as any);
+        });
       }
       await storage.createSecureMessageActivity({
         tenantId: msg.tenantId,
         messageId: msg.id,
         action: "VERIFIED",
         details: `Recipient verified via ${email}`,
+        ipAddress: req.ip || null,
+      });
+      await storage.createSecureMessageActivity({
+        tenantId: msg.tenantId,
+        messageId: msg.id,
+        action: "VIEWED",
+        details: `Message viewed by ${msg.recipientName}`,
         ipAddress: req.ip || null,
       });
       res.json({
