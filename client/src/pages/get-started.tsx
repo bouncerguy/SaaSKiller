@@ -215,7 +215,15 @@ export default function GetStarted() {
                   <Github className="h-7 w-7 text-white dark:text-gray-900" />
                 </div>
                 <div className="flex-1 text-center sm:text-left">
-                  <h2 className="text-lg font-semibold" data-testid="text-github-title">Source Code on GitHub</h2>
+                  <div className="flex items-center gap-3 flex-wrap justify-center sm:justify-start">
+                    <h2 className="text-lg font-semibold" data-testid="text-github-title">Source Code on GitHub</h2>
+                    <img
+                      src="https://img.shields.io/github/stars/bouncerguy/SaaSKiller?style=social"
+                      alt="GitHub stars"
+                      className="h-5"
+                      data-testid="img-github-stars"
+                    />
+                  </div>
                   <p className="text-sm text-muted-foreground mt-1">
                     MIT licensed. Clone, fork, or download. Everything you need is in one repository.
                   </p>
@@ -288,6 +296,77 @@ export default function GetStarted() {
                         <span className="text-muted-foreground">({item.note})</span>
                       </div>
                     ))}
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          </div>
+        </section>
+
+        {/* What You Need — Prerequisites */}
+        <section className="px-6 pb-16" data-testid="section-prerequisites">
+          <div className="max-w-4xl mx-auto">
+            <div className="text-center mb-8">
+              <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-primary/[0.08] dark:bg-primary/[0.15] text-primary text-xs font-medium mb-4">
+                <CheckCircle2 className="h-3 w-3" />
+                Before you begin
+              </div>
+              <h2 className="text-2xl sm:text-3xl font-semibold" data-testid="text-prerequisites-title">What You Need</h2>
+              <p className="mt-3 text-muted-foreground max-w-lg mx-auto">
+                Gather these before starting. Replit users can skip to the next section — everything is provided automatically.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <Card data-testid="card-prereqs-required">
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-sm font-medium flex items-center gap-2">
+                    <Shield className="h-4 w-4 text-primary" />
+                    Required
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="pt-0 space-y-3">
+                  {[
+                    { icon: Github, name: "GitHub account", detail: "To clone or fork the repository" },
+                    { icon: Package, name: "Node.js 20+", detail: "JavaScript runtime" },
+                    { icon: Database, name: "PostgreSQL 15+", detail: "Application database" },
+                    { icon: Terminal, name: "npm 9+", detail: "Package manager (bundled with Node.js)" },
+                  ].map((item) => (
+                    <div key={item.name} className="flex items-start gap-3">
+                      <item.icon className="h-4 w-4 text-primary mt-0.5 shrink-0" />
+                      <div>
+                        <span className="text-sm font-medium">{item.name}</span>
+                        <p className="text-xs text-muted-foreground">{item.detail}</p>
+                      </div>
+                    </div>
+                  ))}
+                </CardContent>
+              </Card>
+
+              <Card data-testid="card-prereqs-optional">
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-sm font-medium flex items-center gap-2">
+                    <Settings className="h-4 w-4 text-muted-foreground" />
+                    Optional Services (BYOK)
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="pt-0 space-y-3">
+                  {[
+                    { icon: Phone, name: "Twilio account", detail: "For phone numbers, calls, SMS, and voicemail" },
+                    { icon: Share2, name: "Social media API keys", detail: "Twitter/X, Facebook, LinkedIn, Instagram — configured per-account in the UI" },
+                    { icon: Video, name: "Jitsi server or Zoom", detail: "Video conferencing — configured in Settings" },
+                    { icon: Link2, name: "HubSpot Private App token", detail: "Import contacts and workflows from HubSpot" },
+                  ].map((item) => (
+                    <div key={item.name} className="flex items-start gap-3">
+                      <item.icon className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0" />
+                      <div>
+                        <span className="text-sm font-medium">{item.name}</span>
+                        <p className="text-xs text-muted-foreground">{item.detail}</p>
+                      </div>
+                    </div>
+                  ))}
+                  <div className="pt-2 border-t">
+                    <p className="text-xs text-muted-foreground">All optional services use a Bring Your Own Key (BYOK) model. You only pay the providers you choose.</p>
                   </div>
                 </CardContent>
               </Card>
