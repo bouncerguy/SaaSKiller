@@ -37,12 +37,14 @@ import HudFunnels from "@/pages/hud-funnels";
 import HudPhone from "@/pages/hud-phone";
 import HudDocuments from "@/pages/hud-documents";
 import HudSocial from "@/pages/hud-social";
+import HudSecureMessages from "@/pages/hud-secure-messages";
 import PublicBooking from "@/pages/public-booking";
 import PublicTenant from "@/pages/public-tenant";
 import PublicForm from "@/pages/public-form";
 import PublicPage from "@/pages/public-page";
 import PublicFunnel from "@/pages/public-funnel";
 import PublicDocument from "@/pages/public-document";
+import PublicSecureMessage from "@/pages/public-secure-message";
 import ModuleDetail from "@/pages/module-detail";
 import GetStarted from "@/pages/get-started";
 import { Redirect } from "wouter";
@@ -115,6 +117,7 @@ function Router() {
       <Route path="/s/:tenantSlug/:pageSlug" component={PublicPage} />
       <Route path="/f/:tenantSlug/:funnelSlug" component={PublicFunnel} />
       <Route path="/sign/:tenantSlug/:docSlug/:signerId" component={PublicDocument} />
+      <Route path="/secure/:tenantSlug/:token" component={PublicSecureMessage} />
       <Route path="/hud">{() => <ProtectedRoute component={HudDashboard} />}</Route>
       <Route path="/hud/event-types">{() => <ProtectedRoute component={HudEventTypes} />}</Route>
       <Route path="/hud/bookings">{() => <ProtectedRoute component={HudBookings} />}</Route>
@@ -141,6 +144,7 @@ function Router() {
       <Route path="/hud/phone">{() => <ProtectedRoute component={HudPhone} />}</Route>
       <Route path="/hud/social">{() => <ProtectedRoute component={HudSocial} />}</Route>
       <Route path="/hud/documents">{() => <ProtectedRoute component={HudDocuments} />}</Route>
+      <Route path="/hud/secure-messages">{() => <ProtectedRoute component={HudSecureMessages} />}</Route>
       <Route component={NotFound} />
     </Switch>
   );

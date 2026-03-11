@@ -8,6 +8,7 @@ import {
   pages, funnels, funnelSteps, phoneNumbers, callLogs, smsMessages,
   documents, documentSigners, documentActivityLog,
   socialAccounts, socialPosts, socialPostPlatforms,
+  secureMessages, secureMessageActivity,
   type Tenant, type InsertTenant,
   type User, type InsertUser,
   type EventType, type InsertEventType,
@@ -48,6 +49,8 @@ import {
   type SocialAccount, type InsertSocialAccount,
   type SocialPost, type InsertSocialPost,
   type SocialPostPlatform, type InsertSocialPostPlatform,
+  type SecureMessage, type InsertSecureMessage,
+  type SecureMessageActivity, type InsertSecureMessageActivity,
 } from "@shared/schema";
 
 export interface IStorage {
@@ -277,6 +280,16 @@ export interface IStorage {
   createSocialPostPlatform(data: InsertSocialPostPlatform): Promise<SocialPostPlatform>;
   updateSocialPostPlatform(id: string, data: Partial<InsertSocialPostPlatform>): Promise<SocialPostPlatform>;
   getScheduledPostsDue(): Promise<SocialPost[]>;
+
+  getSecureMessagesByTenant(tenantId: string): Promise<SecureMessage[]>;
+  getSecureMessage(id: string): Promise<SecureMessage | undefined>;
+  getSecureMessageByToken(token: string): Promise<SecureMessage | undefined>;
+  createSecureMessage(data: InsertSecureMessage): Promise<SecureMessage>;
+  updateSecureMessage(id: string, data: Partial<InsertSecureMessage>): Promise<SecureMessage>;
+  deleteSecureMessage(id: string): Promise<void>;
+
+  getSecureMessageActivity(messageId: string): Promise<SecureMessageActivity[]>;
+  createSecureMessageActivity(data: InsertSecureMessageActivity): Promise<SecureMessageActivity>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -495,6 +508,7 @@ export class DatabaseStorage implements IStorage {
       { name: "Backups", slug: "backups", description: "Backup management", enabledGlobally: false },
       { name: "Updates", slug: "updates", description: "Git-based update system", enabledGlobally: false },
       { name: "Social Media", slug: "social-media", description: "Social media management and scheduling", enabledGlobally: false },
+      { name: "Secure Messaging", slug: "secure-messaging", description: "Bank-portal style secure message delivery", enabledGlobally: false },
     ];
 
     for (const feat of defaultFeatures) {
@@ -1337,6 +1351,44 @@ export class DatabaseStorage implements IStorage {
         lte(socialPosts.scheduledAt, new Date())
       )
     );
+  }
+
+  async getSecureMessagesByTenant(tenantId: string): Promise<SecureMessage[]> {
+    return db.select().from(secureMessages).where(eq(secureMessages.tenantId, tenantId)).orderBy(desc(secureMessages.createdAt));
+  }
+
+  async getSecureMessage(id: string): Promise<SecureMessage | undefined> {
+    const [m] = await db.select().from(secureMessages).where(eq(secureMessages.id, id));
+    return m;
+  }
+
+  async getSecureMessageByToken(token: string): Promise<SecureMessage | undefined> {
+    const [m] = await db.select().from(secureMessages).where(eq(secureMessages.accessToken, token));
+    return m;
+  }
+
+  async createSecureMessage(data: InsertSecureMessage): Promise<SecureMessage> {
+    const [m] = await db.insert(secureMessages).values(data).returning();
+    return m;
+  }
+
+  async updateSecureMessage(id: string, data: Partial<InsertSecureMessage>): Promise<SecureMessage> {
+    const [m] = await db.update(secureMessages).set({ ...data, updatedAt: new Date() }).where(eq(secureMessages.id, id)).returning();
+    return m;
+  }
+
+  async deleteSecureMessage(id: string): Promise<void> {
+    await db.delete(secureMessageActivity).where(eq(secureMessageActivity.messageId, id));
+    await db.delete(secureMessages).where(eq(secureMessages.id, id));
+  }
+
+  async getSecureMessageActivity(messageId: string): Promise<SecureMessageActivity[]> {
+    return db.select().from(secureMessageActivity).where(eq(secureMessageActivity.messageId, messageId)).orderBy(desc(secureMessageActivity.createdAt));
+  }
+
+  async createSecureMessageActivity(data: InsertSecureMessageActivity): Promise<SecureMessageActivity> {
+    const [a] = await db.insert(secureMessageActivity).values(data).returning();
+    return a;
   }
 }
 

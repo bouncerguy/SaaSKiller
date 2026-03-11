@@ -3,10 +3,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
-import { Calendar, CalendarCheck, Clock, Users, ArrowRight, TrendingUp, XCircle, ShoppingBag, HeadphonesIcon, DollarSign, Timer, FileText, Mail, Bot, ImageIcon, Video, FileCode, GitBranch, Phone, FileSignature, Share2 } from "lucide-react";
+import { Calendar, CalendarCheck, Clock, Users, ArrowRight, TrendingUp, XCircle, ShoppingBag, HeadphonesIcon, DollarSign, Timer, FileText, Mail, Bot, ImageIcon, Video, FileCode, GitBranch, Phone, FileSignature, Share2, ShieldCheck } from "lucide-react";
 import { format } from "date-fns";
 import { Link } from "wouter";
-import type { Booking, EventType, Customer, Product, Ticket, Invoice, TimeEntry, Form, EmailTemplate, Agent, MediaAsset, Page, Funnel, PhoneNumber, Document, SocialPost } from "@shared/schema";
+import type { Booking, EventType, Customer, Product, Ticket, Invoice, TimeEntry, Form, EmailTemplate, Agent, MediaAsset, Page, Funnel, PhoneNumber, Document, SocialPost, SecureMessage } from "@shared/schema";
 
 interface VideoSettings {
   videoProvider: "none" | "jitsi" | "zoom";
@@ -82,6 +82,10 @@ export default function AdminDashboard() {
     queryKey: ["/api/admin/social-posts"],
   });
 
+  const { data: secureMessagesData } = useQuery<SecureMessage[]>({
+    queryKey: ["/api/admin/secure-messages"],
+  });
+
   const upcomingBookings = bookings
     ?.filter((b) => b.status === "CONFIRMED" && new Date(b.startAt) > new Date())
     .sort((a, b) => new Date(a.startAt).getTime() - new Date(b.startAt).getTime())
@@ -105,6 +109,7 @@ export default function AdminDashboard() {
   const activePhoneNumbers = phoneNumbersData?.filter((p) => p.isActive).length || 0;
   const totalDocuments = documentsData?.length || 0;
   const totalSocialPosts = socialPostsData?.length || 0;
+  const totalSecureMessages = secureMessagesData?.filter(m => m.status === "SENT" || m.status === "READ").length || 0;
 
   const isLoading = loadingBookings || loadingEvents;
 
@@ -272,6 +277,15 @@ export default function AdminDashboard() {
       href: "/hud/documents",
       color: "text-indigo-600 dark:text-indigo-400",
       bg: "bg-indigo-600/[0.08] dark:bg-indigo-600/[0.15]",
+    },
+    {
+      label: "Secure Msgs",
+      value: totalSecureMessages,
+      icon: ShieldCheck,
+      testId: "text-total-secure-messages",
+      href: "/hud/secure-messages",
+      color: "text-slate-600 dark:text-slate-400",
+      bg: "bg-slate-600/[0.08] dark:bg-slate-600/[0.15]",
     },
   ];
 

@@ -1,7 +1,7 @@
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Calendar, Users, ShoppingBag, HeadphonesIcon, DollarSign, Timer, Code, Shield, Zap, ArrowRight, Check, Layers, FileText, Mail, Bot, Image, Video, FileCode, GitBranch, Phone, FileSignature, Share2, Server, Cpu, HardDrive, Settings } from "lucide-react";
+import { Calendar, Users, ShoppingBag, HeadphonesIcon, DollarSign, Timer, Code, Shield, Zap, ArrowRight, Check, Layers, FileText, Mail, Bot, Image, Video, FileCode, GitBranch, Phone, FileSignature, Share2, ShieldCheck, Server, Cpu, HardDrive, Settings } from "lucide-react";
 import { ThemeToggle } from "@/components/theme-toggle";
 
 const modules = [
@@ -133,6 +133,14 @@ const modules = [
     color: "text-rose-600 dark:text-rose-400",
     bg: "bg-rose-600/[0.08] dark:bg-rose-600/[0.15]",
   },
+  {
+    icon: ShieldCheck,
+    title: "Secure Messaging",
+    slug: "secure-messaging",
+    desc: "Bank-portal style messaging. Recipients verify their email before viewing content. Full audit trail with read receipts and expiration.",
+    color: "text-slate-600 dark:text-slate-400",
+    bg: "bg-slate-600/[0.08] dark:bg-slate-600/[0.15]",
+  },
 ];
 
 const platformFeatures = [
@@ -215,7 +223,7 @@ export default function Landing() {
           <div className="max-w-5xl mx-auto">
             <div className="text-center mb-14">
               <h2 className="text-2xl sm:text-3xl font-semibold" data-testid="text-modules-title">
-                Sixteen modules. One platform. Zero SaaS fees.
+                Seventeen modules. One platform. Zero SaaS fees.
               </h2>
               <p className="mt-3 text-muted-foreground max-w-lg mx-auto">
                 Every module is off by default — enable only what you need. No clutter, no overwhelm. Your dashboard stays clean until you decide otherwise.
@@ -298,6 +306,7 @@ export default function Landing() {
                         { name: "Grasshopper", cost: "$28/mo", module: "Phone" },
                         { name: "DocuSign", cost: "$25/mo", module: "Documents" },
                         { name: "Buffer", cost: "$15/mo", module: "Social Media" },
+                        { name: "Virtru", cost: "$20/mo", module: "Secure Msgs" },
                       ].map((item) => (
                         <div key={item.name} className="flex items-center justify-between py-2 px-3 rounded-md bg-muted/50">
                           <div>
@@ -335,7 +344,7 @@ export default function Landing() {
                   icon: Server,
                   specs: "1 vCPU · 2 GB RAM · 25 GB SSD",
                   fit: "1–5 users, light usage",
-                  features: ["Node.js + PostgreSQL on one box", "Perfect for solo operators", "All 15 modules included"],
+                  features: ["Node.js + PostgreSQL on one box", "Perfect for solo operators", "All 17 modules included"],
                 },
                 {
                   tier: "Recommended",

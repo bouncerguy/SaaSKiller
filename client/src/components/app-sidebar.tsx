@@ -25,6 +25,7 @@ import {
   Phone,
   FileSignature,
   Share2,
+  ShieldCheck,
 } from "lucide-react";
 import { useLocation, Link } from "wouter";
 import { useAuth } from "@/hooks/use-auth";
@@ -97,6 +98,7 @@ const operationsItems: NavItem[] = [
   { title: "Phone", url: "/hud/phone", icon: Phone, enabled: true },
   { title: "Social Media", url: "/hud/social", icon: Share2, enabled: true },
   { title: "Documents", url: "/hud/documents", icon: FileSignature, enabled: true },
+  { title: "Secure Messages", url: "/hud/secure-messages", icon: ShieldCheck, enabled: true },
 ];
 
 const toolItems: NavItem[] = [
