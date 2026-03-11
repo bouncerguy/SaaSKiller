@@ -22,8 +22,6 @@ interface TenantData {
 
 interface MessageMeta {
   id: string;
-  subject: string;
-  recipientEmail: string;
   recipientName: string;
   status: string;
   expiresAt: string | null;
@@ -214,10 +212,9 @@ export default function PublicSecureMessage() {
         <Card className="overflow-visible">
           <CardContent className="p-6">
             <div className="mb-4">
-              <h2 className="text-base font-semibold" data-testid="text-message-subject-preview">{data.subject}</h2>
-              <p className="text-xs text-muted-foreground mt-1">
-                To: {data.recipientName}
-              </p>
+              <h2 className="text-base font-semibold" data-testid="text-message-recipient">
+                Secure message for {data.recipientName}
+              </h2>
               {data.expiresAt && (
                 <div className="flex items-center gap-1.5 mt-2 text-xs text-muted-foreground">
                   <Clock className="h-3 w-3" />

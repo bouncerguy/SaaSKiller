@@ -3962,7 +3962,7 @@ export async function registerRoutes(
         templateId: null,
         toEmail: msg.recipientEmail,
         toName: msg.recipientName,
-        subject: `You have a secure message from ${tenant?.name || "your organization"}: ${msg.subject}. View it at: ${secureLink}`,
+        subject: `You have a secure message from ${tenant?.name || "your organization"}. Verify your identity to view it at: ${secureLink}`,
         status: "QUEUED",
       });
       res.json(updated);
@@ -3998,8 +3998,6 @@ export async function registerRoutes(
       }
       res.json({
         id: msg.id,
-        subject: msg.subject,
-        recipientEmail: msg.recipientEmail,
         recipientName: msg.recipientName,
         status: msg.status,
         expiresAt: msg.expiresAt,
