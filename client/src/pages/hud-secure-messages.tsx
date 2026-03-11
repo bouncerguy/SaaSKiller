@@ -14,7 +14,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
-  ShieldCheck, Plus, Loader2, Trash2, Search, Send, Eye, ArrowLeft,
+  Lock, Plus, Loader2, Trash2, Search, Send, Eye, ArrowLeft,
   Clock, CheckCircle2, Mail, Copy, XCircle, AlertCircle
 } from "lucide-react";
 import { format } from "date-fns";
@@ -42,6 +42,7 @@ function statusBadge(status: string) {
 export default function HudSecureMessages() {
   const [selectedMsgId, setSelectedMsgId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
+  const [activeTab, setActiveTab] = useState("compose");
 
   return (
     <div className="p-6 lg:p-8 space-y-6 max-w-6xl mx-auto">
@@ -57,16 +58,38 @@ export default function HudSecureMessages() {
       {selectedMsgId ? (
         <MessageDetail msgId={selectedMsgId} onBack={() => setSelectedMsgId(null)} />
       ) : (
-        <MessagesList onSelect={setSelectedMsgId} searchQuery={searchQuery} setSearchQuery={setSearchQuery} />
+        <Tabs value={activeTab} onValueChange={setActiveTab}>
+          <TabsList data-testid="tabs-secure-messages">
+            <TabsTrigger value="compose" data-testid="tab-compose">Compose</TabsTrigger>
+            <TabsTrigger value="sent" data-testid="tab-sent">Sent</TabsTrigger>
+          </TabsList>
+          <TabsContent value="compose" className="mt-4">
+            <MessagesList
+              onSelect={setSelectedMsgId}
+              searchQuery={searchQuery}
+              setSearchQuery={setSearchQuery}
+              filter="compose"
+            />
+          </TabsContent>
+          <TabsContent value="sent" className="mt-4">
+            <MessagesList
+              onSelect={setSelectedMsgId}
+              searchQuery={searchQuery}
+              setSearchQuery={setSearchQuery}
+              filter="sent"
+            />
+          </TabsContent>
+        </Tabs>
       )}
     </div>
   );
 }
 
-function MessagesList({ onSelect, searchQuery, setSearchQuery }: {
+function MessagesList({ onSelect, searchQuery, setSearchQuery, filter }: {
   onSelect: (id: string) => void;
   searchQuery: string;
   setSearchQuery: (q: string) => void;
+  filter: "compose" | "sent";
 }) {
   const { toast } = useToast();
   const [composeOpen, setComposeOpen] = useState(false);
@@ -127,6 +150,8 @@ function MessagesList({ onSelect, searchQuery, setSearchQuery }: {
   });
 
   const filtered = (messages || []).filter(msg => {
+    if (filter === "compose" && msg.status !== "DRAFT") return false;
+    if (filter === "sent" && msg.status === "DRAFT") return false;
     if (!searchQuery) return true;
     const q = searchQuery.toLowerCase();
     return msg.subject.toLowerCase().includes(q) ||
@@ -195,14 +220,14 @@ function MessagesList({ onSelect, searchQuery, setSearchQuery }: {
         <div className="relative flex-1 min-w-[200px]">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
-            placeholder="Search messages..."
+            placeholder={filter === "compose" ? "Search drafts..." : "Search sent messages..."}
             value={searchQuery}
             onChange={e => setSearchQuery(e.target.value)}
             className="pl-10"
             data-testid="input-search-messages"
           />
         </div>
-        <Dialog open={composeOpen} onOpenChange={setComposeOpen}>
+        {filter === "compose" && <Dialog open={composeOpen} onOpenChange={setComposeOpen}>
           <DialogTrigger asChild>
             <Button data-testid="button-compose-message">
               <Plus className="h-4 w-4 mr-2" />
@@ -288,15 +313,21 @@ function MessagesList({ onSelect, searchQuery, setSearchQuery }: {
               </Button>
             </div>
           </DialogContent>
-        </Dialog>
+        </Dialog>}
       </div>
 
       {filtered.length === 0 ? (
         <Card>
           <CardContent className="py-12 text-center">
-            <ShieldCheck className="h-12 w-12 text-muted-foreground mx-auto mb-3" />
-            <p className="text-sm font-medium" data-testid="text-no-messages">No secure messages yet</p>
-            <p className="text-xs text-muted-foreground mt-1">Compose a message to send confidential information securely</p>
+            <Lock className="h-12 w-12 text-muted-foreground mx-auto mb-3" />
+            <p className="text-sm font-medium" data-testid="text-no-messages">
+              {filter === "compose" ? "No draft messages" : "No sent messages yet"}
+            </p>
+            <p className="text-xs text-muted-foreground mt-1">
+              {filter === "compose"
+                ? "Compose a message to send confidential information securely"
+                : "Messages you send will appear here"}
+            </p>
           </CardContent>
         </Card>
       ) : (
@@ -305,7 +336,7 @@ function MessagesList({ onSelect, searchQuery, setSearchQuery }: {
             <Card key={msg.id} className="hover-elevate cursor-pointer" data-testid={`card-message-${msg.id}`}>
               <CardContent className="p-4 flex items-center gap-4" onClick={() => onSelect(msg.id)}>
                 <div className="w-10 h-10 rounded-md bg-slate-600/[0.08] dark:bg-slate-600/[0.15] flex items-center justify-center flex-shrink-0">
-                  <ShieldCheck className="h-5 w-5 text-slate-600 dark:text-slate-400" />
+                  <Lock className="h-5 w-5 text-slate-600 dark:text-slate-400" />
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">

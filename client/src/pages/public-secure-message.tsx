@@ -50,9 +50,9 @@ export default function PublicSecureMessage() {
   const [messageContent, setMessageContent] = useState<MessageContent | null>(null);
 
   const { data, isLoading, error } = useQuery<MessageMeta>({
-    queryKey: ["/api/public", tenantSlug, "secure-message", token],
+    queryKey: ["/api/public", tenantSlug, "secure", token],
     queryFn: async () => {
-      const res = await fetch(`/api/public/${tenantSlug}/secure-message/${token}`);
+      const res = await fetch(`/api/public/${tenantSlug}/secure/${token}`);
       if (res.status === 410) throw new Error("expired");
       if (!res.ok) throw new Error("not_found");
       return res.json();
@@ -63,7 +63,7 @@ export default function PublicSecureMessage() {
     mutationFn: async (verifyEmail: string) => {
       const res = await apiRequest(
         "POST",
-        `/api/public/${tenantSlug}/secure-message/${token}/verify`,
+        `/api/public/${tenantSlug}/secure/${token}/verify`,
         { email: verifyEmail }
       );
       return res.json();

@@ -3951,6 +3951,7 @@ export async function registerRoutes(
       const msg = await storage.getSecureMessage(req.params.id);
       if (!msg || msg.tenantId !== user.tenantId) return res.status(404).json({ message: "Message not found" });
       if (msg.status !== "DRAFT") return res.status(400).json({ message: "Only draft messages can be sent" });
+      const tenant = await storage.getTenant(user.tenantId);
       const updated = await storage.updateSecureMessage(msg.id, {
         status: "SENT",
         sentAt: new Date(),
@@ -3960,6 +3961,14 @@ export async function registerRoutes(
         messageId: msg.id,
         action: "SENT",
         details: `Message sent to ${msg.recipientEmail}`,
+      });
+      await storage.createEmailLog({
+        tenantId: msg.tenantId,
+        templateId: null,
+        toEmail: msg.recipientEmail,
+        toName: msg.recipientName,
+        subject: `Secure message from ${tenant?.name || "your organization"}: ${msg.subject}`,
+        status: "QUEUED",
       });
       res.json(updated);
     } catch (e: any) {
@@ -3980,7 +3989,7 @@ export async function registerRoutes(
   });
 
   // ── Public Secure Message Routes ──
-  app.get("/api/public/:tenantSlug/secure-message/:token", async (req, res) => {
+  app.get("/api/public/:tenantSlug/secure/:token", async (req, res) => {
     try {
       const tenant = await storage.getTenantBySlug(req.params.tenantSlug);
       if (!tenant) return res.status(404).json({ message: "Not found" });
@@ -4007,7 +4016,7 @@ export async function registerRoutes(
     }
   });
 
-  app.post("/api/public/:tenantSlug/secure-message/:token/verify", async (req, res) => {
+  app.post("/api/public/:tenantSlug/secure/:token/verify", async (req, res) => {
     try {
       const tenant = await storage.getTenantBySlug(req.params.tenantSlug);
       if (!tenant) return res.status(404).json({ message: "Not found" });
