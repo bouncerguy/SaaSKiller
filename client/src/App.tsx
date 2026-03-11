@@ -36,6 +36,7 @@ import HudPages from "@/pages/hud-pages";
 import HudFunnels from "@/pages/hud-funnels";
 import HudPhone from "@/pages/hud-phone";
 import HudDocuments from "@/pages/hud-documents";
+import HudSocial from "@/pages/hud-social";
 import PublicBooking from "@/pages/public-booking";
 import PublicTenant from "@/pages/public-tenant";
 import PublicForm from "@/pages/public-form";
@@ -138,6 +139,7 @@ function Router() {
       <Route path="/hud/pages">{() => <ProtectedRoute component={HudPages} />}</Route>
       <Route path="/hud/funnels">{() => <ProtectedRoute component={HudFunnels} />}</Route>
       <Route path="/hud/phone">{() => <ProtectedRoute component={HudPhone} />}</Route>
+      <Route path="/hud/social">{() => <ProtectedRoute component={HudSocial} />}</Route>
       <Route path="/hud/documents">{() => <ProtectedRoute component={HudDocuments} />}</Route>
       <Route component={NotFound} />
     </Switch>

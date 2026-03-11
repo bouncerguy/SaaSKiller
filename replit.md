@@ -4,7 +4,7 @@
 SaaS Killer is a modular business platform designed to be a comprehensive business operating system. The project offers an open-source, self-hosted alternative to proprietary SaaS solutions. Current modules:
 
 - **Public booking pages**: `/book/:tenantSlug/:eventSlug` — date/time picker, timezone selector, booking form
-- **HUD dashboard**: `/hud` — unified control center with module stats (bookings, customers, products, tickets, revenue, time, forms, templates, agents, media, video, pages, funnels, phone lines, documents)
+- **HUD dashboard**: `/hud` — unified control center with module stats (bookings, customers, products, tickets, revenue, time, forms, templates, agents, media, video, pages, funnels, phone lines, social posts, documents)
 - **CRM module**: Customer management with payment status tracking, lead management with kanban pipeline boards, notes system, lead-to-customer conversion, cross-module linking (tickets, invoices, time entries visible in customer detail)
 - **Products module**: Product & service catalog with pricing, billing cycles (one-time/monthly/quarterly/yearly), categories, search
 - **Support module**: Ticket management with priority levels (Low/Medium/High/Urgent), status workflow (Open→In Progress→Waiting→Resolved→Closed), customer linking, team assignment
@@ -20,6 +20,7 @@ SaaS Killer is a modular business platform designed to be a comprehensive busine
 - **Funnels module**: Multi-step sales funnel builder with step types (opt_in/sales/checkout/thank_you/custom), block-based content per step, visual step pipeline, reordering. Public funnels at `/f/:tenantSlug/:funnelSlug` with step navigation
 - **Phone System module**: Virtual PBX with Twilio integration, phone number management, call forwarding, voicemail, call logs with direction/status/duration, SMS messaging with compose/receive, Twilio credential configuration per tenant, webhook endpoints for incoming calls/SMS
 - **Documents & Signing module**: Document/contract creation with block-based content, signer management (signer/viewer/approver roles), signing order, status workflow (Draft→Sent→Completed/Cancelled/Expired), public signing pages at `/sign/:tenantSlug/:docSlug/:signerId`, signature capture with typed name, activity logging, customer linking
+- **Social Media module**: BYOK multi-platform social media management with post composer, scheduling, calendar view, and platform accounts management. Supports Twitter/X, Facebook, LinkedIn, and Instagram with step-by-step API key setup guides per platform. Post status workflow (Draft→Scheduled→Publishing→Published/Failed), platform-level error tracking.
 - **HubSpot Integration**: Import contacts as customers or leads, import workflows as AI agents. Requires `HUBSPOT_ACCESS_TOKEN` Private App token. Duplicate detection by email. Imported workflows start as Draft agents.
 - **Public form pages**: `/forms/:tenantSlug/:formSlug` — dynamic form renderer with field validation and branded submission
 - **First-run setup wizard**: `/setup` — creates organization, admin account, and seeds features on fresh install
@@ -67,6 +68,7 @@ client/src/
     hud-pages.tsx          - Website pages builder (lime accent)
     hud-funnels.tsx        - Sales funnels builder (fuchsia accent)
     hud-phone.tsx          - Phone system & PBX (teal accent)
+    hud-social.tsx         - Social media management (rose accent)
     hud-documents.tsx      - Documents & contract signing (indigo accent)
     public-form.tsx        - Public form renderer page
     public-page.tsx        - Public page renderer
@@ -86,6 +88,7 @@ server/
   index.ts                 - Express server entry
   routes.ts                - All API routes
   storage.ts               - IStorage interface + DatabaseStorage (Drizzle)
+  social.ts                - Social media platform API helpers (Twitter, Facebook, LinkedIn, Instagram)
   auth.ts                  - Passport config + requireAuth middleware
   db.ts                    - Database connection
   seed.ts                  - Dev seed data
@@ -131,6 +134,8 @@ shared/
 - **SMS**: GET/POST /sms, GET /sms/:id
 - **Documents**: GET/POST /documents, GET/PATCH/DELETE /documents/:id, POST /documents/:id/send, GET /documents/:id/activity
 - **Signers**: GET/POST /documents/:id/signers, PATCH/DELETE /documents/:id/signers/:signerId
+- **Social Accounts**: GET/POST /social-accounts, PATCH/DELETE /social-accounts/:id, POST /social-accounts/:id/test
+- **Social Posts**: GET/POST /social-posts, GET/PATCH/DELETE /social-posts/:id, POST /social-posts/:id/publish
 - **HubSpot**: GET /hubspot/status, GET /hubspot/contacts, POST /hubspot/import-customers, POST /hubspot/import-leads, GET /hubspot/workflows, POST /hubspot/import-workflows
 
 ### Public (prefix: /api/public)
@@ -148,11 +153,11 @@ shared/
 - POST /:tenantSlug/documents/:docSlug/signer/:signerId/decline — Decline signing
 
 ## Database Schema
-Key tables: tenants, users, groups, user_groups, features, group_features, user_features, settings, activity_log, event_types, availability_rules, bookings, customers, leads, pipelines, notes, products, tickets, invoices, time_entries, forms, form_responses, email_templates, email_logs, agents, agent_runs, media_assets, pages, funnels, funnel_steps, phone_numbers, call_logs, sms_messages, documents, document_signers, document_activity_log, session
+Key tables: tenants, users, groups, user_groups, features, group_features, user_features, settings, activity_log, event_types, availability_rules, bookings, customers, leads, pipelines, notes, products, tickets, invoices, time_entries, forms, form_responses, email_templates, email_logs, agents, agent_runs, media_assets, pages, funnels, funnel_steps, phone_numbers, call_logs, sms_messages, documents, document_signers, document_activity_log, social_accounts, social_posts, social_post_platforms, session
 
 ## Design System
 - **Primary**: Warm indigo, Inter font
-- **Module accents**: CRM (emerald), Products (orange), Support (rose), Finance (emerald), Time Tracking (violet), Forms (sky), Email (amber), AI Agents (cyan), Media (pink), Pages (lime), Funnels (fuchsia), Phone (teal), Documents (indigo)
+- **Module accents**: CRM (emerald), Products (orange), Support (rose), Finance (emerald), Time Tracking (violet), Forms (sky), Email (amber), AI Agents (cyan), Media (pink), Pages (lime), Funnels (fuchsia), Phone (teal), Social Media (rose), Documents (indigo)
 - **Dark mode**: Full support via ThemeProvider + class-based toggling
 - Prices stored in cents, invoice auto-numbered INV-0001+
 

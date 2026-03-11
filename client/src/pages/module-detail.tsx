@@ -6,7 +6,7 @@ import { ThemeToggle } from "@/components/theme-toggle";
 import {
   ArrowLeft, Calendar, Users, ShoppingBag, HeadphonesIcon, DollarSign,
   Timer, FileText, Mail, Bot, Image, Video, FileCode, GitBranch, Phone,
-  FileSignature, Check, Layers, ArrowRight,
+  FileSignature, Share2, Check, Layers, ArrowRight,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
@@ -431,6 +431,34 @@ const moduleData: ModuleData[] = [
     replaces: "DocuSign",
     replacesCost: "$25/mo",
   },
+  {
+    slug: "social-media",
+    title: "Social Media",
+    tagline: "Plan, schedule, and publish — all from one dashboard",
+    description: "A multi-platform social media management module that lets you compose posts, schedule them for optimal times, and publish to Twitter, Facebook, LinkedIn, and Instagram — all from a single interface. Bring your own API keys (BYOK) for each platform and keep full control of your accounts.",
+    icon: Share2,
+    color: "text-rose-600 dark:text-rose-400",
+    bg: "bg-rose-600/[0.08] dark:bg-rose-600/[0.15]",
+    borderColor: "border-rose-600/20",
+    features: [
+      { title: "Post Composer", description: "Write posts with a rich text editor, attach media URLs, and preview how your content will look before publishing across platforms." },
+      { title: "Multi-Platform Publishing", description: "Publish a single post to multiple platforms simultaneously. Select which connected accounts receive each post with per-platform status tracking." },
+      { title: "Post Scheduling", description: "Schedule posts for future dates and times. The system automatically publishes when the scheduled time arrives, respecting your configured timezone." },
+      { title: "Calendar View", description: "Visualize your posting schedule on a monthly calendar grid. See all scheduled, published, and draft posts at a glance with color-coded status dots." },
+      { title: "Platform Accounts", description: "Connect Twitter, Facebook, LinkedIn, and Instagram accounts by entering your own API keys and tokens. Each account is stored per-tenant with status tracking." },
+      { title: "Setup Guides", description: "Step-by-step collapsible guides for each platform walk you through creating developer apps, generating API keys, and connecting your accounts." },
+      { title: "Post Status Tracking", description: "Track every post through its lifecycle: Draft, Scheduled, Publishing, Published, or Failed. Per-platform status shows exactly where issues occurred." },
+      { title: "Media Integration", description: "Attach media URLs to posts for image and video sharing. Works with your Media Library assets or any external URL." },
+    ],
+    highlights: [
+      "Four platforms from one dashboard",
+      "BYOK — bring your own API keys",
+      "Scheduled publishing with calendar view",
+      "Per-platform status tracking",
+    ],
+    replaces: "Buffer / Hootsuite",
+    replacesCost: "$15–50/mo per tool",
+  },
 ];
 
 export default function ModuleDetail() {
@@ -549,7 +577,7 @@ export default function ModuleDetail() {
         <div className="max-w-4xl mx-auto text-center">
           <h2 className="text-2xl font-semibold mb-3">Ready to get started?</h2>
           <p className="text-muted-foreground mb-3 max-w-lg mx-auto">
-            Stop paying {mod.replacesCost} for {mod.replaces}. Get {mod.title} and 14 other modules with SaaS Killer — free and self-hosted.
+            Stop paying {mod.replacesCost} for {mod.replaces}. Get {mod.title} and 15 other modules with SaaS Killer — free and self-hosted.
           </p>
           <p className="text-sm text-muted-foreground mb-6 max-w-md mx-auto">
             Every module is off by default. Enable only what you need — your dashboard stays clean until you say otherwise.

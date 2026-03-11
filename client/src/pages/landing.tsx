@@ -1,7 +1,7 @@
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Calendar, Users, ShoppingBag, HeadphonesIcon, DollarSign, Timer, Code, Shield, Zap, ArrowRight, Check, Layers, FileText, Mail, Bot, Image, Video, FileCode, GitBranch, Phone, FileSignature, Server, Cpu, HardDrive, Settings } from "lucide-react";
+import { Calendar, Users, ShoppingBag, HeadphonesIcon, DollarSign, Timer, Code, Shield, Zap, ArrowRight, Check, Layers, FileText, Mail, Bot, Image, Video, FileCode, GitBranch, Phone, FileSignature, Share2, Server, Cpu, HardDrive, Settings } from "lucide-react";
 import { ThemeToggle } from "@/components/theme-toggle";
 
 const modules = [
@@ -125,6 +125,14 @@ const modules = [
     color: "text-indigo-600 dark:text-indigo-400",
     bg: "bg-indigo-600/[0.08] dark:bg-indigo-600/[0.15]",
   },
+  {
+    icon: Share2,
+    title: "Social Media",
+    slug: "social-media",
+    desc: "Plan, schedule, and publish posts to Twitter, Facebook, LinkedIn, and Instagram from one dashboard. BYOK — bring your own API keys.",
+    color: "text-rose-600 dark:text-rose-400",
+    bg: "bg-rose-600/[0.08] dark:bg-rose-600/[0.15]",
+  },
 ];
 
 const platformFeatures = [
@@ -185,7 +193,7 @@ export default function Landing() {
               Your business, your terms.
             </h1>
             <p className="mt-5 text-base sm:text-lg text-muted-foreground max-w-xl mx-auto leading-relaxed">
-              SaaS Killer replaces the stack of SaaS tools eating your margins. Scheduling, CRM, invoicing, support, time tracking, forms, email, AI agents, media, products, and video conferencing — all in one self-hosted platform you actually own.
+              SaaS Killer replaces the stack of SaaS tools eating your margins. Scheduling, CRM, invoicing, support, time tracking, forms, email, AI agents, media, products, video conferencing, and social media — all in one self-hosted platform you actually own.
             </p>
             <div className="mt-8 flex items-center gap-3 justify-center flex-wrap">
               <Link href="/hud">
@@ -207,7 +215,7 @@ export default function Landing() {
           <div className="max-w-5xl mx-auto">
             <div className="text-center mb-14">
               <h2 className="text-2xl sm:text-3xl font-semibold" data-testid="text-modules-title">
-                Fifteen modules. One platform. Zero SaaS fees.
+                Sixteen modules. One platform. Zero SaaS fees.
               </h2>
               <p className="mt-3 text-muted-foreground max-w-lg mx-auto">
                 Every module is off by default — enable only what you need. No clutter, no overwhelm. Your dashboard stays clean until you decide otherwise.
@@ -289,6 +297,7 @@ export default function Landing() {
                         { name: "ClickFunnels", cost: "$97/mo", module: "Funnels" },
                         { name: "Grasshopper", cost: "$28/mo", module: "Phone" },
                         { name: "DocuSign", cost: "$25/mo", module: "Documents" },
+                        { name: "Buffer", cost: "$15/mo", module: "Social Media" },
                       ].map((item) => (
                         <div key={item.name} className="flex items-center justify-between py-2 px-3 rounded-md bg-muted/50">
                           <div>

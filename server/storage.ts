@@ -7,6 +7,7 @@ import {
   forms, formResponses, emailTemplates, emailLogs, agents, agentRuns, mediaAssets, domains,
   pages, funnels, funnelSteps, phoneNumbers, callLogs, smsMessages,
   documents, documentSigners, documentActivityLog,
+  socialAccounts, socialPosts, socialPostPlatforms,
   type Tenant, type InsertTenant,
   type User, type InsertUser,
   type EventType, type InsertEventType,
@@ -44,6 +45,9 @@ import {
   type Document, type InsertDocument,
   type DocumentSigner, type InsertDocumentSigner,
   type DocumentActivity, type InsertDocumentActivity,
+  type SocialAccount, type InsertSocialAccount,
+  type SocialPost, type InsertSocialPost,
+  type SocialPostPlatform, type InsertSocialPostPlatform,
 } from "@shared/schema";
 
 export interface IStorage {
@@ -256,6 +260,23 @@ export interface IStorage {
 
   getDocumentActivity(documentId: string): Promise<DocumentActivity[]>;
   createDocumentActivity(data: InsertDocumentActivity): Promise<DocumentActivity>;
+
+  getSocialAccountsByTenant(tenantId: string): Promise<SocialAccount[]>;
+  getSocialAccount(id: string): Promise<SocialAccount | undefined>;
+  createSocialAccount(data: InsertSocialAccount): Promise<SocialAccount>;
+  updateSocialAccount(id: string, data: Partial<InsertSocialAccount>): Promise<SocialAccount>;
+  deleteSocialAccount(id: string): Promise<void>;
+
+  getSocialPostsByTenant(tenantId: string): Promise<SocialPost[]>;
+  getSocialPost(id: string): Promise<SocialPost | undefined>;
+  createSocialPost(data: InsertSocialPost): Promise<SocialPost>;
+  updateSocialPost(id: string, data: Partial<InsertSocialPost>): Promise<SocialPost>;
+  deleteSocialPost(id: string): Promise<void>;
+
+  getSocialPostPlatforms(postId: string): Promise<SocialPostPlatform[]>;
+  createSocialPostPlatform(data: InsertSocialPostPlatform): Promise<SocialPostPlatform>;
+  updateSocialPostPlatform(id: string, data: Partial<InsertSocialPostPlatform>): Promise<SocialPostPlatform>;
+  getScheduledPostsDue(): Promise<SocialPost[]>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -473,6 +494,7 @@ export class DatabaseStorage implements IStorage {
       { name: "Time Tracking", slug: "time-tracking", description: "Time tracker and retainer management", enabledGlobally: false },
       { name: "Backups", slug: "backups", description: "Backup management", enabledGlobally: false },
       { name: "Updates", slug: "updates", description: "Git-based update system", enabledGlobally: false },
+      { name: "Social Media", slug: "social-media", description: "Social media management and scheduling", enabledGlobally: false },
     ];
 
     for (const feat of defaultFeatures) {
@@ -1245,6 +1267,76 @@ export class DatabaseStorage implements IStorage {
   async createDocumentActivity(data: InsertDocumentActivity): Promise<DocumentActivity> {
     const [a] = await db.insert(documentActivityLog).values(data).returning();
     return a;
+  }
+
+  async getSocialAccountsByTenant(tenantId: string): Promise<SocialAccount[]> {
+    return db.select().from(socialAccounts).where(eq(socialAccounts.tenantId, tenantId)).orderBy(desc(socialAccounts.createdAt));
+  }
+
+  async getSocialAccount(id: string): Promise<SocialAccount | undefined> {
+    const [a] = await db.select().from(socialAccounts).where(eq(socialAccounts.id, id));
+    return a;
+  }
+
+  async createSocialAccount(data: InsertSocialAccount): Promise<SocialAccount> {
+    const [a] = await db.insert(socialAccounts).values(data).returning();
+    return a;
+  }
+
+  async updateSocialAccount(id: string, data: Partial<InsertSocialAccount>): Promise<SocialAccount> {
+    const [a] = await db.update(socialAccounts).set({ ...data, updatedAt: new Date() }).where(eq(socialAccounts.id, id)).returning();
+    return a;
+  }
+
+  async deleteSocialAccount(id: string): Promise<void> {
+    await db.delete(socialAccounts).where(eq(socialAccounts.id, id));
+  }
+
+  async getSocialPostsByTenant(tenantId: string): Promise<SocialPost[]> {
+    return db.select().from(socialPosts).where(eq(socialPosts.tenantId, tenantId)).orderBy(desc(socialPosts.createdAt));
+  }
+
+  async getSocialPost(id: string): Promise<SocialPost | undefined> {
+    const [p] = await db.select().from(socialPosts).where(eq(socialPosts.id, id));
+    return p;
+  }
+
+  async createSocialPost(data: InsertSocialPost): Promise<SocialPost> {
+    const [p] = await db.insert(socialPosts).values(data).returning();
+    return p;
+  }
+
+  async updateSocialPost(id: string, data: Partial<InsertSocialPost>): Promise<SocialPost> {
+    const [p] = await db.update(socialPosts).set({ ...data, updatedAt: new Date() }).where(eq(socialPosts.id, id)).returning();
+    return p;
+  }
+
+  async deleteSocialPost(id: string): Promise<void> {
+    await db.delete(socialPostPlatforms).where(eq(socialPostPlatforms.postId, id));
+    await db.delete(socialPosts).where(eq(socialPosts.id, id));
+  }
+
+  async getSocialPostPlatforms(postId: string): Promise<SocialPostPlatform[]> {
+    return db.select().from(socialPostPlatforms).where(eq(socialPostPlatforms.postId, postId));
+  }
+
+  async createSocialPostPlatform(data: InsertSocialPostPlatform): Promise<SocialPostPlatform> {
+    const [p] = await db.insert(socialPostPlatforms).values(data).returning();
+    return p;
+  }
+
+  async updateSocialPostPlatform(id: string, data: Partial<InsertSocialPostPlatform>): Promise<SocialPostPlatform> {
+    const [p] = await db.update(socialPostPlatforms).set(data).where(eq(socialPostPlatforms.id, id)).returning();
+    return p;
+  }
+
+  async getScheduledPostsDue(): Promise<SocialPost[]> {
+    return db.select().from(socialPosts).where(
+      and(
+        eq(socialPosts.status, "SCHEDULED"),
+        lte(socialPosts.scheduledAt, new Date())
+      )
+    );
   }
 }
 
