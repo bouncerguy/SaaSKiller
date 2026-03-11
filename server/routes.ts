@@ -3933,6 +3933,7 @@ export async function registerRoutes(
     try {
       const msg = await storage.getSecureMessage(req.params.id);
       if (!msg || msg.tenantId !== req.user!.tenantId) return res.status(404).json({ message: "Message not found" });
+      if (msg.status !== "DRAFT") return res.status(400).json({ message: "Only draft messages can be deleted" });
       await storage.deleteSecureMessage(req.params.id);
       res.json({ success: true });
     } catch (e: any) {

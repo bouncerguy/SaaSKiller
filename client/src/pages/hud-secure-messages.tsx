@@ -13,7 +13,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
-  Lock, Loader2, Trash2, Search, Send, Eye, ArrowLeft,
+  Lock, Loader2, Search, Send, Eye, ArrowLeft,
   Clock, CheckCircle2, Mail, Copy, XCircle, AlertCircle
 } from "lucide-react";
 import { format } from "date-fns";
@@ -258,24 +258,10 @@ function SentList({ onSelect, searchQuery, setSearchQuery }: {
   searchQuery: string;
   setSearchQuery: (q: string) => void;
 }) {
-  const { toast } = useToast();
   const [page, setPage] = useState(0);
 
   const { data: messages, isLoading } = useQuery<SecureMessage[]>({
     queryKey: ["/api/admin/secure-messages"],
-  });
-
-  const deleteMutation = useMutation({
-    mutationFn: async (id: string) => {
-      await apiRequest("DELETE", `/api/admin/secure-messages/${id}`);
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/admin/secure-messages"] });
-      toast({ title: "Message deleted" });
-    },
-    onError: (e: Error) => {
-      toast({ title: "Error", description: e.message, variant: "destructive" });
-    },
   });
 
   const sentMessages = (messages || []).filter(m => m.status !== "DRAFT");
@@ -382,28 +368,15 @@ function SentList({ onSelect, searchQuery, setSearchQuery }: {
                       )}
                     </div>
                   </div>
-                  <div className="flex items-center gap-1">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={(e) => { e.stopPropagation(); onSelect(msg.id); }}
-                      data-testid={`button-view-msg-${msg.id}`}
-                    >
-                      <Eye className="h-3.5 w-3.5 mr-1" />
-                      View
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        if (confirm("Delete this message?")) deleteMutation.mutate(msg.id);
-                      }}
-                      data-testid={`button-delete-msg-${msg.id}`}
-                    >
-                      <Trash2 className="h-4 w-4 text-destructive" />
-                    </Button>
-                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={(e) => { e.stopPropagation(); onSelect(msg.id); }}
+                    data-testid={`button-view-msg-${msg.id}`}
+                  >
+                    <Eye className="h-3.5 w-3.5 mr-1" />
+                    View
+                  </Button>
                 </CardContent>
               </Card>
             ))}
