@@ -353,7 +353,7 @@ function MessageList({ onSelect, searchQuery, setSearchQuery, statusFilter }: {
                         <Mail className="h-3 w-3" />
                         {msg.recipientName} ({msg.recipientEmail})
                       </span>
-                      <span>{format(new Date(msg.createdAt), "MMM d, yyyy")}</span>
+                      <span>{format(new Date(msg.sentAt || msg.createdAt), "MMM d, yyyy")}</span>
                       {msg.readAt && (
                         <span className="flex items-center gap-1 text-green-600 dark:text-green-400">
                           <Eye className="h-3 w-3" />
