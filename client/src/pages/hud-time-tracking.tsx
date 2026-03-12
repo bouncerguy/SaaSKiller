@@ -408,6 +408,44 @@ export default function HudTimeTracking() {
         </Card>
       </div>
 
+      {weekEntries.length > 0 && (() => {
+        const byCustomer: Record<string, number> = {};
+        weekEntries.forEach((e) => {
+          const name = customerName(e.customerId) || "Unassigned";
+          byCustomer[name] = (byCustomer[name] || 0) + (e.durationMinutes || 0);
+        });
+        const sorted = Object.entries(byCustomer).sort((a, b) => b[1] - a[1]);
+        return (
+          <Card data-testid="card-weekly-by-customer">
+            <CardContent className="p-4">
+              <div className="text-xs text-muted-foreground font-medium mb-3 flex items-center gap-1.5">
+                <BarChart3 className="h-3.5 w-3.5" />
+                This Week by Customer
+              </div>
+              <div className="space-y-2">
+                {sorted.map(([name, mins]) => {
+                  const pct = weekMinutes > 0 ? (mins / weekMinutes) * 100 : 0;
+                  return (
+                    <div key={name} className="space-y-1" data-testid={`customer-breakdown-${name}`}>
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="truncate">{name}</span>
+                        <span className="font-medium shrink-0 ml-2">{formatDuration(mins)}</span>
+                      </div>
+                      <div className="h-1.5 bg-muted rounded-full overflow-hidden">
+                        <div
+                          className="h-full bg-violet-500 rounded-full transition-all"
+                          style={{ width: `${pct}%` }}
+                        />
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </CardContent>
+          </Card>
+        );
+      })()}
+
       {entriesQuery.isLoading ? (
         <div className="space-y-3">
           {[1, 2, 3].map((i) => <Skeleton key={i} className="h-16 w-full rounded-lg" />)}

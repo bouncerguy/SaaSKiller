@@ -18,13 +18,28 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Separator } from "@/components/ui/separator";
 import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
+import {
   FileText,
   Plus,
   Loader2,
   Trash2,
   GripVertical,
-  ChevronUp,
-  ChevronDown,
   ClipboardList,
   Inbox,
   Eye,
@@ -88,6 +103,129 @@ function createEmptyField(): FormField {
     placeholder: "",
     options: [],
   };
+}
+
+function SortableFieldCard({
+  field,
+  idx,
+  totalFields,
+  onUpdate,
+  onRemove,
+}: {
+  field: FormField;
+  idx: number;
+  totalFields: number;
+  onUpdate: (updates: Partial<FormField>) => void;
+  onRemove: () => void;
+}) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: field.id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+  };
+
+  return (
+    <Card ref={setNodeRef} style={style} data-testid={`card-field-${idx}`}>
+      <CardContent className="p-4 space-y-3">
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center gap-1">
+            <button
+              {...attributes}
+              {...listeners}
+              className="cursor-grab active:cursor-grabbing p-1 rounded hover:bg-muted"
+              data-testid={`drag-handle-${idx}`}
+            >
+              <GripVertical className="h-4 w-4 text-muted-foreground" />
+            </button>
+            <span className="text-xs text-muted-foreground font-medium">
+              Field {idx + 1}
+            </span>
+          </div>
+          <Button
+            size="icon"
+            variant="ghost"
+            onClick={onRemove}
+            data-testid={`button-remove-field-${idx}`}
+          >
+            <Trash2 className="h-4 w-4 text-red-500" />
+          </Button>
+        </div>
+        <div className="grid grid-cols-2 gap-3">
+          <div className="space-y-1.5">
+            <Label>Label</Label>
+            <Input
+              data-testid={`input-field-label-${idx}`}
+              value={field.label}
+              onChange={(e) => onUpdate({ label: e.target.value })}
+              placeholder="Field label"
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label>Type</Label>
+            <Select
+              value={field.type}
+              onValueChange={(v) => onUpdate({ type: v })}
+            >
+              <SelectTrigger data-testid={`select-field-type-${idx}`}>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {FIELD_TYPES.map((ft) => (
+                  <SelectItem key={ft.value} value={ft.value}>
+                    {ft.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+        <div className="space-y-1.5">
+          <Label>Placeholder</Label>
+          <Input
+            data-testid={`input-field-placeholder-${idx}`}
+            value={field.placeholder}
+            onChange={(e) => onUpdate({ placeholder: e.target.value })}
+            placeholder="Placeholder text"
+          />
+        </div>
+        {(field.type === "select" || field.type === "radio") && (
+          <div className="space-y-1.5">
+            <Label>Options (comma-separated)</Label>
+            <Input
+              data-testid={`input-field-options-${idx}`}
+              value={field.options.join(", ")}
+              onChange={(e) =>
+                onUpdate({
+                  options: e.target.value.split(",").map((s) => s.trim()).filter(Boolean),
+                })
+              }
+              placeholder="Option 1, Option 2, Option 3"
+            />
+          </div>
+        )}
+        <div className="flex items-center justify-between p-2 rounded-md border">
+          <Label htmlFor={`required-${idx}`} className="cursor-pointer text-sm">
+            Required
+          </Label>
+          <Switch
+            id={`required-${idx}`}
+            data-testid={`switch-field-required-${idx}`}
+            checked={field.required}
+            onCheckedChange={(checked) => onUpdate({ required: checked })}
+          />
+        </div>
+      </CardContent>
+    </Card>
+  );
 }
 
 function FieldPreview({ field }: { field: FormField }) {
@@ -274,12 +412,18 @@ export default function HudForms() {
     setEditFields(editFields.map((f, i) => (i === idx ? { ...f, ...updates } : f)));
   };
 
-  const moveField = (idx: number, direction: "up" | "down") => {
-    const newFields = [...editFields];
-    const swapIdx = direction === "up" ? idx - 1 : idx + 1;
-    if (swapIdx < 0 || swapIdx >= newFields.length) return;
-    [newFields[idx], newFields[swapIdx]] = [newFields[swapIdx], newFields[idx]];
-    setEditFields(newFields);
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
+  );
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (over && active.id !== over.id) {
+      const oldIndex = editFields.findIndex((f) => f.id === active.id);
+      const newIndex = editFields.findIndex((f) => f.id === over.id);
+      setEditFields(arrayMove(editFields, oldIndex, newIndex));
+    }
   };
 
   const forms = formsQuery.data || [];
@@ -519,114 +663,22 @@ export default function HudForms() {
                     </CardContent>
                   </Card>
                 ) : (
-                  <div className="space-y-3">
-                    {editFields.map((field, idx) => (
-                      <Card key={field.id} data-testid={`card-field-${idx}`}>
-                        <CardContent className="p-4 space-y-3">
-                          <div className="flex items-center justify-between gap-2">
-                            <div className="flex items-center gap-1">
-                              <GripVertical className="h-4 w-4 text-muted-foreground" />
-                              <span className="text-xs text-muted-foreground font-medium">
-                                Field {idx + 1}
-                              </span>
-                            </div>
-                            <div className="flex items-center gap-1">
-                              <Button
-                                size="icon"
-                                variant="ghost"
-                                disabled={idx === 0}
-                                onClick={() => moveField(idx, "up")}
-                                data-testid={`button-move-up-${idx}`}
-                              >
-                                <ChevronUp className="h-4 w-4" />
-                              </Button>
-                              <Button
-                                size="icon"
-                                variant="ghost"
-                                disabled={idx === editFields.length - 1}
-                                onClick={() => moveField(idx, "down")}
-                                data-testid={`button-move-down-${idx}`}
-                              >
-                                <ChevronDown className="h-4 w-4" />
-                              </Button>
-                              <Button
-                                size="icon"
-                                variant="ghost"
-                                onClick={() => removeField(idx)}
-                                data-testid={`button-remove-field-${idx}`}
-                              >
-                                <Trash2 className="h-4 w-4 text-red-500" />
-                              </Button>
-                            </div>
-                          </div>
-                          <div className="grid grid-cols-2 gap-3">
-                            <div className="space-y-1.5">
-                              <Label>Label</Label>
-                              <Input
-                                data-testid={`input-field-label-${idx}`}
-                                value={field.label}
-                                onChange={(e) => updateField(idx, { label: e.target.value })}
-                                placeholder="Field label"
-                              />
-                            </div>
-                            <div className="space-y-1.5">
-                              <Label>Type</Label>
-                              <Select
-                                value={field.type}
-                                onValueChange={(v) => updateField(idx, { type: v })}
-                              >
-                                <SelectTrigger data-testid={`select-field-type-${idx}`}>
-                                  <SelectValue />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  {FIELD_TYPES.map((ft) => (
-                                    <SelectItem key={ft.value} value={ft.value}>
-                                      {ft.label}
-                                    </SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
-                            </div>
-                          </div>
-                          <div className="space-y-1.5">
-                            <Label>Placeholder</Label>
-                            <Input
-                              data-testid={`input-field-placeholder-${idx}`}
-                              value={field.placeholder}
-                              onChange={(e) => updateField(idx, { placeholder: e.target.value })}
-                              placeholder="Placeholder text"
-                            />
-                          </div>
-                          {(field.type === "select" || field.type === "radio") && (
-                            <div className="space-y-1.5">
-                              <Label>Options (comma-separated)</Label>
-                              <Input
-                                data-testid={`input-field-options-${idx}`}
-                                value={field.options.join(", ")}
-                                onChange={(e) =>
-                                  updateField(idx, {
-                                    options: e.target.value.split(",").map((s) => s.trim()).filter(Boolean),
-                                  })
-                                }
-                                placeholder="Option 1, Option 2, Option 3"
-                              />
-                            </div>
-                          )}
-                          <div className="flex items-center justify-between p-2 rounded-md border">
-                            <Label htmlFor={`required-${idx}`} className="cursor-pointer text-sm">
-                              Required
-                            </Label>
-                            <Switch
-                              id={`required-${idx}`}
-                              data-testid={`switch-field-required-${idx}`}
-                              checked={field.required}
-                              onCheckedChange={(checked) => updateField(idx, { required: checked })}
-                            />
-                          </div>
-                        </CardContent>
-                      </Card>
-                    ))}
-                  </div>
+                  <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+                    <SortableContext items={editFields.map((f) => f.id)} strategy={verticalListSortingStrategy}>
+                      <div className="space-y-3">
+                        {editFields.map((field, idx) => (
+                          <SortableFieldCard
+                            key={field.id}
+                            field={field}
+                            idx={idx}
+                            totalFields={editFields.length}
+                            onUpdate={(updates) => updateField(idx, updates)}
+                            onRemove={() => removeField(idx)}
+                          />
+                        ))}
+                      </div>
+                    </SortableContext>
+                  </DndContext>
                 )}
                 <Button
                   variant="outline"

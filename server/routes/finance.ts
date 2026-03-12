@@ -49,9 +49,21 @@ export function registerFinanceRoutes(app: Express) {
   app.post("/api/admin/invoices", requireAuth, async (req, res) => {
     try {
       const parsed = createInvoiceSchema.parse(req.body);
+      let subtotal = parsed.subtotal;
+      let tax = parsed.tax;
+      if (parsed.lineItemsJson) {
+        try {
+          const items = JSON.parse(parsed.lineItemsJson) as { quantity: number; unitPrice: number }[];
+          subtotal = items.reduce((s, i) => s + (i.quantity || 1) * (i.unitPrice || 0), 0);
+        } catch {}
+      }
+      const total = subtotal + tax;
       const invoiceNumber = await storage.getNextInvoiceNumber(req.user!.tenantId);
       const invoice = await storage.createInvoice({
         ...parsed,
+        subtotal,
+        tax,
+        total,
         invoiceNumber,
         tenantId: req.user!.tenantId,
         dueDate: parsed.dueDate ? new Date(parsed.dueDate) : null,
@@ -95,6 +107,13 @@ export function registerFinanceRoutes(app: Express) {
       const updateData: any = { ...parsed };
       if (parsed.dueDate) {
         updateData.dueDate = new Date(parsed.dueDate);
+      }
+      if (parsed.lineItemsJson) {
+        try {
+          const items = JSON.parse(parsed.lineItemsJson) as { quantity: number; unitPrice: number }[];
+          updateData.subtotal = items.reduce((s, i) => s + (i.quantity || 1) * (i.unitPrice || 0), 0);
+          updateData.total = updateData.subtotal + (parsed.tax ?? invoice.tax ?? 0);
+        } catch {}
       }
       const updated = await storage.updateInvoice(req.params.id as string, updateData);
       await storage.logActivity({
