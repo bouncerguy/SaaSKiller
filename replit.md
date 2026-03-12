@@ -9,6 +9,12 @@ Clear, concise, structured. Explain "why" not just "what." Iterative development
 ## System Architecture
 The platform is built with a multi-tenant architecture, allowing for isolated environments and branding per tenant. It features a modular design, enabling scalable and independent development of functionalities.
 
+**Backend Structure (Domain-Split):**
+- `shared/schema.ts` — thin re-export barrel; actual schema lives in `shared/schema/*.ts` (18 domain files: core, booking, groups, crm, products, support, finance, forms, email, agents, media, domains, pages, phone, documents, social, secure-messaging, and barrel index.ts)
+- `server/routes.ts` — thin orchestrator (~11 lines); actual route handlers live in `server/routes/*.ts` (22 domain files: setup, auth, admin, pages, funnels, phone, documents, hubspot, booking, hud, crm, products, support, finance, forms, email, agents, media, social, secure-messages, helpers, and barrel index.ts)
+- `server/storage.ts` — storage interface (IStorage) with all CRUD operations
+- `server/auth.ts` — Passport.js session auth setup
+
 **UI/UX Decisions:**
 - **Design System:** Utilizes a warm indigo primary color, the Inter font, and Shadcn UI components with Tailwind CSS for a modern, consistent aesthetic.
 - **Dark Mode:** Full support implemented via a `ThemeProvider` for user preference.

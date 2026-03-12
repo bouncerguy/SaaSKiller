@@ -1,0 +1,44 @@
+import type { Express } from "express";
+import { registerSetupRoutes } from "./setup";
+import { registerAuthRoutes } from "./auth";
+import { registerAdminRoutes } from "./admin";
+import { registerPageRoutes } from "./pages";
+import { registerFunnelRoutes } from "./funnels";
+import { registerPhoneRoutes } from "./phone";
+import { registerDocumentRoutes } from "./documents";
+import { registerHubSpotRoutes } from "./hubspot";
+import { registerBookingRoutes } from "./booking";
+import { registerHudRoutes } from "./hud";
+import { registerCrmRoutes } from "./crm";
+import { registerProductRoutes } from "./products";
+import { registerSupportRoutes } from "./support";
+import { registerFinanceRoutes } from "./finance";
+import { registerFormRoutes } from "./forms";
+import { registerEmailRoutes } from "./email";
+import { registerAgentRoutes } from "./agents";
+import { registerMediaRoutes } from "./media";
+import { registerSocialRoutes } from "./social";
+import { registerSecureMessageRoutes } from "./secure-messages";
+
+export function registerAllRoutes(app: Express) {
+  registerSetupRoutes(app);
+  registerAuthRoutes(app);
+  registerAdminRoutes(app);
+  registerPageRoutes(app);
+  registerFunnelRoutes(app);
+  registerPhoneRoutes(app);
+  registerDocumentRoutes(app);
+  registerHubSpotRoutes(app);
+  registerBookingRoutes(app);
+  registerHudRoutes(app);
+  registerCrmRoutes(app);
+  registerProductRoutes(app);
+  registerSupportRoutes(app);
+  registerFinanceRoutes(app);
+  registerFormRoutes(app);
+  registerEmailRoutes(app);
+  registerAgentRoutes(app);
+  registerMediaRoutes(app);
+  registerSocialRoutes(app);
+  registerSecureMessageRoutes(app);
+}
