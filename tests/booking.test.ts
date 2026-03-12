@@ -98,6 +98,60 @@ describe("generateTimeSlots", () => {
     const sorted = [...slots].sort();
     expect(slots).toEqual(sorted);
   });
+
+  it("handles late-night availability windows (near midnight)", () => {
+    const rules = [makeRule({ startTime: "22:00", endTime: "23:30" })];
+    const farFuture = "2030-01-07";
+    const slots = generateTimeSlots(rules, farFuture, 30, []);
+    expect(slots).toEqual(["22:00", "22:30", "23:00"]);
+  });
+
+  it("returns no slots when end time equals start time (zero-length window)", () => {
+    const rules = [makeRule({ startTime: "09:00", endTime: "09:00" })];
+    const farFuture = "2030-01-07";
+    const slots = generateTimeSlots(rules, farFuture, 30, []);
+    expect(slots).toEqual([]);
+  });
+
+  it("handles midnight boundary — availability ending at 23:59 does not overflow", () => {
+    const rules = [makeRule({ startTime: "23:00", endTime: "23:59" })];
+    const farFuture = "2030-01-07";
+    const slots = generateTimeSlots(rules, farFuture, 30, []);
+    expect(slots).toEqual(["23:00"]);
+    expect(slots).not.toContain("23:30");
+  });
+
+  it("handles DST spring-forward date (March second Sunday) without errors", () => {
+    const rules = [makeRule({ dayOfWeek: "SUNDAY", startTime: "01:00", endTime: "04:00" })];
+    const dstSpring = "2030-03-10";
+    const slots = generateTimeSlots(rules, dstSpring, 30, []);
+    expect(Array.isArray(slots)).toBe(true);
+    expect(slots.length).toBeGreaterThan(0);
+    expect(slots[0]).toBe("01:00");
+  });
+
+  it("handles DST fall-back date (November first Sunday) without errors", () => {
+    const rules = [makeRule({ dayOfWeek: "SUNDAY", startTime: "00:00", endTime: "03:00" })];
+    const dstFall = "2030-11-03";
+    const slots = generateTimeSlots(rules, dstFall, 30, []);
+    expect(Array.isArray(slots)).toBe(true);
+    expect(slots.length).toBeGreaterThan(0);
+  });
+
+  it("correctly handles all seven days of the week", () => {
+    const days: Array<AvailabilityRule["dayOfWeek"]> = [
+      "MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY", "SATURDAY", "SUNDAY",
+    ];
+    const dates = [
+      "2030-01-07", "2030-01-08", "2030-01-09", "2030-01-10",
+      "2030-01-11", "2030-01-12", "2030-01-13",
+    ];
+    for (let i = 0; i < 7; i++) {
+      const rules = [makeRule({ dayOfWeek: days[i], startTime: "10:00", endTime: "11:00" })];
+      const slots = generateTimeSlots(rules, dates[i], 30, []);
+      expect(slots).toEqual(["10:00", "10:30"]);
+    }
+  });
 });
 
 describe("isTimeWithinRules", () => {
@@ -137,6 +191,24 @@ describe("isTimeWithinRules", () => {
       makeRule({ id: "rule-2", startTime: "14:00", endTime: "17:00" }),
     ];
     const result = isTimeWithinRules(rules, "2030-01-07", "15:00", 30);
+    expect(result).toBe(true);
+  });
+
+  it("handles late-night bookings near midnight boundary", () => {
+    const rules = [makeRule({ startTime: "22:00", endTime: "23:30" })];
+    const result = isTimeWithinRules(rules, "2030-01-07", "23:00", 30);
+    expect(result).toBe(true);
+  });
+
+  it("rejects bookings that would extend past midnight boundary", () => {
+    const rules = [makeRule({ startTime: "22:00", endTime: "23:30" })];
+    const result = isTimeWithinRules(rules, "2030-01-07", "23:15", 30);
+    expect(result).toBe(false);
+  });
+
+  it("handles DST spring-forward date without breaking", () => {
+    const rules = [makeRule({ dayOfWeek: "SUNDAY", startTime: "01:00", endTime: "04:00" })];
+    const result = isTimeWithinRules(rules, "2030-03-10", "02:00", 30);
     expect(result).toBe(true);
   });
 });

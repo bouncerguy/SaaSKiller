@@ -1,10 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import express from "express";
+import express, { type Express } from "express";
 import session from "express-session";
 import passport from "passport";
 import { Strategy as LocalStrategy } from "passport-local";
 import supertest from "supertest";
-import { hashPassword, comparePasswords } from "../server/auth";
 
 vi.mock("../server/storage", () => ({
   storage: {
@@ -17,10 +16,12 @@ vi.mock("../server/storage", () => ({
 }));
 
 import { storage } from "../server/storage";
+import { hashPassword, comparePasswords } from "../server/auth";
+import { registerAuthRoutes } from "../server/routes/auth";
 
 const mockedStorage = vi.mocked(storage);
 
-function buildApp() {
+function buildApp(): Express {
   const app = express();
   app.use(express.json());
 
@@ -37,13 +38,13 @@ function buildApp() {
   passport.use(
     new LocalStrategy(
       { usernameField: "email" },
-      async (email: string, password: string, done: any) => {
+      async (email: string, password: string, done) => {
         try {
           const user = await storage.getUserByEmail(email);
-          if (!user || !(user as any).passwordHash) {
+          if (!user || !user.passwordHash) {
             return done(null, false, { message: "Invalid email or password" });
           }
-          const isValid = await comparePasswords(password, (user as any).passwordHash);
+          const isValid = await comparePasswords(password, user.passwordHash);
           if (!isValid) {
             return done(null, false, { message: "Invalid email or password" });
           }
@@ -61,11 +62,11 @@ function buildApp() {
     ),
   );
 
-  passport.serializeUser((user: any, done: any) => {
+  passport.serializeUser((user: Express.User, done) => {
     done(null, user.id);
   });
 
-  passport.deserializeUser(async (id: string, done: any) => {
+  passport.deserializeUser(async (id: string, done) => {
     try {
       const user = await storage.getUser(id);
       if (!user) return done(null, false);
@@ -81,78 +82,19 @@ function buildApp() {
     }
   });
 
-  app.post("/api/auth/register", async (req: any, res: any, next: any) => {
-    try {
-      const { name, email, password } = req.body;
-      if (!name || !email || !password || password.length < 6) {
-        return res.status(400).json({ message: "Validation failed" });
-      }
-
-      const existing = await storage.getUserByEmail(email);
-      if (existing) {
-        return res.status(400).json({ message: "Email already registered" });
-      }
-
-      const tenant = await storage.getTenantBySlug("default");
-      if (!tenant) {
-        return res.status(500).json({ message: "Default tenant not found" });
-      }
-
-      const users = await storage.getUsersByTenant(tenant.id);
-      const role = (users as any[]).length === 0 ? "OWNER" : "MEMBER";
-
-      const passwordHash = await hashPassword(password);
-      const user = await storage.createUser({
-        tenantId: tenant.id,
-        name,
-        email,
-        role,
-        passwordHash,
-      });
-
-      if ((users as any[]).length === 0) {
-        req.login(
-          { id: user.id, tenantId: user.tenantId, name: user.name, email: user.email, role: user.role },
-          (err: any) => {
-            if (err) return next(err);
-            res.json({ id: user.id, name: user.name, email: user.email, role: user.role });
-          },
-        );
-      } else {
-        res.json({ id: user.id, name: user.name, email: user.email, role: user.role });
-      }
-    } catch (e: any) {
-      res.status(500).json({ message: e.message });
-    }
-  });
-
-  app.post("/api/auth/login", (req: any, res: any, next: any) => {
-    passport.authenticate("local", (err: any, user: any, info: any) => {
-      if (err) return next(err);
-      if (!user) return res.status(401).json({ message: info?.message || "Invalid credentials" });
-      req.login(user, (loginErr: any) => {
-        if (loginErr) return next(loginErr);
-        res.json({ id: user.id, name: user.name, email: user.email, role: user.role });
-      });
-    })(req, res, next);
-  });
-
-  app.post("/api/auth/logout", (req: any, res: any) => {
-    req.logout((err: any) => {
-      if (err) return res.status(500).json({ message: "Logout failed" });
-      res.json({ message: "Logged out" });
-    });
-  });
-
-  app.get("/api/auth/user", (req: any, res: any) => {
-    if (!req.isAuthenticated()) {
-      return res.status(401).json({ message: "Not authenticated" });
-    }
-    res.json(req.user);
-  });
+  registerAuthRoutes(app);
 
   return app;
 }
+
+const MOCK_TENANT = {
+  id: "t1",
+  slug: "default",
+  name: "Default",
+  brandColor: "#000",
+  logoUrl: null,
+  calendarIcsUrl: null,
+};
 
 describe("Password hashing", () => {
   it("hashPassword produces a bcrypt hash", async () => {
@@ -175,21 +117,23 @@ describe("Password hashing", () => {
   });
 });
 
-describe("Auth routes", () => {
+describe("Auth routes (registerAuthRoutes)", () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
   it("POST /api/auth/register creates the first user as OWNER", async () => {
     const app = buildApp();
-    const mockTenant = { id: "t1", slug: "default", name: "Default", brandColor: "#000", logoUrl: null, calendarIcsUrl: null };
-    const mockUser = { id: "u1", tenantId: "t1", name: "Alice", email: "alice@test.com", role: "OWNER", passwordHash: "hashed" };
+    const mockUser = {
+      id: "u1", tenantId: "t1", name: "Alice",
+      email: "alice@test.com", role: "OWNER", passwordHash: "hashed",
+    };
 
-    mockedStorage.getTenantBySlug.mockResolvedValue(mockTenant as any);
+    mockedStorage.getTenantBySlug.mockResolvedValue(MOCK_TENANT as ReturnType<typeof storage.getTenantBySlug> extends Promise<infer T> ? T : never);
     mockedStorage.getUserByEmail.mockResolvedValue(undefined);
     mockedStorage.getUsersByTenant.mockResolvedValue([]);
-    mockedStorage.createUser.mockResolvedValue(mockUser as any);
-    mockedStorage.getUser.mockResolvedValue(mockUser as any);
+    mockedStorage.createUser.mockResolvedValue(mockUser as ReturnType<typeof storage.createUser> extends Promise<infer T> ? T : never);
+    mockedStorage.getUser.mockResolvedValue(mockUser as ReturnType<typeof storage.getUser> extends Promise<infer T> ? T : never);
 
     const res = await supertest(app)
       .post("/api/auth/register")
@@ -205,8 +149,11 @@ describe("Auth routes", () => {
 
   it("POST /api/auth/register rejects duplicate email", async () => {
     const app = buildApp();
-    const existingUser = { id: "u1", tenantId: "t1", name: "Alice", email: "alice@test.com", role: "OWNER", passwordHash: "x" };
-    mockedStorage.getUserByEmail.mockResolvedValue(existingUser as any);
+    const existingUser = {
+      id: "u1", tenantId: "t1", name: "Alice",
+      email: "alice@test.com", role: "OWNER", passwordHash: "x",
+    };
+    mockedStorage.getUserByEmail.mockResolvedValue(existingUser as ReturnType<typeof storage.getUserByEmail> extends Promise<infer T> ? T : never);
 
     const res = await supertest(app)
       .post("/api/auth/register")
@@ -219,9 +166,12 @@ describe("Auth routes", () => {
   it("POST /api/auth/login succeeds with correct credentials", async () => {
     const app = buildApp();
     const hash = await hashPassword("password123");
-    const mockUser = { id: "u1", tenantId: "t1", name: "Alice", email: "alice@test.com", role: "OWNER", passwordHash: hash };
-    mockedStorage.getUserByEmail.mockResolvedValue(mockUser as any);
-    mockedStorage.getUser.mockResolvedValue(mockUser as any);
+    const mockUser = {
+      id: "u1", tenantId: "t1", name: "Alice",
+      email: "alice@test.com", role: "OWNER", passwordHash: hash,
+    };
+    mockedStorage.getUserByEmail.mockResolvedValue(mockUser as ReturnType<typeof storage.getUserByEmail> extends Promise<infer T> ? T : never);
+    mockedStorage.getUser.mockResolvedValue(mockUser as ReturnType<typeof storage.getUser> extends Promise<infer T> ? T : never);
 
     const res = await supertest(app)
       .post("/api/auth/login")
@@ -235,8 +185,11 @@ describe("Auth routes", () => {
   it("POST /api/auth/login returns 401 for wrong password", async () => {
     const app = buildApp();
     const hash = await hashPassword("correctpassword");
-    const mockUser = { id: "u1", tenantId: "t1", name: "Alice", email: "alice@test.com", role: "OWNER", passwordHash: hash };
-    mockedStorage.getUserByEmail.mockResolvedValue(mockUser as any);
+    const mockUser = {
+      id: "u1", tenantId: "t1", name: "Alice",
+      email: "alice@test.com", role: "OWNER", passwordHash: hash,
+    };
+    mockedStorage.getUserByEmail.mockResolvedValue(mockUser as ReturnType<typeof storage.getUserByEmail> extends Promise<infer T> ? T : never);
 
     const res = await supertest(app)
       .post("/api/auth/login")
@@ -259,9 +212,12 @@ describe("Auth routes", () => {
   it("POST /api/auth/logout ends the session", async () => {
     const app = buildApp();
     const hash = await hashPassword("password123");
-    const mockUser = { id: "u1", tenantId: "t1", name: "Alice", email: "alice@test.com", role: "OWNER", passwordHash: hash };
-    mockedStorage.getUserByEmail.mockResolvedValue(mockUser as any);
-    mockedStorage.getUser.mockResolvedValue(mockUser as any);
+    const mockUser = {
+      id: "u1", tenantId: "t1", name: "Alice",
+      email: "alice@test.com", role: "OWNER", passwordHash: hash,
+    };
+    mockedStorage.getUserByEmail.mockResolvedValue(mockUser as ReturnType<typeof storage.getUserByEmail> extends Promise<infer T> ? T : never);
+    mockedStorage.getUser.mockResolvedValue(mockUser as ReturnType<typeof storage.getUser> extends Promise<infer T> ? T : never);
 
     const agent = supertest.agent(app);
 
