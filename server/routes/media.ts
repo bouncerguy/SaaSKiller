@@ -2,6 +2,8 @@ import type { Express } from "express";
   import { storage } from "../storage";
   import { z } from "zod";
   import { requireAuth } from "../auth";
+  import path from "path";
+  import fs from "fs";
 
   export function registerMediaRoutes(app: Express) {
     // ─── MEDIA ASSETS ──────────────────────────────────────────────────────
@@ -93,6 +95,17 @@ import type { Express } from "express";
       if (!asset || asset.tenantId !== req.user!.tenantId) {
         return res.status(404).json({ message: "Asset not found" });
       }
+
+      if (asset.url && asset.url.includes("/uploads/")) {
+        try {
+          const urlPath = new URL(asset.url).pathname;
+          const filePath = path.resolve(process.cwd(), urlPath.replace(/^\//, ""));
+          if (fs.existsSync(filePath) && filePath.startsWith(path.resolve(process.cwd(), "uploads"))) {
+            fs.unlinkSync(filePath);
+          }
+        } catch {}
+      }
+
       await storage.deleteMediaAsset(asset.id);
       res.json({ success: true });
     } catch (e: any) {

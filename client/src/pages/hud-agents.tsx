@@ -46,6 +46,7 @@ const statusConfig: Record<string, { label: string; badgeClass: string }> = {
 const triggerConfig: Record<string, { label: string; icon: any; badgeClass: string }> = {
   manual: { label: "Manual", icon: Play, badgeClass: "border-cyan-400 text-cyan-700 dark:text-cyan-400" },
   schedule: { label: "Schedule", icon: Calendar, badgeClass: "border-violet-400 text-violet-700 dark:text-violet-400" },
+  webhook: { label: "Webhook", icon: Wifi, badgeClass: "border-orange-400 text-orange-700 dark:text-orange-400" },
   form_submission: { label: "Form Submission", icon: FileText, badgeClass: "border-sky-400 text-sky-700 dark:text-sky-400" },
   new_customer: { label: "New Customer", icon: UserPlus, badgeClass: "border-emerald-400 text-emerald-700 dark:text-emerald-400" },
   new_ticket: { label: "New Ticket", icon: HeadphonesIcon, badgeClass: "border-rose-400 text-rose-700 dark:text-rose-400" },
@@ -306,6 +307,7 @@ export default function HudAgents() {
                   <SelectContent>
                     <SelectItem value="manual">Manual</SelectItem>
                     <SelectItem value="schedule">Schedule</SelectItem>
+                    <SelectItem value="webhook">Webhook</SelectItem>
                     <SelectItem value="form_submission">Form Submission</SelectItem>
                     <SelectItem value="new_customer">New Customer</SelectItem>
                     <SelectItem value="new_ticket">New Ticket</SelectItem>
@@ -551,6 +553,7 @@ export default function HudAgents() {
                         <SelectContent>
                           <SelectItem value="manual">Manual</SelectItem>
                           <SelectItem value="schedule">Schedule</SelectItem>
+                          <SelectItem value="webhook">Webhook</SelectItem>
                           <SelectItem value="form_submission">Form Submission</SelectItem>
                           <SelectItem value="new_customer">New Customer</SelectItem>
                           <SelectItem value="new_ticket">New Ticket</SelectItem>
@@ -594,6 +597,43 @@ export default function HudAgents() {
                       className="font-mono text-xs"
                     />
                   </div>
+                  <div className="space-y-1.5">
+                    <Label className="flex items-center gap-1">
+                      <Sparkles className="h-3 w-3" />
+                      System Prompt (auto-generated)
+                    </Label>
+                    <div className="text-xs bg-muted/50 p-3 rounded-md border font-mono whitespace-pre-wrap" data-testid="text-system-prompt">
+                      {(() => {
+                        let prompt = `You are an AI automation agent named "${editData.name}".`;
+                        if (editData.description) prompt += ` Your purpose: ${editData.description}`;
+                        prompt += ` Trigger type: ${editData.triggerType}.`;
+                        if (editData.actionsJson && editData.actionsJson !== "[]") {
+                          try {
+                            const actions = JSON.parse(editData.actionsJson);
+                            if (Array.isArray(actions) && actions.length > 0) {
+                              prompt += ` Configured actions: ${JSON.stringify(actions)}.`;
+                            }
+                          } catch {}
+                        }
+                        prompt += ` Respond concisely and helpfully. If the user asks you to perform an action, describe what you would do and any results.`;
+                        return prompt;
+                      })()}
+                    </div>
+                  </div>
+                  {editData.triggerType === "webhook" && (
+                    <div className="space-y-1.5">
+                      <Label className="flex items-center gap-1">
+                        <Wifi className="h-3 w-3" />
+                        Webhook URL
+                      </Label>
+                      <div className="text-xs bg-muted/50 p-3 rounded-md border font-mono break-all" data-testid="text-webhook-url">
+                        POST {window.location.origin}/api/webhooks/agent/{selectedAgentId}
+                      </div>
+                      <p className="text-[11px] text-muted-foreground">
+                        Set "webhookSecret" in Trigger Config to require X-Webhook-Secret header.
+                      </p>
+                    </div>
+                  )}
                   <Button
                     className="w-full bg-cyan-500 hover:bg-cyan-600 text-white border-cyan-600"
                     data-testid="button-save-agent"

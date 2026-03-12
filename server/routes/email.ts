@@ -159,4 +159,62 @@ export function registerEmailRoutes(app: Express) {
       res.status(500).json({ message: e.message });
     }
   });
+
+  const sendBulkSchema = z.object({
+    recipients: z.array(z.object({
+      to: z.string().email(),
+      toName: z.string().optional(),
+      variables: z.record(z.string()).optional(),
+    })).min(1).max(500),
+    templateId: z.string().min(1).optional(),
+    subject: z.string().min(1).optional(),
+    html: z.string().optional(),
+    text: z.string().optional(),
+  });
+
+  app.post("/api/admin/email/send-bulk", requireAuth, async (req, res) => {
+    try {
+      const parsed = sendBulkSchema.parse(req.body);
+      const results: Array<{ to: string; status: string; logId: string }> = [];
+
+      for (const recipient of parsed.recipients) {
+        try {
+          let result;
+          if (parsed.templateId) {
+            result = await sendTemplateEmail(
+              req.user!.tenantId,
+              parsed.templateId,
+              recipient.to,
+              recipient.toName,
+              recipient.variables || {},
+            );
+          } else {
+            if (!parsed.subject) throw new Error("Subject required when not using a template");
+            result = await sendEmail({
+              tenantId: req.user!.tenantId,
+              to: recipient.to,
+              toName: recipient.toName,
+              subject: parsed.subject,
+              html: parsed.html,
+              text: parsed.text,
+            });
+          }
+          results.push({ to: recipient.to, ...result });
+        } catch (err: any) {
+          results.push({ to: recipient.to, status: "FAILED", logId: "" });
+        }
+      }
+
+      const sent = results.filter((r) => r.status === "SENT").length;
+      const queued = results.filter((r) => r.status === "QUEUED").length;
+      const failed = results.filter((r) => r.status === "FAILED").length;
+
+      res.json({ total: results.length, sent, queued, failed, results });
+    } catch (e: any) {
+      if (e.name === "ZodError") {
+        return res.status(400).json({ message: e.errors[0]?.message || "Validation failed" });
+      }
+      res.status(500).json({ message: e.message });
+    }
+  });
 }

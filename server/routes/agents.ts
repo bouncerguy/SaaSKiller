@@ -8,14 +8,14 @@ export function registerAgentRoutes(app: Express) {
   const createAgentSchema = z.object({
     name: z.string().min(1),
     description: z.string().optional().nullable(),
-    triggerType: z.enum(["manual", "schedule", "form_submission", "new_customer", "new_ticket"]).optional(),
+    triggerType: z.enum(["manual", "schedule", "webhook", "form_submission", "new_customer", "new_ticket"]).optional(),
   });
 
   const updateAgentSchema = z.object({
     name: z.string().min(1).optional(),
     description: z.string().optional().nullable(),
     status: z.enum(["ACTIVE", "PAUSED", "DRAFT"]).optional(),
-    triggerType: z.enum(["manual", "schedule", "form_submission", "new_customer", "new_ticket"]).optional(),
+    triggerType: z.enum(["manual", "schedule", "webhook", "form_submission", "new_customer", "new_ticket"]).optional(),
     triggerConfig: z.string().optional().nullable(),
     actionsJson: z.string().optional().nullable(),
   });
