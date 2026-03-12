@@ -2,6 +2,7 @@
 
 ### Open Source Self-Hosted Business Operating System
 
+[![CI](https://github.com/bouncerguy/SaaSKiller/actions/workflows/ci.yml/badge.svg)](https://github.com/bouncerguy/SaaSKiller/actions/workflows/ci.yml)
 [![Deploy on Replit](https://replit.com/badge?caption=Deploy%20on%20Replit)](https://replit.com/refer/kenpcox)
 [![Deploy on DigitalOcean](https://www.deploytodo.com/do-btn-blue.svg)](https://www.digitalocean.com/?refcode=de537efcf1f1&utm_campaign=Referral_Invite&utm_medium=Referral_Program&utm_source=badge)
 

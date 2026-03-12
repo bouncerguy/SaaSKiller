@@ -63,3 +63,12 @@ The platform is built with a multi-tenant architecture, allowing for isolated en
 - **AI:** OpenAI SDK (gpt-4o-mini)
 - **File Upload:** multer (disk storage)
 - **PDF Generation:** pdfkit (invoice PDF export)
+- **Testing:** Vitest (unit + integration), supertest (HTTP route testing)
+- **CI:** GitHub Actions (`.github/workflows/ci.yml`) — typecheck + test on push/PR to main
+
+## Testing
+- `npm test` runs Vitest (`vitest run`)
+- Test files live in `tests/` directory: `auth.test.ts`, `booking.test.ts`, `crm.test.ts`
+- Booking tests: pure function tests for `generateTimeSlots` and `isTimeWithinRules` (no DB needed)
+- Auth tests: password hashing + supertest route tests with mocked storage
+- CRM tests: customer/lead CRUD + pipeline stage progression with mocked storage
