@@ -133,11 +133,11 @@ export default function HudSupport() {
             <HeadphonesIcon className="h-6 w-6 text-rose-600 dark:text-rose-400" />
             Support Tickets
           </h1>
-          <p className="text-muted-foreground text-sm mt-1" data-testid="text-page-subtitle">
+          <div className="text-muted-foreground text-sm mt-1" data-testid="text-page-subtitle">
             Manage customer support requests
             {openCount > 0 && <Badge variant="secondary" className="ml-2 text-[10px]">{openCount} open</Badge>}
             {inProgressCount > 0 && <Badge variant="secondary" className="ml-1 text-[10px]">{inProgressCount} in progress</Badge>}
-          </p>
+          </div>
         </div>
         <Dialog open={createOpen} onOpenChange={setCreateOpen}>
           <DialogTrigger asChild>

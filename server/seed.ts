@@ -15,9 +15,11 @@ export async function seedDatabase() {
     const users = await storage.getUsersByTenant(tenant.id);
     user = users.find(u => u.email === "alex@acmeconsulting.com");
     if (!user) {
-      console.log("Seed tenant exists but user not found, skipping...");
+      console.log("Seed data already exists, skipping...");
       return;
     }
+    console.log("Seed data already exists, skipping...");
+    return;
   } else {
     console.log("Seeding database...");
 
