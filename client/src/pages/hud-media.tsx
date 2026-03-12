@@ -86,6 +86,8 @@ export default function HudMedia() {
     folder: "",
   });
 
+  const [uploadProgress, setUploadProgress] = useState<number | null>(null);
+
   const mediaQueryUrl = (() => {
     const params = new URLSearchParams();
     if (activeFolder) params.set("folder", activeFolder);
@@ -139,35 +141,37 @@ export default function HudMedia() {
   const uploadMutation = useMutation({
     mutationFn: async (files: FileList | File[]) => {
       const formData = new FormData();
+      const url = files.length === 1 ? "/api/admin/media/upload" : "/api/admin/media/upload-multiple";
       if (files.length === 1) {
         formData.append("file", files[0]);
-        if (activeFolder) formData.append("folder", activeFolder);
-        const res = await fetch("/api/admin/media/upload", {
-          method: "POST",
-          body: formData,
-          credentials: "include",
-        });
-        if (!res.ok) {
-          const err = await res.json().catch(() => ({ message: "Upload failed" }));
-          throw new Error(err.message);
-        }
-        return res.json();
       } else {
         for (const file of Array.from(files)) {
           formData.append("files", file);
         }
-        if (activeFolder) formData.append("folder", activeFolder);
-        const res = await fetch("/api/admin/media/upload-multiple", {
-          method: "POST",
-          body: formData,
-          credentials: "include",
-        });
-        if (!res.ok) {
-          const err = await res.json().catch(() => ({ message: "Upload failed" }));
-          throw new Error(err.message);
-        }
-        return res.json();
       }
+      if (activeFolder) formData.append("folder", activeFolder);
+
+      return new Promise((resolve, reject) => {
+        const xhr = new XMLHttpRequest();
+        xhr.open("POST", url);
+        xhr.withCredentials = true;
+        xhr.upload.onprogress = (e) => {
+          if (e.lengthComputable) {
+            setUploadProgress(Math.round((e.loaded / e.total) * 100));
+          }
+        };
+        xhr.onload = () => {
+          setUploadProgress(null);
+          if (xhr.status >= 200 && xhr.status < 300) {
+            try { resolve(JSON.parse(xhr.responseText)); } catch { resolve({}); }
+          } else {
+            try { const err = JSON.parse(xhr.responseText); reject(new Error(err.message)); } catch { reject(new Error("Upload failed")); }
+          }
+        };
+        xhr.onerror = () => { setUploadProgress(null); reject(new Error("Upload failed")); };
+        setUploadProgress(0);
+        xhr.send(formData);
+      });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/media"] });
@@ -411,9 +415,16 @@ export default function HudMedia() {
         <CloudUpload className={`h-10 w-10 mx-auto mb-2 ${isDragging ? "text-pink-500" : "text-muted-foreground/40"}`} />
         <p className="text-sm text-muted-foreground">
           {uploadMutation.isPending ? (
-            <span className="flex items-center justify-center gap-2">
-              <Loader2 className="h-4 w-4 animate-spin" />
-              Uploading...
+            <span className="flex flex-col items-center gap-2">
+              <span className="flex items-center gap-2">
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Uploading{uploadProgress !== null ? ` — ${uploadProgress}%` : "..."}
+              </span>
+              {uploadProgress !== null && (
+                <div className="w-48 h-1.5 bg-muted rounded-full overflow-hidden">
+                  <div className="h-full bg-pink-500 transition-all duration-200 rounded-full" style={{ width: `${uploadProgress}%` }} />
+                </div>
+              )}
             </span>
           ) : isDragging ? (
             "Drop files here to upload"

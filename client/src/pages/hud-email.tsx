@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -53,6 +53,13 @@ export default function HudEmail() {
     subject: "",
     html: "",
     text: "",
+  });
+
+  const [sendTemplateOpen, setSendTemplateOpen] = useState(false);
+  const [sendTemplateData, setSendTemplateData] = useState({
+    to: "",
+    toName: "",
+    variables: "",
   });
 
   const statusQuery = useQuery<{ smtpConfigured: boolean }>({
@@ -158,6 +165,30 @@ export default function HudEmail() {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/email-logs"] });
       toast({
         title: result.status === "SENT" ? "Test email sent" : "Test email queued",
+        description: result.status === "QUEUED" ? "SMTP not configured — email saved to queue" : undefined,
+      });
+    },
+    onError: (e: Error) => {
+      toast({ title: "Error", description: e.message, variant: "destructive" });
+    },
+  });
+
+  const sendTemplateMutation = useMutation({
+    mutationFn: async ({ templateId, to, toName, variables }: { templateId: string; to: string; toName?: string; variables: Record<string, string> }) => {
+      const res = await apiRequest("POST", "/api/admin/email/send-template", {
+        templateId,
+        to,
+        toName,
+        variables,
+      });
+      return res.json();
+    },
+    onSuccess: (result: { status: string }) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/email-logs"] });
+      setSendTemplateOpen(false);
+      setSendTemplateData({ to: "", toName: "", variables: "" });
+      toast({
+        title: result.status === "SENT" ? "Email sent" : "Email queued",
         description: result.status === "QUEUED" ? "SMTP not configured — email saved to queue" : undefined,
       });
     },
@@ -548,16 +579,30 @@ export default function HudEmail() {
                 Created {new Date(detail.createdAt).toLocaleDateString()}
                 {detail.updatedAt && ` · Updated ${new Date(detail.updatedAt).toLocaleDateString()}`}
               </div>
-              <Button
-                variant="outline"
-                className="w-full border-amber-300 text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-950/30"
-                data-testid="button-test-send"
-                disabled={sendTestMutation.isPending || !detail.isActive}
-                onClick={() => sendTestMutation.mutate(detail.id)}
-              >
-                {sendTestMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Send className="h-4 w-4 mr-2" />}
-                Send Test to {user?.email || "me"}
-              </Button>
+              <div className="grid grid-cols-2 gap-2">
+                <Button
+                  variant="outline"
+                  className="border-amber-300 text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-950/30"
+                  data-testid="button-test-send"
+                  disabled={sendTestMutation.isPending || !detail.isActive}
+                  onClick={() => sendTestMutation.mutate(detail.id)}
+                >
+                  {sendTestMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Send className="h-4 w-4 mr-2" />}
+                  Test Send
+                </Button>
+                <Button
+                  className="bg-amber-500 hover:bg-amber-600 text-white"
+                  data-testid="button-send-template"
+                  disabled={!detail.isActive}
+                  onClick={() => {
+                    setSendTemplateData({ to: "", toName: "", variables: "" });
+                    setSendTemplateOpen(true);
+                  }}
+                >
+                  <Mail className="h-4 w-4 mr-2" />
+                  Send Template
+                </Button>
+              </div>
               <Button
                 variant="outline"
                 className="w-full border-red-300 text-red-600"
@@ -576,6 +621,75 @@ export default function HudEmail() {
           ) : null}
         </SheetContent>
       </Sheet>
+
+      <Dialog open={sendTemplateOpen} onOpenChange={setSendTemplateOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Send Template</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div className="space-y-1.5">
+              <Label>Recipient Email *</Label>
+              <Input
+                data-testid="input-send-template-to"
+                type="email"
+                placeholder="recipient@example.com"
+                value={sendTemplateData.to}
+                onChange={(e) => setSendTemplateData({ ...sendTemplateData, to: e.target.value })}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Recipient Name</Label>
+              <Input
+                data-testid="input-send-template-name"
+                placeholder="John Doe"
+                value={sendTemplateData.toName}
+                onChange={(e) => setSendTemplateData({ ...sendTemplateData, toName: e.target.value })}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Variables (JSON)</Label>
+              <Textarea
+                data-testid="input-send-template-variables"
+                placeholder={'{"name": "John", "company": "Acme"}'}
+                value={sendTemplateData.variables}
+                onChange={(e) => setSendTemplateData({ ...sendTemplateData, variables: e.target.value })}
+                rows={3}
+                className="font-mono text-xs"
+              />
+              <p className="text-[11px] text-muted-foreground">
+                Variables like {"{{name}}"} in the template body will be replaced.
+              </p>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setSendTemplateOpen(false)}>Cancel</Button>
+            <Button
+              data-testid="button-confirm-send-template"
+              className="bg-amber-500 hover:bg-amber-600 text-white"
+              disabled={!sendTemplateData.to || sendTemplateMutation.isPending}
+              onClick={() => {
+                let vars: Record<string, string> = {};
+                if (sendTemplateData.variables.trim()) {
+                  try { vars = JSON.parse(sendTemplateData.variables); } catch {
+                    toast({ title: "Invalid JSON", description: "Variables must be valid JSON", variant: "destructive" });
+                    return;
+                  }
+                }
+                sendTemplateMutation.mutate({
+                  templateId: selectedTemplateId!,
+                  to: sendTemplateData.to,
+                  toName: sendTemplateData.toName || undefined,
+                  variables: vars,
+                });
+              }}
+            >
+              {sendTemplateMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Send className="h-4 w-4 mr-2" />}
+              Send
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
