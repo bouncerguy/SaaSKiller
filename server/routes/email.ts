@@ -1,11 +1,10 @@
 import type { Express } from "express";
-  import { storage } from "../storage";
-  import { z } from "zod";
-  import { requireAuth } from "../auth";
+import { storage } from "../storage";
+import { z } from "zod";
+import { requireAuth } from "../auth";
+import { sendEmail, sendTemplateEmail, isSmtpConfigured } from "../email";
 
-  export function registerEmailRoutes(app: Express) {
-    // ─── EMAIL TEMPLATES ────────────────────────────────────────────────────
-
+export function registerEmailRoutes(app: Express) {
   const createEmailTemplateSchema = z.object({
     name: z.string().min(1),
     subject: z.string().min(1),
@@ -102,5 +101,62 @@ import type { Express } from "express";
       res.status(500).json({ message: e.message });
     }
   });
-  }
-  
+
+  app.get("/api/admin/email/status", requireAuth, async (_req, res) => {
+    res.json({ smtpConfigured: isSmtpConfigured() });
+  });
+
+  const sendEmailSchema = z.object({
+    to: z.string().email(),
+    toName: z.string().optional(),
+    subject: z.string().min(1),
+    html: z.string().optional(),
+    text: z.string().optional(),
+  });
+
+  app.post("/api/admin/email/send", requireAuth, async (req, res) => {
+    try {
+      const parsed = sendEmailSchema.parse(req.body);
+      const result = await sendEmail({
+        tenantId: req.user!.tenantId,
+        to: parsed.to,
+        toName: parsed.toName,
+        subject: parsed.subject,
+        html: parsed.html,
+        text: parsed.text,
+      });
+      res.json(result);
+    } catch (e: any) {
+      if (e.name === "ZodError") {
+        return res.status(400).json({ message: e.errors[0]?.message || "Validation failed" });
+      }
+      res.status(500).json({ message: e.message });
+    }
+  });
+
+  const sendTemplateSchema = z.object({
+    templateId: z.string().min(1),
+    to: z.string().email(),
+    toName: z.string().optional(),
+    variables: z.record(z.string()).optional(),
+  });
+
+  app.post("/api/admin/email/send-template", requireAuth, async (req, res) => {
+    try {
+      const parsed = sendTemplateSchema.parse(req.body);
+      const result = await sendTemplateEmail(
+        req.user!.tenantId,
+        parsed.templateId,
+        parsed.to,
+        parsed.toName,
+        parsed.variables || {},
+      );
+      res.json(result);
+    } catch (e: any) {
+      if (e.name === "ZodError") {
+        return res.status(400).json({ message: e.errors[0]?.message || "Validation failed" });
+      }
+      res.status(500).json({ message: e.message });
+    }
+  });
+}

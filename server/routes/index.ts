@@ -19,6 +19,7 @@ import { registerAgentRoutes } from "./agents";
 import { registerMediaRoutes } from "./media";
 import { registerSocialRoutes } from "./social";
 import { registerSecureMessageRoutes } from "./secure-messages";
+import { registerUploadRoutes } from "../uploads";
 
 export function registerAllRoutes(app: Express) {
   registerSetupRoutes(app);
@@ -41,4 +42,5 @@ export function registerAllRoutes(app: Express) {
   registerMediaRoutes(app);
   registerSocialRoutes(app);
   registerSecureMessageRoutes(app);
+  registerUploadRoutes(app);
 }

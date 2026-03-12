@@ -184,6 +184,7 @@ export interface IStorage {
   updateEmailTemplate(id: string, data: Partial<InsertEmailTemplate>): Promise<EmailTemplate>;
   deleteEmailTemplate(id: string): Promise<void>;
   createEmailLog(data: InsertEmailLog): Promise<EmailLog>;
+  updateEmailLog(id: string, data: Partial<{ status: string; sentAt: Date; errorMessage: string }>): Promise<EmailLog>;
   getEmailLogsByTenant(tenantId: string): Promise<EmailLog[]>;
 
   createAgent(data: InsertAgent): Promise<Agent>;
@@ -192,6 +193,7 @@ export interface IStorage {
   updateAgent(id: string, data: Partial<InsertAgent>): Promise<Agent>;
   deleteAgent(id: string): Promise<void>;
   createAgentRun(data: InsertAgentRun): Promise<AgentRun>;
+  updateAgentRun(id: string, data: Partial<{ status: string; completedAt: Date; resultJson: string | null; errorMessage: string | null }>): Promise<AgentRun>;
   getAgentRuns(agentId: string): Promise<AgentRun[]>;
   incrementAgentRunCount(agentId: string): Promise<void>;
 
@@ -957,6 +959,11 @@ export class DatabaseStorage implements IStorage {
     return l;
   }
 
+  async updateEmailLog(id: string, data: Partial<{ status: string; sentAt: Date; errorMessage: string }>): Promise<EmailLog> {
+    const [l] = await db.update(emailLogs).set(data).where(eq(emailLogs.id, id)).returning();
+    return l;
+  }
+
   async getEmailLogsByTenant(tenantId: string): Promise<EmailLog[]> {
     return db.select().from(emailLogs).where(eq(emailLogs.tenantId, tenantId)).orderBy(desc(emailLogs.createdAt));
   }
@@ -987,6 +994,11 @@ export class DatabaseStorage implements IStorage {
 
   async createAgentRun(data: InsertAgentRun): Promise<AgentRun> {
     const [r] = await db.insert(agentRuns).values(data).returning();
+    return r;
+  }
+
+  async updateAgentRun(id: string, data: Partial<{ status: string; completedAt: Date; resultJson: string | null; errorMessage: string | null }>): Promise<AgentRun> {
+    const [r] = await db.update(agentRuns).set(data).where(eq(agentRuns.id, id)).returning();
     return r;
   }
 

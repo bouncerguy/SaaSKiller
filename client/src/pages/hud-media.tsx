@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef, useCallback } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -25,6 +25,8 @@ import {
   Copy,
   Check,
   ImageIcon,
+  Upload,
+  CloudUpload,
 } from "lucide-react";
 
 function formatFileSize(bytes: number): string {
@@ -64,6 +66,8 @@ export default function HudMedia() {
   const [createOpen, setCreateOpen] = useState(false);
   const [selectedAssetId, setSelectedAssetId] = useState<string | null>(null);
   const [copiedUrl, setCopiedUrl] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [formData, setFormData] = useState({
     url: "",
@@ -132,6 +136,48 @@ export default function HudMedia() {
     },
   });
 
+  const uploadMutation = useMutation({
+    mutationFn: async (files: FileList | File[]) => {
+      const formData = new FormData();
+      if (files.length === 1) {
+        formData.append("file", files[0]);
+        if (activeFolder) formData.append("folder", activeFolder);
+        const res = await fetch("/api/admin/media/upload", {
+          method: "POST",
+          body: formData,
+          credentials: "include",
+        });
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({ message: "Upload failed" }));
+          throw new Error(err.message);
+        }
+        return res.json();
+      } else {
+        for (const file of Array.from(files)) {
+          formData.append("files", file);
+        }
+        if (activeFolder) formData.append("folder", activeFolder);
+        const res = await fetch("/api/admin/media/upload-multiple", {
+          method: "POST",
+          body: formData,
+          credentials: "include",
+        });
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({ message: "Upload failed" }));
+          throw new Error(err.message);
+        }
+        return res.json();
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/media"] });
+      toast({ title: "File(s) uploaded successfully" });
+    },
+    onError: (e: Error) => {
+      toast({ title: "Upload failed", description: e.message, variant: "destructive" });
+    },
+  });
+
   const updateMutation = useMutation({
     mutationFn: async ({ id, data }: { id: string; data: any }) => {
       const res = await apiRequest("PATCH", `/api/admin/media/${id}`, data);
@@ -187,6 +233,31 @@ export default function HudMedia() {
     });
   };
 
+  const handleDrop = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+    if (e.dataTransfer.files.length > 0) {
+      uploadMutation.mutate(e.dataTransfer.files);
+    }
+  }, [uploadMutation]);
+
+  const handleDragOver = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(true);
+  }, []);
+
+  const handleDragLeave = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+  }, []);
+
+  const handleFileSelect = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files.length > 0) {
+      uploadMutation.mutate(e.target.files);
+      e.target.value = "";
+    }
+  }, [uploadMutation]);
+
   return (
     <div className="p-6 max-w-6xl mx-auto space-y-6">
       <div className="flex items-center justify-between flex-wrap gap-4">
@@ -199,112 +270,158 @@ export default function HudMedia() {
             Manage your digital assets and files
           </p>
         </div>
-        <Dialog open={createOpen} onOpenChange={setCreateOpen}>
-          <DialogTrigger asChild>
-            <Button data-testid="button-add-media" className="bg-pink-500 hover:bg-pink-600 text-white border-pink-600">
-              <Plus className="h-4 w-4 mr-2" />
-              Add Asset
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="max-w-md" data-testid="dialog-add-media">
-            <DialogHeader>
-              <DialogTitle>Add Media Asset</DialogTitle>
-            </DialogHeader>
-            <form
-              onSubmit={(e) => {
-                e.preventDefault();
-                createMutation.mutate(formData);
-              }}
-              className="space-y-4"
-            >
-              <div className="space-y-2">
-                <Label htmlFor="mediaUrl">URL *</Label>
-                <Input
-                  id="mediaUrl"
-                  data-testid="input-media-url"
-                  value={formData.url}
-                  onChange={(e) => setFormData({ ...formData, url: e.target.value })}
-                  placeholder="https://example.com/image.png"
-                  required
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="mediaOriginalName">Original Name *</Label>
-                <Input
-                  id="mediaOriginalName"
-                  data-testid="input-media-original-name"
-                  value={formData.originalName}
-                  onChange={(e) => setFormData({ ...formData, originalName: e.target.value })}
-                  placeholder="photo.png"
-                  required
-                />
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-2">
-                  <Label htmlFor="mediaMimeType">MIME Type</Label>
-                  <Input
-                    id="mediaMimeType"
-                    data-testid="input-media-mime-type"
-                    value={formData.mimeType}
-                    onChange={(e) => setFormData({ ...formData, mimeType: e.target.value })}
-                    placeholder="image/png"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="mediaSizeBytes">Size (bytes)</Label>
-                  <Input
-                    id="mediaSizeBytes"
-                    type="number"
-                    min="0"
-                    data-testid="input-media-size"
-                    value={formData.sizeBytes}
-                    onChange={(e) => setFormData({ ...formData, sizeBytes: e.target.value })}
-                    placeholder="0"
-                  />
-                </div>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="mediaAlt">Alt Text</Label>
-                <Input
-                  id="mediaAlt"
-                  data-testid="input-media-alt"
-                  value={formData.alt}
-                  onChange={(e) => setFormData({ ...formData, alt: e.target.value })}
-                  placeholder="Describe the asset"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="mediaTags">Tags (comma-separated)</Label>
-                <Input
-                  id="mediaTags"
-                  data-testid="input-media-tags"
-                  value={formData.tags}
-                  onChange={(e) => setFormData({ ...formData, tags: e.target.value })}
-                  placeholder="logo, branding, header"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="mediaFolder">Folder</Label>
-                <Input
-                  id="mediaFolder"
-                  data-testid="input-media-folder"
-                  value={formData.folder}
-                  onChange={(e) => setFormData({ ...formData, folder: e.target.value })}
-                  placeholder="e.g. images, documents"
-                />
-              </div>
-              <Button
-                type="submit"
-                className="w-full bg-pink-500 hover:bg-pink-600 text-white border-pink-600"
-                disabled={createMutation.isPending}
-                data-testid="button-submit-media"
-              >
-                {createMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
-                Add Asset
+        <div className="flex items-center gap-2">
+          <input
+            ref={fileInputRef}
+            type="file"
+            multiple
+            className="hidden"
+            onChange={handleFileSelect}
+            data-testid="input-file-upload"
+          />
+          <Button
+            variant="outline"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={uploadMutation.isPending}
+            data-testid="button-upload-file"
+          >
+            {uploadMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Upload className="h-4 w-4 mr-2" />}
+            Upload File
+          </Button>
+          <Dialog open={createOpen} onOpenChange={setCreateOpen}>
+            <DialogTrigger asChild>
+              <Button data-testid="button-add-media" className="bg-pink-500 hover:bg-pink-600 text-white border-pink-600">
+                <Plus className="h-4 w-4 mr-2" />
+                Add by URL
               </Button>
-            </form>
-          </DialogContent>
-        </Dialog>
+            </DialogTrigger>
+            <DialogContent className="max-w-md" data-testid="dialog-add-media">
+              <DialogHeader>
+                <DialogTitle>Add Media Asset by URL</DialogTitle>
+              </DialogHeader>
+              <form
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  createMutation.mutate(formData);
+                }}
+                className="space-y-4"
+              >
+                <div className="space-y-2">
+                  <Label htmlFor="mediaUrl">URL *</Label>
+                  <Input
+                    id="mediaUrl"
+                    data-testid="input-media-url"
+                    value={formData.url}
+                    onChange={(e) => setFormData({ ...formData, url: e.target.value })}
+                    placeholder="https://example.com/image.png"
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="mediaOriginalName">Original Name *</Label>
+                  <Input
+                    id="mediaOriginalName"
+                    data-testid="input-media-original-name"
+                    value={formData.originalName}
+                    onChange={(e) => setFormData({ ...formData, originalName: e.target.value })}
+                    placeholder="photo.png"
+                    required
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-2">
+                    <Label htmlFor="mediaMimeType">MIME Type</Label>
+                    <Input
+                      id="mediaMimeType"
+                      data-testid="input-media-mime-type"
+                      value={formData.mimeType}
+                      onChange={(e) => setFormData({ ...formData, mimeType: e.target.value })}
+                      placeholder="image/png"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="mediaSizeBytes">Size (bytes)</Label>
+                    <Input
+                      id="mediaSizeBytes"
+                      type="number"
+                      min="0"
+                      data-testid="input-media-size"
+                      value={formData.sizeBytes}
+                      onChange={(e) => setFormData({ ...formData, sizeBytes: e.target.value })}
+                      placeholder="0"
+                    />
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="mediaAlt">Alt Text</Label>
+                  <Input
+                    id="mediaAlt"
+                    data-testid="input-media-alt"
+                    value={formData.alt}
+                    onChange={(e) => setFormData({ ...formData, alt: e.target.value })}
+                    placeholder="Describe the asset"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="mediaTags">Tags (comma-separated)</Label>
+                  <Input
+                    id="mediaTags"
+                    data-testid="input-media-tags"
+                    value={formData.tags}
+                    onChange={(e) => setFormData({ ...formData, tags: e.target.value })}
+                    placeholder="logo, branding, header"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="mediaFolder">Folder</Label>
+                  <Input
+                    id="mediaFolder"
+                    data-testid="input-media-folder"
+                    value={formData.folder}
+                    onChange={(e) => setFormData({ ...formData, folder: e.target.value })}
+                    placeholder="e.g. images, documents"
+                  />
+                </div>
+                <Button
+                  type="submit"
+                  className="w-full bg-pink-500 hover:bg-pink-600 text-white border-pink-600"
+                  disabled={createMutation.isPending}
+                  data-testid="button-submit-media"
+                >
+                  {createMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+                  Add Asset
+                </Button>
+              </form>
+            </DialogContent>
+          </Dialog>
+        </div>
+      </div>
+
+      <div
+        className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors ${
+          isDragging
+            ? "border-pink-400 bg-pink-50 dark:bg-pink-950/20"
+            : "border-muted-foreground/20 hover:border-pink-300 dark:hover:border-pink-700"
+        }`}
+        onDrop={handleDrop}
+        onDragOver={handleDragOver}
+        onDragLeave={handleDragLeave}
+        data-testid="dropzone-upload"
+      >
+        <CloudUpload className={`h-10 w-10 mx-auto mb-2 ${isDragging ? "text-pink-500" : "text-muted-foreground/40"}`} />
+        <p className="text-sm text-muted-foreground">
+          {uploadMutation.isPending ? (
+            <span className="flex items-center justify-center gap-2">
+              <Loader2 className="h-4 w-4 animate-spin" />
+              Uploading...
+            </span>
+          ) : isDragging ? (
+            "Drop files here to upload"
+          ) : (
+            "Drag & drop files here, or use the Upload button above"
+          )}
+        </p>
+        <p className="text-xs text-muted-foreground/60 mt-1">Max 50MB per file</p>
       </div>
 
       <div className="flex items-center gap-3 flex-wrap">
@@ -357,7 +474,7 @@ export default function HudMedia() {
             <p className="text-muted-foreground" data-testid="text-empty-media">
               {searchQuery || activeFolder
                 ? "No assets match your filters"
-                : "No media assets yet. Add your first file to get started."}
+                : "No media assets yet. Upload a file or add one by URL to get started."}
             </p>
           </CardContent>
         </Card>
@@ -513,7 +630,7 @@ export default function HudMedia() {
                   data-testid="input-edit-folder"
                   value={editData.folder}
                   onChange={(e) => setEditData({ ...editData, folder: e.target.value })}
-                  placeholder="e.g. images"
+                  placeholder="images"
                 />
               </div>
 
@@ -522,18 +639,17 @@ export default function HudMedia() {
                 data-testid="button-save-media"
                 disabled={updateMutation.isPending}
                 onClick={() => {
-                  if (selectedAssetId) {
-                    updateMutation.mutate({
-                      id: selectedAssetId,
-                      data: {
-                        alt: editData.alt || null,
-                        tagsJson: editData.tags
-                          ? JSON.stringify(editData.tags.split(",").map((t) => t.trim()).filter(Boolean))
-                          : "[]",
-                        folder: editData.folder || "",
-                      },
-                    });
-                  }
+                  if (!selectedAssetId) return;
+                  updateMutation.mutate({
+                    id: selectedAssetId,
+                    data: {
+                      alt: editData.alt || null,
+                      tagsJson: editData.tags
+                        ? JSON.stringify(editData.tags.split(",").map((t) => t.trim()).filter(Boolean))
+                        : "[]",
+                      folder: editData.folder || "",
+                    },
+                  });
                 }}
               >
                 {updateMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
@@ -545,9 +661,7 @@ export default function HudMedia() {
                 data-testid="button-delete-media"
                 disabled={deleteMutation.isPending}
                 onClick={() => {
-                  if (selectedAssetId) {
-                    deleteMutation.mutate(selectedAssetId);
-                  }
+                  if (selectedAssetId) deleteMutation.mutate(selectedAssetId);
                 }}
               >
                 <Trash2 className="h-4 w-4 mr-2" />

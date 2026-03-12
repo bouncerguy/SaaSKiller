@@ -16,7 +16,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Switch } from "@/components/ui/switch";
-import { Mail, Plus, Loader2, Trash2, Send, CheckCircle2, XCircle, Clock, AlertTriangle, FileText } from "lucide-react";
+import { Mail, Plus, Loader2, Trash2, Send, CheckCircle2, XCircle, Clock, AlertTriangle, FileText, Wifi, WifiOff } from "lucide-react";
 
 const emailStatusConfig: Record<string, { label: string; color: string }> = {
   QUEUED: { label: "Queued", color: "bg-gray-100 text-gray-700 dark:bg-gray-900/30 dark:text-gray-400" },
@@ -36,6 +36,7 @@ export default function HudEmail() {
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState("templates");
   const [createOpen, setCreateOpen] = useState(false);
+  const [composeOpen, setComposeOpen] = useState(false);
   const [selectedTemplateId, setSelectedTemplateId] = useState<string | null>(null);
 
   const [formData, setFormData] = useState({
@@ -44,6 +45,18 @@ export default function HudEmail() {
     category: "transactional",
     bodyHtml: "",
     bodyText: "",
+  });
+
+  const [composeData, setComposeData] = useState({
+    to: "",
+    toName: "",
+    subject: "",
+    html: "",
+    text: "",
+  });
+
+  const statusQuery = useQuery<{ smtpConfigured: boolean }>({
+    queryKey: ["/api/admin/email/status"],
   });
 
   const templatesQuery = useQuery<EmailTemplate[]>({
@@ -110,9 +123,53 @@ export default function HudEmail() {
     },
   });
 
+  const sendMutation = useMutation({
+    mutationFn: async (data: typeof composeData) => {
+      const res = await apiRequest("POST", "/api/admin/email/send", data);
+      return res.json();
+    },
+    onSuccess: (result: { status: string }) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/email-logs"] });
+      setComposeOpen(false);
+      setComposeData({ to: "", toName: "", subject: "", html: "", text: "" });
+      toast({
+        title: result.status === "SENT" ? "Email sent" : "Email queued",
+        description: result.status === "QUEUED" ? "SMTP not configured — email saved to queue" : undefined,
+      });
+    },
+    onError: (e: Error) => {
+      toast({ title: "Error", description: e.message, variant: "destructive" });
+    },
+  });
+
+  const sendTestMutation = useMutation({
+    mutationFn: async (templateId: string) => {
+      const template = templates.find((t) => t.id === templateId);
+      if (!template) throw new Error("Template not found");
+      const res = await apiRequest("POST", "/api/admin/email/send-template", {
+        templateId,
+        to: user?.email || "",
+        toName: user?.name || "",
+        variables: {},
+      });
+      return res.json();
+    },
+    onSuccess: (result: { status: string }) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/email-logs"] });
+      toast({
+        title: result.status === "SENT" ? "Test email sent" : "Test email queued",
+        description: result.status === "QUEUED" ? "SMTP not configured — email saved to queue" : undefined,
+      });
+    },
+    onError: (e: Error) => {
+      toast({ title: "Error", description: e.message, variant: "destructive" });
+    },
+  });
+
   const templates = templatesQuery.data || [];
   const logs = logsQuery.data || [];
   const detail = templateDetailQuery.data;
+  const smtpConfigured = statusQuery.data?.smtpConfigured ?? false;
 
   const activeCount = templates.filter((t) => t.isActive).length;
 
@@ -124,63 +181,127 @@ export default function HudEmail() {
             <Mail className="h-6 w-6 text-amber-500 dark:text-amber-400" />
             Email
           </h1>
-          <p className="text-muted-foreground text-sm mt-1" data-testid="text-page-subtitle">
+          <p className="text-muted-foreground text-sm mt-1 flex items-center gap-2" data-testid="text-page-subtitle">
             Manage email templates and view sent logs
-            {activeCount > 0 && <Badge variant="secondary" className="ml-2 text-[10px]">{activeCount} active</Badge>}
+            {activeCount > 0 && <Badge variant="secondary" className="text-[10px]">{activeCount} active</Badge>}
+            <Badge
+              variant="outline"
+              className={`text-[10px] ${smtpConfigured ? "border-green-400 text-green-600 dark:text-green-400" : "border-gray-300 text-gray-500"}`}
+              data-testid="badge-smtp-status"
+            >
+              {smtpConfigured ? <Wifi className="h-3 w-3 mr-1" /> : <WifiOff className="h-3 w-3 mr-1" />}
+              {smtpConfigured ? "SMTP Connected" : "SMTP Not Configured"}
+            </Badge>
           </p>
         </div>
-        {activeTab === "templates" && (
-          <Dialog open={createOpen} onOpenChange={setCreateOpen}>
+        <div className="flex items-center gap-2">
+          <Dialog open={composeOpen} onOpenChange={setComposeOpen}>
             <DialogTrigger asChild>
-              <Button data-testid="button-create-template" className="bg-amber-500 hover:bg-amber-600 text-white">
-                <Plus className="h-4 w-4 mr-2" />
-                New Template
+              <Button variant="outline" data-testid="button-compose-email">
+                <Send className="h-4 w-4 mr-2" />
+                Compose
               </Button>
             </DialogTrigger>
-            <DialogContent className="max-w-md" data-testid="dialog-create-template">
+            <DialogContent className="max-w-md" data-testid="dialog-compose-email">
               <DialogHeader>
-                <DialogTitle>New Email Template</DialogTitle>
+                <DialogTitle>Compose Email</DialogTitle>
               </DialogHeader>
               <form
                 onSubmit={(e) => {
                   e.preventDefault();
-                  createMutation.mutate(formData);
+                  sendMutation.mutate(composeData);
                 }}
                 className="space-y-4"
               >
-                <div className="space-y-2">
-                  <Label>Name *</Label>
-                  <Input data-testid="input-template-name" value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} required placeholder="Welcome Email" />
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-2">
+                    <Label>To Email *</Label>
+                    <Input data-testid="input-compose-to" type="email" value={composeData.to} onChange={(e) => setComposeData({ ...composeData, to: e.target.value })} required placeholder="user@example.com" />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Recipient Name</Label>
+                    <Input data-testid="input-compose-to-name" value={composeData.toName} onChange={(e) => setComposeData({ ...composeData, toName: e.target.value })} placeholder="John Doe" />
+                  </div>
                 </div>
                 <div className="space-y-2">
                   <Label>Subject *</Label>
-                  <Input data-testid="input-template-subject" value={formData.subject} onChange={(e) => setFormData({ ...formData, subject: e.target.value })} required placeholder="Welcome to {{company}}" />
-                </div>
-                <div className="space-y-2">
-                  <Label>Category</Label>
-                  <Select value={formData.category} onValueChange={(v) => setFormData({ ...formData, category: v })}>
-                    <SelectTrigger data-testid="select-template-category">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="transactional">Transactional</SelectItem>
-                      <SelectItem value="marketing">Marketing</SelectItem>
-                      <SelectItem value="notification">Notification</SelectItem>
-                    </SelectContent>
-                  </Select>
+                  <Input data-testid="input-compose-subject" value={composeData.subject} onChange={(e) => setComposeData({ ...composeData, subject: e.target.value })} required placeholder="Subject line" />
                 </div>
                 <div className="space-y-2">
                   <Label>Body (HTML)</Label>
-                  <Textarea data-testid="input-template-body-html" value={formData.bodyHtml} onChange={(e) => setFormData({ ...formData, bodyHtml: e.target.value })} rows={6} placeholder="<h1>Hello {{name}}</h1>" />
+                  <Textarea data-testid="input-compose-html" value={composeData.html} onChange={(e) => setComposeData({ ...composeData, html: e.target.value })} rows={6} placeholder="<p>Hello!</p>" />
                 </div>
-                <Button type="submit" className="w-full bg-amber-500 hover:bg-amber-600 text-white" disabled={createMutation.isPending} data-testid="button-submit-template">
-                  {createMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
-                  Create Template
+                <div className="space-y-2">
+                  <Label>Body (Plain Text)</Label>
+                  <Textarea data-testid="input-compose-text" value={composeData.text} onChange={(e) => setComposeData({ ...composeData, text: e.target.value })} rows={3} placeholder="Hello!" />
+                </div>
+                {!smtpConfigured && (
+                  <p className="text-xs text-amber-600 dark:text-amber-400 flex items-center gap-1">
+                    <AlertTriangle className="h-3 w-3" />
+                    SMTP not configured — email will be queued in the database
+                  </p>
+                )}
+                <Button type="submit" className="w-full bg-amber-500 hover:bg-amber-600 text-white" disabled={sendMutation.isPending} data-testid="button-send-email">
+                  {sendMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Send className="h-4 w-4 mr-2" />}
+                  {smtpConfigured ? "Send Email" : "Queue Email"}
                 </Button>
               </form>
             </DialogContent>
           </Dialog>
-        )}
+
+          {activeTab === "templates" && (
+            <Dialog open={createOpen} onOpenChange={setCreateOpen}>
+              <DialogTrigger asChild>
+                <Button data-testid="button-create-template" className="bg-amber-500 hover:bg-amber-600 text-white">
+                  <Plus className="h-4 w-4 mr-2" />
+                  New Template
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="max-w-md" data-testid="dialog-create-template">
+                <DialogHeader>
+                  <DialogTitle>New Email Template</DialogTitle>
+                </DialogHeader>
+                <form
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    createMutation.mutate(formData);
+                  }}
+                  className="space-y-4"
+                >
+                  <div className="space-y-2">
+                    <Label>Name *</Label>
+                    <Input data-testid="input-template-name" value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} required placeholder="Welcome Email" />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Subject *</Label>
+                    <Input data-testid="input-template-subject" value={formData.subject} onChange={(e) => setFormData({ ...formData, subject: e.target.value })} required placeholder="Welcome to {{company}}" />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Category</Label>
+                    <Select value={formData.category} onValueChange={(v) => setFormData({ ...formData, category: v })}>
+                      <SelectTrigger data-testid="select-template-category">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="transactional">Transactional</SelectItem>
+                        <SelectItem value="marketing">Marketing</SelectItem>
+                        <SelectItem value="notification">Notification</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Body (HTML)</Label>
+                    <Textarea data-testid="input-template-body-html" value={formData.bodyHtml} onChange={(e) => setFormData({ ...formData, bodyHtml: e.target.value })} rows={6} placeholder="<h1>Hello {{name}}</h1>" />
+                  </div>
+                  <Button type="submit" className="w-full bg-amber-500 hover:bg-amber-600 text-white" disabled={createMutation.isPending} data-testid="button-submit-template">
+                    {createMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+                    Create Template
+                  </Button>
+                </form>
+              </DialogContent>
+            </Dialog>
+          )}
+        </div>
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
@@ -427,6 +548,16 @@ export default function HudEmail() {
                 Created {new Date(detail.createdAt).toLocaleDateString()}
                 {detail.updatedAt && ` · Updated ${new Date(detail.updatedAt).toLocaleDateString()}`}
               </div>
+              <Button
+                variant="outline"
+                className="w-full border-amber-300 text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-950/30"
+                data-testid="button-test-send"
+                disabled={sendTestMutation.isPending || !detail.isActive}
+                onClick={() => sendTestMutation.mutate(detail.id)}
+              >
+                {sendTestMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Send className="h-4 w-4 mr-2" />}
+                Send Test to {user?.email || "me"}
+              </Button>
               <Button
                 variant="outline"
                 className="w-full border-red-300 text-red-600"

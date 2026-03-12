@@ -28,8 +28,9 @@ The platform is built with a multi-tenant architecture, allowing for isolated en
 - **CRM:** Comprehensive customer and lead management, including Kanban boards for lead pipelines, and cross-module linking for a unified customer view.
 - **Support:** Ticket management with priority levels, status workflows, and team assignment.
 - **Finance:** Automated invoice numbering, status tracking, and revenue reporting. Prices are stored in cents.
-- **AI Agents:** Configurable workflow automation with various triggers and JSON-defined actions.
-- **Media Management:** Digital asset library with grid view, previews, folder organization, and tag-based search.
+- **Email System:** Real email sending via nodemailer/SMTP with graceful QUEUED fallback when SMTP not configured. Compose dialog, template-based sending with `{{variable}}` interpolation, test send, and full sent log with status tracking. Backend: `server/email.ts`.
+- **AI Agents:** Real OpenAI-powered agent execution (gpt-4o-mini) with graceful fallback when API key not set. Prompt dialog for interactive runs, webhook endpoint (`POST /api/webhooks/agent/:id`), and rich run history with AI response display. Backend: `server/ai.ts`.
+- **Media Management:** Digital asset library with grid view, previews, folder organization, tag-based search, and real file upload via multer (drag-and-drop + button). Files stored under `uploads/{tenantId}/` with static serving. Backend: `server/uploads.ts`.
 - **Video Conferencing:** Integration with Jitsi Meet (auto-generated rooms) and Zoom (link support) for event types.
 - **Website & Domains:** Custom domain management with DNS setup instructions.
 - **Pages & Funnels:** Block-based page builder and multi-step sales funnel builder with customizable content and public URLs.
@@ -55,3 +56,6 @@ The platform is built with a multi-tenant architecture, allowing for isolated en
 - **SMS/Voice:** Twilio
 - **Social Media APIs:** Twitter/X API, Facebook Graph API, LinkedIn API, Instagram API
 - **CRM Integration:** HubSpot API
+- **Email:** nodemailer (SMTP transport)
+- **AI:** OpenAI SDK (gpt-4o-mini)
+- **File Upload:** multer (disk storage)

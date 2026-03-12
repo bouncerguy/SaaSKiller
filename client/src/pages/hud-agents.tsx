@@ -30,6 +30,10 @@ import {
   HeadphonesIcon,
   RotateCw,
   Download,
+  Sparkles,
+  WifiOff,
+  Wifi,
+  MessageSquare,
 } from "lucide-react";
 import { HubSpotWorkflowImportDialog } from "@/components/hubspot-import-dialog";
 
@@ -68,12 +72,23 @@ function formatTimeAgo(date: Date | string | null): string {
   return d.toLocaleDateString();
 }
 
+function parseRunResult(resultJson: string | null): { response?: string; model?: string; tokensUsed?: number; prompt?: string } | null {
+  if (!resultJson) return null;
+  try {
+    return JSON.parse(resultJson);
+  } catch {
+    return null;
+  }
+}
+
 export default function HudAgents() {
   const { toast } = useToast();
   const [createOpen, setCreateOpen] = useState(false);
   const [selectedAgentId, setSelectedAgentId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState("config");
   const [hubspotImportOpen, setHubspotImportOpen] = useState(false);
+  const [promptOpen, setPromptOpen] = useState(false);
+  const [promptText, setPromptText] = useState("");
 
   const [formData, setFormData] = useState({
     name: "",
@@ -88,6 +103,10 @@ export default function HudAgents() {
     triggerConfig: "{}",
     status: "DRAFT",
     actionsJson: "[]",
+  });
+
+  const aiStatusQuery = useQuery<{ openaiConfigured: boolean }>({
+    queryKey: ["/api/admin/agents/status/ai"],
   });
 
   const agentsQuery = useQuery<Agent[]>({
@@ -156,8 +175,8 @@ export default function HudAgents() {
   });
 
   const runMutation = useMutation({
-    mutationFn: async (id: string) => {
-      const res = await apiRequest("POST", `/api/admin/agents/${id}/run`);
+    mutationFn: async ({ id, prompt }: { id: string; prompt: string }) => {
+      const res = await apiRequest("POST", `/api/admin/agents/${id}/run`, { prompt });
       return res.json();
     },
     onSuccess: () => {
@@ -165,7 +184,10 @@ export default function HudAgents() {
       if (selectedAgentId) {
         queryClient.invalidateQueries({ queryKey: ["/api/admin/agents", selectedAgentId, "runs"] });
       }
-      toast({ title: "Agent triggered successfully" });
+      setPromptOpen(false);
+      setPromptText("");
+      setActiveTab("runs");
+      toast({ title: "Agent run completed" });
     },
     onError: (e: Error) => {
       toast({ title: "Error", description: e.message, variant: "destructive" });
@@ -203,6 +225,7 @@ export default function HudAgents() {
   const agents = agentsQuery.data || [];
   const detail = agentDetailQuery.data;
   const runs = runsQuery.data || [];
+  const openaiConfigured = aiStatusQuery.data?.openaiConfigured ?? false;
 
   const activeCount = agents.filter((a) => a.status === "ACTIVE").length;
 
@@ -214,9 +237,17 @@ export default function HudAgents() {
             <Bot className="h-6 w-6 text-cyan-500 dark:text-cyan-400" />
             AI Agents
           </h1>
-          <p className="text-muted-foreground text-sm mt-1" data-testid="text-page-subtitle">
+          <p className="text-muted-foreground text-sm mt-1 flex items-center gap-2" data-testid="text-page-subtitle">
             Workflow automations with triggers and actions
-            {activeCount > 0 && <Badge variant="secondary" className="ml-2 text-[10px]">{activeCount} active</Badge>}
+            {activeCount > 0 && <Badge variant="secondary" className="text-[10px]">{activeCount} active</Badge>}
+            <Badge
+              variant="outline"
+              className={`text-[10px] ${openaiConfigured ? "border-green-400 text-green-600 dark:text-green-400" : "border-gray-300 text-gray-500"}`}
+              data-testid="badge-ai-status"
+            >
+              {openaiConfigured ? <Sparkles className="h-3 w-3 mr-1" /> : <WifiOff className="h-3 w-3 mr-1" />}
+              {openaiConfigured ? "AI Connected" : "AI Not Configured"}
+            </Badge>
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -366,6 +397,52 @@ export default function HudAgents() {
         </div>
       )}
 
+      <Dialog open={promptOpen} onOpenChange={setPromptOpen}>
+        <DialogContent className="max-w-md" data-testid="dialog-prompt-agent">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Sparkles className="h-5 w-5 text-cyan-500" />
+              Run Agent with Prompt
+            </DialogTitle>
+          </DialogHeader>
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              if (selectedAgentId) {
+                runMutation.mutate({ id: selectedAgentId, prompt: promptText || "Execute your configured actions." });
+              }
+            }}
+            className="space-y-4"
+          >
+            <div className="space-y-2">
+              <Label>Prompt</Label>
+              <Textarea
+                data-testid="input-agent-prompt"
+                value={promptText}
+                onChange={(e) => setPromptText(e.target.value)}
+                rows={4}
+                placeholder="Describe what you want the agent to do..."
+              />
+            </div>
+            {!openaiConfigured && (
+              <p className="text-xs text-amber-600 dark:text-amber-400 flex items-center gap-1">
+                <WifiOff className="h-3 w-3" />
+                OpenAI not configured — agent will return a fallback message
+              </p>
+            )}
+            <Button
+              type="submit"
+              className="w-full bg-cyan-500 hover:bg-cyan-600 text-white border-cyan-600"
+              disabled={runMutation.isPending}
+              data-testid="button-submit-prompt"
+            >
+              {runMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Sparkles className="h-4 w-4 mr-2" />}
+              {runMutation.isPending ? "Running..." : "Run Agent"}
+            </Button>
+          </form>
+        </DialogContent>
+      </Dialog>
+
       <Sheet
         open={!!selectedAgentId}
         onOpenChange={(open) => {
@@ -403,21 +480,34 @@ export default function HudAgents() {
                     );
                   })()}
                 </div>
-                <Button
-                  data-testid="button-run-agent"
-                  className="bg-cyan-500 hover:bg-cyan-600 text-white border-cyan-600"
-                  disabled={runMutation.isPending}
-                  onClick={() => {
-                    if (selectedAgentId) runMutation.mutate(selectedAgentId);
-                  }}
-                >
-                  {runMutation.isPending ? (
-                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                  ) : (
-                    <Play className="h-4 w-4 mr-2" />
-                  )}
-                  Run Now
-                </Button>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    data-testid="button-run-agent-prompt"
+                    onClick={() => {
+                      setPromptText("");
+                      setPromptOpen(true);
+                    }}
+                  >
+                    <MessageSquare className="h-4 w-4 mr-2" />
+                    Run with Prompt
+                  </Button>
+                  <Button
+                    data-testid="button-run-agent"
+                    className="bg-cyan-500 hover:bg-cyan-600 text-white border-cyan-600"
+                    disabled={runMutation.isPending}
+                    onClick={() => {
+                      if (selectedAgentId) runMutation.mutate({ id: selectedAgentId, prompt: "Execute your configured actions." });
+                    }}
+                  >
+                    {runMutation.isPending ? (
+                      <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                    ) : (
+                      <Play className="h-4 w-4 mr-2" />
+                    )}
+                    Run Now
+                  </Button>
+                </div>
               </div>
 
               <Tabs value={activeTab} onValueChange={setActiveTab}>
@@ -547,15 +637,22 @@ export default function HudAgents() {
                     runs.map((run) => {
                       const rc = runStatusConfig[run.status] || runStatusConfig.running;
                       const RunIcon = rc.icon;
+                      const result = parseRunResult(run.resultJson);
                       return (
                         <Card key={run.id} data-testid={`card-run-${run.id}`}>
                           <CardContent className="p-4">
                             <div className="flex items-start justify-between gap-3">
-                              <div className="flex items-start gap-3 min-w-0">
+                              <div className="flex items-start gap-3 min-w-0 flex-1">
                                 <RunIcon className={`h-5 w-5 mt-0.5 shrink-0 ${rc.className}`} />
-                                <div className="min-w-0">
+                                <div className="min-w-0 flex-1">
                                   <div className="font-medium text-sm" data-testid={`text-run-status-${run.id}`}>
                                     {rc.label}
+                                    {result?.model && (
+                                      <span className="text-xs text-muted-foreground font-normal ml-2">
+                                        {result.model}
+                                        {result.tokensUsed ? ` · ${result.tokensUsed} tokens` : ""}
+                                      </span>
+                                    )}
                                   </div>
                                   <div className="text-xs text-muted-foreground mt-0.5">
                                     Started {new Date(run.startedAt).toLocaleString()}
@@ -565,14 +662,23 @@ export default function HudAgents() {
                                       Completed {new Date(run.completedAt).toLocaleString()}
                                     </div>
                                   )}
-                                  {run.errorMessage && (
-                                    <div className="text-xs text-red-600 dark:text-red-400 mt-1" data-testid={`text-run-error-${run.id}`}>
-                                      {run.errorMessage}
+                                  {result?.prompt && (
+                                    <div className="text-xs text-muted-foreground mt-2 bg-muted/30 p-2 rounded-md border" data-testid={`text-run-prompt-${run.id}`}>
+                                      <span className="font-medium">Prompt:</span> {result.prompt}
                                     </div>
                                   )}
-                                  {run.resultJson && run.status === "success" && (
-                                    <div className="text-xs text-muted-foreground mt-1 font-mono bg-muted/50 p-2 rounded-md" data-testid={`text-run-result-${run.id}`}>
-                                      {run.resultJson}
+                                  {result?.response && run.status === "success" && (
+                                    <div className="text-xs mt-2 bg-cyan-50 dark:bg-cyan-950/30 p-3 rounded-md border border-cyan-200 dark:border-cyan-800" data-testid={`text-run-response-${run.id}`}>
+                                      <div className="flex items-center gap-1 text-cyan-700 dark:text-cyan-400 font-medium mb-1">
+                                        <Sparkles className="h-3 w-3" />
+                                        AI Response
+                                      </div>
+                                      <div className="whitespace-pre-wrap text-foreground">{result.response}</div>
+                                    </div>
+                                  )}
+                                  {run.errorMessage && (
+                                    <div className="text-xs text-red-600 dark:text-red-400 mt-2 bg-red-50 dark:bg-red-950/30 p-2 rounded-md border border-red-200 dark:border-red-800" data-testid={`text-run-error-${run.id}`}>
+                                      {run.errorMessage}
                                     </div>
                                   )}
                                 </div>
