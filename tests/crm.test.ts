@@ -4,6 +4,7 @@ import session from "express-session";
 import passport from "passport";
 import { Strategy as LocalStrategy } from "passport-local";
 import supertest from "supertest";
+import type { User, Customer, Lead, Pipeline, ActivityLog } from "@shared/schema";
 
 vi.mock("../server/storage", () => ({
   storage: {
@@ -34,10 +35,10 @@ vi.mock("../server/storage", () => ({
 }));
 
 vi.mock("../server/auth", async (importOriginal) => {
-  const actual = (await importOriginal()) as any;
+  const actual = await importOriginal<typeof import("../server/auth")>();
   return {
     ...actual,
-    requireAuth: (req: any, res: any, next: any) => {
+    requireAuth: (req: express.Request, res: express.Response, next: express.NextFunction) => {
       if (!req.isAuthenticated || !req.isAuthenticated()) {
         return res.status(401).json({ message: "Not authenticated" });
       }
@@ -52,14 +53,83 @@ import { registerCrmRoutes } from "../server/routes/crm";
 
 const mockedStorage = vi.mocked(storage);
 
-const MOCK_USER = {
-  id: "u1",
-  tenantId: "t1",
-  name: "Test User",
-  email: "test@test.com",
-  role: "OWNER",
-  passwordHash: "",
-};
+const now = new Date();
+
+function mockUser(overrides: Partial<User> = {}): User {
+  return {
+    id: "u1",
+    tenantId: "t1",
+    name: "Test User",
+    email: "test@test.com",
+    role: "OWNER",
+    passwordHash: "",
+    createdAt: now,
+    updatedAt: now,
+    ...overrides,
+  };
+}
+
+function mockCustomer(overrides: Partial<Customer> = {}): Customer {
+  return {
+    id: "c1",
+    tenantId: "t1",
+    userId: null,
+    name: "Acme Corp",
+    businessName: null,
+    email: "acme@test.com",
+    phone: null,
+    address: null,
+    billingType: null,
+    paymentStatus: "CURRENT",
+    isActive: true,
+    createdAt: now,
+    updatedAt: now,
+    ...overrides,
+  };
+}
+
+function mockLead(overrides: Partial<Lead> = {}): Lead {
+  return {
+    id: "l1",
+    tenantId: "t1",
+    name: "Test Lead",
+    email: null,
+    phone: null,
+    source: null,
+    pipelineId: "p1",
+    stage: "New Lead",
+    awarenessData: null,
+    createdAt: now,
+    updatedAt: now,
+    ...overrides,
+  };
+}
+
+function mockPipeline(overrides: Partial<Pipeline> = {}): Pipeline {
+  return {
+    id: "p1",
+    tenantId: "t1",
+    name: "Sales Pipeline",
+    stages: '["New Lead","Contacted","Qualified","Proposal","Negotiation","Won","Lost"]',
+    isDefault: true,
+    createdAt: now,
+    ...overrides,
+  };
+}
+
+function mockActivity(overrides: Partial<ActivityLog> = {}): ActivityLog {
+  return {
+    id: "a1",
+    tenantId: "t1",
+    userId: "u1",
+    entityType: "customer",
+    entityId: "c1",
+    action: "created",
+    details: "{}",
+    createdAt: now,
+    ...overrides,
+  };
+}
 
 function buildApp() {
   const app = express();
@@ -79,13 +149,13 @@ function buildApp() {
     new LocalStrategy({ usernameField: "email" }, async (email, password, done) => {
       const user = await storage.getUserByEmail(email);
       if (!user) return done(null, false);
-      const valid = await comparePasswords(password, (user as any).passwordHash);
+      const valid = await comparePasswords(password, user.passwordHash);
       if (!valid) return done(null, false);
       return done(null, { id: user.id, tenantId: user.tenantId, name: user.name, email: user.email, role: user.role });
     }),
   );
 
-  passport.serializeUser((user: any, done) => done(null, user.id));
+  passport.serializeUser((user: Express.User, done) => done(null, user.id));
   passport.deserializeUser(async (id: string, done) => {
     const user = await storage.getUser(id);
     if (!user) return done(null, false);
@@ -93,7 +163,7 @@ function buildApp() {
   });
 
   app.post("/api/auth/login", (req, res, next) => {
-    passport.authenticate("local", (err: any, user: any) => {
+    passport.authenticate("local", (err: Error | null, user: Express.User | false) => {
       if (err) return next(err);
       if (!user) return res.status(401).json({ message: "Invalid" });
       req.login(user, (loginErr) => {
@@ -110,10 +180,10 @@ function buildApp() {
 
 async function authenticatedAgent(app: express.Express) {
   const hash = await hashPassword("password123");
-  const userWithHash = { ...MOCK_USER, passwordHash: hash };
+  const user = mockUser({ passwordHash: hash });
 
-  mockedStorage.getUserByEmail.mockResolvedValue(userWithHash as any);
-  mockedStorage.getUser.mockResolvedValue(userWithHash as any);
+  mockedStorage.getUserByEmail.mockResolvedValue(user);
+  mockedStorage.getUser.mockResolvedValue(user);
 
   const agent = supertest.agent(app);
   await agent.post("/api/auth/login").send({ email: "test@test.com", password: "password123" });
@@ -127,16 +197,16 @@ describe("Customer CRUD", () => {
   beforeEach(async () => {
     vi.clearAllMocks();
     app = buildApp();
-    mockedStorage.logActivity.mockResolvedValue({} as any);
+    mockedStorage.logActivity.mockResolvedValue(mockActivity());
     agent = await authenticatedAgent(app);
   });
 
   it("GET /api/admin/customers lists customers for the tenant", async () => {
-    const mockCustomers = [
-      { id: "c1", tenantId: "t1", name: "Acme Corp", email: "acme@test.com" },
-      { id: "c2", tenantId: "t1", name: "Beta Inc", email: "beta@test.com" },
+    const customers = [
+      mockCustomer({ id: "c1", name: "Acme Corp", email: "acme@test.com" }),
+      mockCustomer({ id: "c2", name: "Beta Inc", email: "beta@test.com" }),
     ];
-    mockedStorage.getCustomersByTenant.mockResolvedValue(mockCustomers as any);
+    mockedStorage.getCustomersByTenant.mockResolvedValue(customers);
 
     const res = await agent.get("/api/admin/customers");
 
@@ -146,9 +216,9 @@ describe("Customer CRUD", () => {
   });
 
   it("POST /api/admin/customers creates a new customer", async () => {
-    const newCustomer = { id: "c3", tenantId: "t1", name: "New Co", email: "new@test.com", paymentStatus: "CURRENT", isActive: true };
+    const newCustomer = mockCustomer({ id: "c3", name: "New Co", email: "new@test.com" });
     mockedStorage.getCustomerByEmail.mockResolvedValue(undefined);
-    mockedStorage.createCustomer.mockResolvedValue(newCustomer as any);
+    mockedStorage.createCustomer.mockResolvedValue(newCustomer);
 
     const res = await agent
       .post("/api/admin/customers")
@@ -160,8 +230,9 @@ describe("Customer CRUD", () => {
   });
 
   it("POST /api/admin/customers rejects duplicate email", async () => {
-    const existing = { id: "c1", tenantId: "t1", name: "Old", email: "dup@test.com" };
-    mockedStorage.getCustomerByEmail.mockResolvedValue(existing as any);
+    mockedStorage.getCustomerByEmail.mockResolvedValue(
+      mockCustomer({ email: "dup@test.com" }),
+    );
 
     const res = await agent
       .post("/api/admin/customers")
@@ -172,10 +243,10 @@ describe("Customer CRUD", () => {
   });
 
   it("PATCH /api/admin/customers/:id updates customer fields", async () => {
-    const existing = { id: "c1", tenantId: "t1", name: "Old Name", email: "c@test.com" };
-    const updated = { ...existing, name: "New Name" };
-    mockedStorage.getCustomer.mockResolvedValue(existing as any);
-    mockedStorage.updateCustomer.mockResolvedValue(updated as any);
+    const existing = mockCustomer({ name: "Old Name" });
+    const updated = mockCustomer({ name: "New Name" });
+    mockedStorage.getCustomer.mockResolvedValue(existing);
+    mockedStorage.updateCustomer.mockResolvedValue(updated);
 
     const res = await agent
       .patch("/api/admin/customers/c1")
@@ -196,8 +267,8 @@ describe("Customer CRUD", () => {
   });
 
   it("GET /api/admin/customers?search= searches customers", async () => {
-    const results = [{ id: "c1", tenantId: "t1", name: "Acme", email: "acme@test.com" }];
-    mockedStorage.searchCustomers.mockResolvedValue(results as any);
+    const results = [mockCustomer({ name: "Acme" })];
+    mockedStorage.searchCustomers.mockResolvedValue(results);
 
     const res = await agent.get("/api/admin/customers?search=acme");
 
@@ -213,15 +284,12 @@ describe("Lead CRUD", () => {
   beforeEach(async () => {
     vi.clearAllMocks();
     app = buildApp();
-    mockedStorage.logActivity.mockResolvedValue({} as any);
+    mockedStorage.logActivity.mockResolvedValue(mockActivity());
     agent = await authenticatedAgent(app);
   });
 
   it("GET /api/admin/leads lists all leads", async () => {
-    const mockLeads = [
-      { id: "l1", tenantId: "t1", name: "Lead A", stage: "New Lead" },
-    ];
-    mockedStorage.getLeadsByTenant.mockResolvedValue(mockLeads as any);
+    mockedStorage.getLeadsByTenant.mockResolvedValue([mockLead()]);
 
     const res = await agent.get("/api/admin/leads");
 
@@ -230,11 +298,11 @@ describe("Lead CRUD", () => {
   });
 
   it("POST /api/admin/leads creates a lead in the default pipeline", async () => {
-    const mockPipeline = { id: "p1", tenantId: "t1", name: "Sales", stages: '["New Lead","Won"]', isDefault: true };
-    const mockLead = { id: "l1", tenantId: "t1", name: "Test Lead", stage: "New Lead", pipelineId: "p1" };
+    const pipeline = mockPipeline();
+    const lead = mockLead({ name: "Test Lead" });
 
-    mockedStorage.getPipelinesByTenant.mockResolvedValue([mockPipeline] as any);
-    mockedStorage.createLead.mockResolvedValue(mockLead as any);
+    mockedStorage.getPipelinesByTenant.mockResolvedValue([pipeline]);
+    mockedStorage.createLead.mockResolvedValue(lead);
 
     const res = await agent
       .post("/api/admin/leads")
@@ -246,10 +314,10 @@ describe("Lead CRUD", () => {
   });
 
   it("PATCH /api/admin/leads/:id updates lead stage (pipeline progression)", async () => {
-    const existing = { id: "l1", tenantId: "t1", name: "Lead", stage: "New Lead" };
-    const updated = { ...existing, stage: "Qualified" };
-    mockedStorage.getLead.mockResolvedValue(existing as any);
-    mockedStorage.updateLead.mockResolvedValue(updated as any);
+    const existing = mockLead({ stage: "New Lead" });
+    const updated = mockLead({ stage: "Qualified" });
+    mockedStorage.getLead.mockResolvedValue(existing);
+    mockedStorage.updateLead.mockResolvedValue(updated);
 
     const res = await agent
       .patch("/api/admin/leads/l1")
@@ -266,23 +334,25 @@ describe("Lead CRUD", () => {
   });
 
   it("PATCH /api/admin/leads/:id does NOT log stage change when stage is unchanged", async () => {
-    const existing = { id: "l1", tenantId: "t1", name: "Lead", stage: "New Lead" };
-    mockedStorage.getLead.mockResolvedValue(existing as any);
-    mockedStorage.updateLead.mockResolvedValue(existing as any);
+    const existing = mockLead({ stage: "New Lead" });
+    mockedStorage.getLead.mockResolvedValue(existing);
+    mockedStorage.updateLead.mockResolvedValue(existing);
 
     await agent
       .patch("/api/admin/leads/l1")
       .send({ name: "Updated Name" });
 
-    const stageCalls = mockedStorage.logActivity.mock.calls.filter(
-      (c) => (c[0] as any).action === "stage_changed",
+    const stageChangeCalls = mockedStorage.logActivity.mock.calls.filter(
+      (call) => {
+        const arg = call[0] as { action?: string };
+        return arg.action === "stage_changed";
+      },
     );
-    expect(stageCalls).toHaveLength(0);
+    expect(stageChangeCalls).toHaveLength(0);
   });
 
   it("DELETE /api/admin/leads/:id removes the lead", async () => {
-    const existing = { id: "l1", tenantId: "t1", name: "Lead" };
-    mockedStorage.getLead.mockResolvedValue(existing as any);
+    mockedStorage.getLead.mockResolvedValue(mockLead());
     mockedStorage.deleteLead.mockResolvedValue(undefined);
 
     const res = await agent.delete("/api/admin/leads/l1");
@@ -293,8 +363,7 @@ describe("Lead CRUD", () => {
   });
 
   it("DELETE /api/admin/leads/:id returns 404 for wrong tenant", async () => {
-    const otherTenantLead = { id: "l1", tenantId: "other-tenant", name: "Lead" };
-    mockedStorage.getLead.mockResolvedValue(otherTenantLead as any);
+    mockedStorage.getLead.mockResolvedValue(mockLead({ tenantId: "other-tenant" }));
 
     const res = await agent.delete("/api/admin/leads/l1");
 
@@ -309,15 +378,15 @@ describe("Pipeline stage progression", () => {
   beforeEach(async () => {
     vi.clearAllMocks();
     app = buildApp();
-    mockedStorage.logActivity.mockResolvedValue({} as any);
+    mockedStorage.logActivity.mockResolvedValue(mockActivity());
     agent = await authenticatedAgent(app);
   });
 
   it("tracks stage progression from New Lead → Contacted → Qualified", async () => {
-    const lead = { id: "l1", tenantId: "t1", name: "Progressive Lead", stage: "New Lead" };
+    const lead = mockLead({ stage: "New Lead" });
 
-    mockedStorage.getLead.mockResolvedValue(lead as any);
-    mockedStorage.updateLead.mockResolvedValue({ ...lead, stage: "Contacted" } as any);
+    mockedStorage.getLead.mockResolvedValue(lead);
+    mockedStorage.updateLead.mockResolvedValue(mockLead({ stage: "Contacted" }));
 
     await agent.patch("/api/admin/leads/l1").send({ stage: "Contacted" });
 
@@ -329,10 +398,11 @@ describe("Pipeline stage progression", () => {
     );
 
     vi.clearAllMocks();
-    mockedStorage.getUser.mockResolvedValue({ ...MOCK_USER, passwordHash: await hashPassword("password123") } as any);
-    const contactedLead = { id: "l1", tenantId: "t1", name: "Progressive Lead", stage: "Contacted" };
-    mockedStorage.getLead.mockResolvedValue(contactedLead as any);
-    mockedStorage.updateLead.mockResolvedValue({ ...contactedLead, stage: "Qualified" } as any);
+    const hash = await hashPassword("password123");
+    mockedStorage.getUser.mockResolvedValue(mockUser({ passwordHash: hash }));
+    const contactedLead = mockLead({ stage: "Contacted" });
+    mockedStorage.getLead.mockResolvedValue(contactedLead);
+    mockedStorage.updateLead.mockResolvedValue(mockLead({ stage: "Qualified" }));
 
     await agent.patch("/api/admin/leads/l1").send({ stage: "Qualified" });
 
