@@ -28,7 +28,11 @@ A modular, self-hosted business platform built for small teams and solo operator
   </tr>
   <tr>
     <td><img src="docs/screenshots/finance.png" alt="Finance & Invoicing" width="400"/><br/><em>Finance & Invoicing</em></td>
+    <td><img src="docs/screenshots/pages.png" alt="Page Builder" width="400"/><br/><em>Page Builder</em></td>
+  </tr>
+  <tr>
     <td><img src="docs/screenshots/dark-mode.png" alt="Dark Mode" width="400"/><br/><em>Dark Mode</em></td>
+    <td></td>
   </tr>
 </table>
 
@@ -60,6 +64,25 @@ In production, seed data is skipped — use the setup wizard at `/setup` instead
 1. [Sign up on Replit](https://replit.com/refer/kenpcox) and import this GitHub repo
 2. Click **Run** — PostgreSQL is provisioned automatically
 3. Visit `/setup` to create your organization and admin account
+
+### Docker
+
+```bash
+git clone https://github.com/bouncerguy/SaaSKiller.git
+cd SaaSKiller
+cp .env.example .env
+
+# Start PostgreSQL and the app
+docker compose up -d db
+export DATABASE_URL=postgresql://saaskiller:saaskiller@localhost:5432/saaskiller
+export SESSION_SECRET=$(openssl rand -hex 32)
+npm install
+npm run db:push
+npm run build
+npm start                    # Production server → http://localhost:5000
+```
+
+> A full `docker-compose.yml` with app + PostgreSQL is on the roadmap. For now, run PostgreSQL in Docker and the app on the host.
 
 ### DigitalOcean + Claude (Self-Hosted)
 
