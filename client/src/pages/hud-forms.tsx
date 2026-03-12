@@ -16,6 +16,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Separator } from "@/components/ui/separator";
 import {
   FileText,
   Plus,
@@ -26,6 +27,7 @@ import {
   ChevronDown,
   ClipboardList,
   Inbox,
+  Eye,
 } from "lucide-react";
 
 interface FormField {
@@ -44,7 +46,9 @@ const FIELD_TYPES = [
   { value: "number", label: "Number" },
   { value: "textarea", label: "Textarea" },
   { value: "select", label: "Select" },
+  { value: "radio", label: "Radio" },
   { value: "checkbox", label: "Checkbox" },
+  { value: "date", label: "Date" },
   { value: "url", label: "URL" },
 ];
 
@@ -84,6 +88,53 @@ function createEmptyField(): FormField {
     placeholder: "",
     options: [],
   };
+}
+
+function FieldPreview({ field }: { field: FormField }) {
+  return (
+    <div className="space-y-1.5">
+      <Label className="text-sm">
+        {field.label || "Untitled Field"}
+        {field.required && <span className="text-red-500 ml-1">*</span>}
+      </Label>
+      {field.type === "textarea" ? (
+        <Textarea placeholder={field.placeholder} disabled className="bg-muted/50" />
+      ) : field.type === "select" ? (
+        <Select disabled>
+          <SelectTrigger className="bg-muted/50">
+            <SelectValue placeholder={field.placeholder || "Select..."} />
+          </SelectTrigger>
+        </Select>
+      ) : field.type === "radio" ? (
+        <div className="space-y-2">
+          {field.options.length > 0 ? (
+            field.options.map((opt, i) => (
+              <label key={i} className="flex items-center gap-2 text-sm text-muted-foreground">
+                <input type="radio" name={field.id} disabled className="h-4 w-4" />
+                {opt}
+              </label>
+            ))
+          ) : (
+            <p className="text-xs text-muted-foreground italic">No options defined</p>
+          )}
+        </div>
+      ) : field.type === "checkbox" ? (
+        <label className="flex items-center gap-2 text-sm text-muted-foreground">
+          <input type="checkbox" disabled className="h-4 w-4" />
+          {field.placeholder || field.label || "Check this"}
+        </label>
+      ) : field.type === "date" ? (
+        <Input type="date" disabled className="bg-muted/50" />
+      ) : (
+        <Input
+          type={field.type === "email" ? "email" : field.type === "number" ? "number" : field.type === "phone" ? "tel" : field.type === "url" ? "url" : "text"}
+          placeholder={field.placeholder}
+          disabled
+          className="bg-muted/50"
+        />
+      )}
+    </div>
+  );
 }
 
 export default function HudForms() {
@@ -385,6 +436,9 @@ export default function HudForms() {
                 <TabsTrigger value="fields" data-testid="tab-fields" className="flex-1">
                   Fields
                 </TabsTrigger>
+                <TabsTrigger value="preview" data-testid="tab-preview" className="flex-1">
+                  Preview
+                </TabsTrigger>
                 <TabsTrigger value="responses" data-testid="tab-responses" className="flex-1">
                   Responses
                 </TabsTrigger>
@@ -543,7 +597,7 @@ export default function HudForms() {
                               placeholder="Placeholder text"
                             />
                           </div>
-                          {field.type === "select" && (
+                          {(field.type === "select" || field.type === "radio") && (
                             <div className="space-y-1.5">
                               <Label>Options (comma-separated)</Label>
                               <Input
@@ -594,6 +648,41 @@ export default function HudForms() {
                 </Button>
               </TabsContent>
 
+              <TabsContent value="preview" className="mt-4">
+                <div className="rounded-lg border overflow-hidden" data-testid="form-preview-container">
+                  <div className="bg-muted/50 p-6 border-b">
+                    <h3 className="text-lg font-semibold">{editSettings.name || "Untitled Form"}</h3>
+                    {editSettings.description && (
+                      <p className="text-sm text-muted-foreground mt-1">{editSettings.description}</p>
+                    )}
+                  </div>
+                  <div className="p-6 space-y-5">
+                    {editFields.length === 0 ? (
+                      <div className="py-8 text-center">
+                        <Eye className="h-10 w-10 mx-auto text-muted-foreground/40 mb-2" />
+                        <p className="text-sm text-muted-foreground">
+                          Add fields to see a preview of your form
+                        </p>
+                      </div>
+                    ) : (
+                      editFields.map((field, idx) => (
+                        <div key={field.id} data-testid={`preview-field-${idx}`}>
+                          <FieldPreview field={field} />
+                        </div>
+                      ))
+                    )}
+                    {editFields.length > 0 && (
+                      <>
+                        <Separator />
+                        <Button className="w-full bg-sky-500 text-white" disabled>
+                          Submit
+                        </Button>
+                      </>
+                    )}
+                  </div>
+                </div>
+              </TabsContent>
+
               <TabsContent value="responses" className="space-y-4 mt-4">
                 {responsesQuery.isLoading ? (
                   <div className="space-y-3">
@@ -633,7 +722,7 @@ export default function HudForms() {
                               </TableCell>
                               {editFields.map((f, i) => (
                                 <TableCell key={i} className="text-xs max-w-[200px] truncate">
-                                  {data[f.label] || data[f.id] || "—"}
+                                  {data[f.label] || data[f.id] || "\u2014"}
                                 </TableCell>
                               ))}
                             </TableRow>

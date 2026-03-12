@@ -14,7 +14,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Switch } from "@/components/ui/switch";
-import { ShoppingBag, Plus, Search, Loader2, Trash2, DollarSign, Tag, RefreshCw } from "lucide-react";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Checkbox } from "@/components/ui/checkbox";
+import { ShoppingBag, Plus, Search, Loader2, Trash2, DollarSign, Tag, RefreshCw, CheckSquare, XSquare, Package } from "lucide-react";
 
 function formatPrice(cents: number) {
   return `$${(cents / 100).toFixed(2)}`;
@@ -56,6 +58,8 @@ export default function HudProducts() {
   const [searchQuery, setSearchQuery] = useState("");
   const [createOpen, setCreateOpen] = useState(false);
   const [selectedProductId, setSelectedProductId] = useState<string | null>(null);
+  const [categoryFilter, setCategoryFilter] = useState("all");
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
   const [formData, setFormData] = useState({
     name: "",
@@ -128,8 +132,46 @@ export default function HudProducts() {
     },
   });
 
-  const products = productsQuery.data || [];
+  const bulkUpdateMutation = useMutation({
+    mutationFn: async ({ ids, isActive }: { ids: string[]; isActive: boolean }) => {
+      await Promise.all(ids.map((id) => apiRequest("PATCH", `/api/admin/products/${id}`, { isActive })));
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/products"] });
+      setSelectedIds(new Set());
+      toast({ title: "Products updated" });
+    },
+    onError: (e: Error) => {
+      toast({ title: "Error", description: e.message, variant: "destructive" });
+    },
+  });
+
+  const allProducts = productsQuery.data || [];
   const detail = productDetailQuery.data;
+
+  const categories = [...new Set(allProducts.map((p) => p.category).filter(Boolean))] as string[];
+  const products = categoryFilter === "all"
+    ? allProducts
+    : allProducts.filter((p) => p.category === categoryFilter);
+
+  const activeCount = allProducts.filter((p) => p.isActive).length;
+  const totalMRR = allProducts
+    .filter((p) => p.isActive && p.billingCycle === "MONTHLY")
+    .reduce((s, p) => s + p.price, 0);
+
+  const toggleSelect = (id: string) => {
+    const next = new Set(selectedIds);
+    if (next.has(id)) next.delete(id); else next.add(id);
+    setSelectedIds(next);
+  };
+
+  const toggleAll = () => {
+    if (selectedIds.size === products.length) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(products.map((p) => p.id)));
+    }
+  };
 
   return (
     <div className="p-6 max-w-6xl mx-auto space-y-6">
@@ -202,16 +244,80 @@ export default function HudProducts() {
         </Dialog>
       </div>
 
-      <div className="relative">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-        <Input
-          placeholder="Search products by name, description, or category..."
-          className="pl-10"
-          data-testid="input-search-products"
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-        />
+      <div className="grid gap-3 sm:grid-cols-3">
+        <Card>
+          <CardContent className="p-4">
+            <div className="text-xs text-muted-foreground">Total Products</div>
+            <div className="text-2xl font-bold text-orange-600 dark:text-orange-400" data-testid="text-total-products">{allProducts.length}</div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4">
+            <div className="text-xs text-muted-foreground">Active</div>
+            <div className="text-2xl font-bold text-green-600 dark:text-green-400" data-testid="text-active-products">{activeCount}</div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4">
+            <div className="text-xs text-muted-foreground">Monthly Recurring</div>
+            <div className="text-2xl font-bold text-blue-600 dark:text-blue-400" data-testid="text-total-mrr">{formatPrice(totalMRR)}</div>
+          </CardContent>
+        </Card>
       </div>
+
+      <div className="flex items-center gap-3 flex-wrap">
+        <div className="relative flex-1 min-w-[200px]">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Search products..."
+            className="pl-10"
+            data-testid="input-search-products"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+          />
+        </div>
+        {categories.length > 0 && (
+          <Tabs value={categoryFilter} onValueChange={setCategoryFilter}>
+            <TabsList>
+              <TabsTrigger value="all" data-testid="tab-category-all">All</TabsTrigger>
+              {categories.map((cat) => (
+                <TabsTrigger key={cat} value={cat} data-testid={`tab-category-${cat}`}>
+                  {cat}
+                </TabsTrigger>
+              ))}
+            </TabsList>
+          </Tabs>
+        )}
+      </div>
+
+      {selectedIds.size > 0 && (
+        <div className="flex items-center gap-3 p-3 bg-orange-50 dark:bg-orange-950/20 border border-orange-200 dark:border-orange-800 rounded-lg" data-testid="bulk-actions-bar">
+          <span className="text-sm font-medium">{selectedIds.size} selected</span>
+          <Button
+            size="sm"
+            variant="outline"
+            data-testid="button-bulk-activate"
+            disabled={bulkUpdateMutation.isPending}
+            onClick={() => bulkUpdateMutation.mutate({ ids: [...selectedIds], isActive: true })}
+          >
+            <CheckSquare className="h-3.5 w-3.5 mr-1" />
+            Activate
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            data-testid="button-bulk-deactivate"
+            disabled={bulkUpdateMutation.isPending}
+            onClick={() => bulkUpdateMutation.mutate({ ids: [...selectedIds], isActive: false })}
+          >
+            <XSquare className="h-3.5 w-3.5 mr-1" />
+            Deactivate
+          </Button>
+          <Button size="sm" variant="ghost" onClick={() => setSelectedIds(new Set())} data-testid="button-clear-selection">
+            Clear
+          </Button>
+        </div>
+      )}
 
       {productsQuery.isLoading ? (
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
@@ -224,49 +330,71 @@ export default function HudProducts() {
           <CardContent className="py-12 text-center">
             <ShoppingBag className="h-12 w-12 mx-auto text-muted-foreground/40 mb-3" />
             <p className="text-muted-foreground" data-testid="text-empty-products">
-              {searchQuery ? "No products match your search" : "No products yet. Add your first product or service to get started."}
+              {searchQuery || categoryFilter !== "all" ? "No products match your filters" : "No products yet. Add your first product or service to get started."}
             </p>
           </CardContent>
         </Card>
       ) : (
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {products.map((product) => (
-            <Card
-              key={product.id}
-              className={`cursor-pointer hover:border-orange-300 dark:hover:border-orange-700 transition-colors ${!product.isActive ? "opacity-60" : ""}`}
-              data-testid={`card-product-${product.id}`}
-              onClick={() => {
-                setSelectedProductId(product.id);
-                setEditData(product);
-              }}
-            >
-              <CardContent className="p-4 space-y-3">
-                <div className="flex items-start justify-between gap-2">
-                  <div className="min-w-0">
-                    <div className="font-medium text-sm truncate" data-testid={`text-product-name-${product.id}`}>{product.name}</div>
-                    {product.category && (
-                      <div className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
-                        <Tag className="h-3 w-3" />
-                        {product.category}
+        <div className="space-y-1">
+          <div className="flex items-center gap-2 px-2 py-1">
+            <Checkbox
+              data-testid="checkbox-select-all"
+              checked={selectedIds.size === products.length && products.length > 0}
+              onCheckedChange={toggleAll}
+            />
+            <span className="text-xs text-muted-foreground">Select all</span>
+          </div>
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {products.map((product) => (
+              <Card
+                key={product.id}
+                className={`cursor-pointer hover:border-orange-300 dark:hover:border-orange-700 transition-colors ${!product.isActive ? "opacity-60" : ""} ${selectedIds.has(product.id) ? "ring-2 ring-orange-400" : ""}`}
+                data-testid={`card-product-${product.id}`}
+              >
+                <CardContent className="p-4 space-y-3">
+                  <div className="flex items-start gap-2">
+                    <Checkbox
+                      data-testid={`checkbox-product-${product.id}`}
+                      checked={selectedIds.has(product.id)}
+                      onCheckedChange={() => toggleSelect(product.id)}
+                      className="mt-1"
+                    />
+                    <div
+                      className="flex-1 min-w-0"
+                      onClick={() => {
+                        setSelectedProductId(product.id);
+                        setEditData(product);
+                      }}
+                    >
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="min-w-0">
+                          <div className="font-medium text-sm truncate" data-testid={`text-product-name-${product.id}`}>{product.name}</div>
+                          {product.category && (
+                            <div className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
+                              <Tag className="h-3 w-3" />
+                              {product.category}
+                            </div>
+                          )}
+                        </div>
+                        {!product.isActive && <Badge variant="secondary" className="text-[10px] shrink-0">Inactive</Badge>}
                       </div>
-                    )}
+                      {product.description && (
+                        <p className="text-xs text-muted-foreground line-clamp-2 mt-2">{product.description}</p>
+                      )}
+                      <div className="flex items-center justify-between mt-2">
+                        <span className="text-lg font-semibold text-orange-600 dark:text-orange-400 flex items-center" data-testid={`text-product-price-${product.id}`}>
+                          <DollarSign className="h-4 w-4" />
+                          {(product.price / 100).toFixed(2)}
+                          <span className="text-xs font-normal text-muted-foreground ml-1">{billingLabel(product.billingCycle)}</span>
+                        </span>
+                        {billingBadge(product.billingCycle)}
+                      </div>
+                    </div>
                   </div>
-                  {!product.isActive && <Badge variant="secondary" className="text-[10px] shrink-0">Inactive</Badge>}
-                </div>
-                {product.description && (
-                  <p className="text-xs text-muted-foreground line-clamp-2">{product.description}</p>
-                )}
-                <div className="flex items-center justify-between">
-                  <span className="text-lg font-semibold text-orange-600 dark:text-orange-400 flex items-center" data-testid={`text-product-price-${product.id}`}>
-                    <DollarSign className="h-4 w-4" />
-                    {(product.price / 100).toFixed(2)}
-                    <span className="text-xs font-normal text-muted-foreground ml-1">{billingLabel(product.billingCycle)}</span>
-                  </span>
-                  {billingBadge(product.billingCycle)}
-                </div>
-              </CardContent>
-            </Card>
-          ))}
+                </CardContent>
+              </Card>
+            ))}
+          </div>
         </div>
       )}
 

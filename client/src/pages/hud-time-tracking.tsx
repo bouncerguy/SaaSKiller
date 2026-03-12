@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -12,10 +12,10 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Switch } from "@/components/ui/switch";
-import { Timer, Plus, Loader2, Trash2, Clock, DollarSign } from "lucide-react";
+import { Timer, Plus, Loader2, Trash2, Clock, DollarSign, Play, Square, BarChart3 } from "lucide-react";
 
 function formatDuration(mins: number | null) {
-  if (!mins) return "—";
+  if (!mins) return "0m";
   const h = Math.floor(mins / 60);
   const m = mins % 60;
   return h > 0 ? `${h}h ${m}m` : `${m}m`;
@@ -24,6 +24,41 @@ function formatDuration(mins: number | null) {
 function formatRate(cents: number | null) {
   if (!cents) return "";
   return `$${(cents / 100).toFixed(2)}/hr`;
+}
+
+function formatElapsed(ms: number) {
+  const totalSec = Math.floor(ms / 1000);
+  const h = Math.floor(totalSec / 3600);
+  const m = Math.floor((totalSec % 3600) / 60);
+  const s = totalSec % 60;
+  return `${h.toString().padStart(2, "0")}:${m.toString().padStart(2, "0")}:${s.toString().padStart(2, "0")}`;
+}
+
+const TIMER_KEY = "saaskiller_timer";
+
+interface TimerState {
+  running: boolean;
+  startTime: number;
+  description: string;
+  customerId: string;
+  billable: boolean;
+  hourlyRate: string;
+}
+
+function loadTimer(): TimerState | null {
+  try {
+    const raw = localStorage.getItem(TIMER_KEY);
+    if (!raw) return null;
+    return JSON.parse(raw);
+  } catch { return null; }
+}
+
+function saveTimer(state: TimerState | null) {
+  if (state) {
+    localStorage.setItem(TIMER_KEY, JSON.stringify(state));
+  } else {
+    localStorage.removeItem(TIMER_KEY);
+  }
 }
 
 export default function HudTimeTracking() {
@@ -39,12 +74,86 @@ export default function HudTimeTracking() {
     customerId: "",
   });
 
+  const [timerState, setTimerState] = useState<TimerState | null>(loadTimer);
+  const [elapsed, setElapsed] = useState(0);
+  const [timerDesc, setTimerDesc] = useState("");
+  const [timerCustomer, setTimerCustomer] = useState("");
+  const [timerBillable, setTimerBillable] = useState(true);
+  const [timerRate, setTimerRate] = useState("");
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  useEffect(() => {
+    if (timerState?.running) {
+      const tick = () => setElapsed(Date.now() - timerState.startTime);
+      tick();
+      intervalRef.current = setInterval(tick, 1000);
+      return () => { if (intervalRef.current) clearInterval(intervalRef.current); };
+    } else {
+      setElapsed(0);
+    }
+  }, [timerState?.running, timerState?.startTime]);
+
+  const startTimer = () => {
+    const state: TimerState = {
+      running: true,
+      startTime: Date.now(),
+      description: timerDesc,
+      customerId: timerCustomer,
+      billable: timerBillable,
+      hourlyRate: timerRate,
+    };
+    setTimerState(state);
+    saveTimer(state);
+  };
+
+  const stopTimer = () => {
+    if (!timerState) return;
+    const endTime = Date.now();
+    const startAt = new Date(timerState.startTime).toISOString();
+    const endAt = new Date(endTime).toISOString();
+    const durationMinutes = Math.round((endTime - timerState.startTime) / 60000);
+
+    createFromTimer.mutate({
+      description: timerState.description || null,
+      startAt,
+      endAt,
+      durationMinutes,
+      billable: timerState.billable,
+      hourlyRate: timerState.hourlyRate ? Math.round(parseFloat(timerState.hourlyRate) * 100) : null,
+      customerId: timerState.customerId || null,
+    });
+  };
+
+  const discardTimer = () => {
+    setTimerState(null);
+    saveTimer(null);
+    setTimerDesc("");
+    setTimerCustomer("");
+    setTimerBillable(true);
+    setTimerRate("");
+  };
+
   const entriesQuery = useQuery<TimeEntry[]>({
     queryKey: ["/api/admin/time-entries"],
   });
 
   const customersQuery = useQuery<Customer[]>({
     queryKey: ["/api/admin/customers"],
+  });
+
+  const createFromTimer = useMutation({
+    mutationFn: async (data: any) => {
+      const res = await apiRequest("POST", "/api/admin/time-entries", data);
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/time-entries"] });
+      discardTimer();
+      toast({ title: "Time entry saved" });
+    },
+    onError: (e: Error) => {
+      toast({ title: "Error", description: e.message, variant: "destructive" });
+    },
   });
 
   const createMutation = useMutation({
@@ -86,7 +195,14 @@ export default function HudTimeTracking() {
   const entries = entriesQuery.data || [];
   const customers = customersQuery.data || [];
 
+  const now = new Date();
+  const weekStart = new Date(now);
+  weekStart.setDate(now.getDate() - now.getDay());
+  weekStart.setHours(0, 0, 0, 0);
+  const weekEntries = entries.filter((e) => new Date(e.startAt) >= weekStart);
+
   const totalMinutes = entries.reduce((s, e) => s + (e.durationMinutes || 0), 0);
+  const weekMinutes = weekEntries.reduce((s, e) => s + (e.durationMinutes || 0), 0);
   const billableMinutes = entries.filter((e) => e.billable).reduce((s, e) => s + (e.durationMinutes || 0), 0);
   const totalEarnings = entries.filter((e) => e.billable && e.hourlyRate && e.durationMinutes).reduce((s, e) => {
     return s + ((e.durationMinutes! / 60) * (e.hourlyRate! / 100));
@@ -181,7 +297,97 @@ export default function HudTimeTracking() {
         </Dialog>
       </div>
 
-      <div className="grid gap-3 sm:grid-cols-3">
+      <Card className={`border-2 ${timerState?.running ? "border-violet-400 dark:border-violet-600" : "border-dashed border-muted"}`} data-testid="card-timer">
+        <CardContent className="p-4">
+          {timerState?.running ? (
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div className="h-2.5 w-2.5 rounded-full bg-violet-500 animate-pulse" />
+                  <span className="text-sm font-medium">Timer Running</span>
+                </div>
+                <span className="font-mono text-2xl font-bold text-violet-600 dark:text-violet-400" data-testid="text-timer-elapsed">
+                  {formatElapsed(elapsed)}
+                </span>
+              </div>
+              {timerState.description && (
+                <p className="text-sm text-muted-foreground">{timerState.description}</p>
+              )}
+              <div className="flex gap-2">
+                <Button
+                  className="flex-1 bg-red-600 hover:bg-red-700 text-white"
+                  data-testid="button-stop-timer"
+                  disabled={createFromTimer.isPending}
+                  onClick={stopTimer}
+                >
+                  {createFromTimer.isPending ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Square className="h-4 w-4 mr-2" />}
+                  Stop & Save
+                </Button>
+                <Button variant="outline" data-testid="button-discard-timer" onClick={discardTimer}>
+                  Discard
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+                <Play className="h-4 w-4" />
+                Start Timer
+              </div>
+              <Input
+                placeholder="What are you working on?"
+                data-testid="input-timer-description"
+                value={timerDesc}
+                onChange={(e) => setTimerDesc(e.target.value)}
+              />
+              <div className="grid grid-cols-3 gap-2">
+                <Select value={timerCustomer} onValueChange={setTimerCustomer}>
+                  <SelectTrigger data-testid="select-timer-customer">
+                    <SelectValue placeholder="Customer" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">None</SelectItem>
+                    {customers.map((c) => (
+                      <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  placeholder="$/hr"
+                  data-testid="input-timer-rate"
+                  value={timerRate}
+                  onChange={(e) => setTimerRate(e.target.value)}
+                />
+                <div className="flex items-center gap-2 px-2 border rounded-md">
+                  <Switch id="timer-billable" data-testid="switch-timer-billable" checked={timerBillable} onCheckedChange={setTimerBillable} />
+                  <Label htmlFor="timer-billable" className="text-xs cursor-pointer">Bill</Label>
+                </div>
+              </div>
+              <Button
+                className="w-full bg-violet-600 hover:bg-violet-700 text-white"
+                data-testid="button-start-timer"
+                onClick={startTimer}
+              >
+                <Play className="h-4 w-4 mr-2" />
+                Start Timer
+              </Button>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      <div className="grid gap-3 sm:grid-cols-4">
+        <Card>
+          <CardContent className="p-4">
+            <div className="text-xs text-muted-foreground">This Week</div>
+            <div className="text-2xl font-bold text-violet-600 dark:text-violet-400" data-testid="text-week-time">
+              {formatDuration(weekMinutes)}
+            </div>
+          </CardContent>
+        </Card>
         <Card>
           <CardContent className="p-4">
             <div className="text-xs text-muted-foreground">Total Time</div>
@@ -210,67 +416,73 @@ export default function HudTimeTracking() {
         <Card>
           <CardContent className="py-12 text-center">
             <Timer className="h-12 w-12 mx-auto text-muted-foreground/40 mb-3" />
-            <p className="text-muted-foreground" data-testid="text-empty-time-entries">No time entries yet. Log your first time entry.</p>
+            <p className="text-muted-foreground" data-testid="text-empty-time-entries">No time entries yet. Start the timer or log your first entry.</p>
           </CardContent>
         </Card>
       ) : (
         <div className="space-y-6">
-          {Object.entries(groupedByDate).map(([date, dayEntries]) => (
-            <div key={date} className="space-y-2">
-              <div className="text-sm font-medium text-muted-foreground">{date}</div>
-              {dayEntries.map((entry) => (
-                <Card key={entry.id} data-testid={`card-time-entry-${entry.id}`}>
-                  <CardContent className="p-4">
-                    <div className="flex items-center justify-between gap-3">
-                      <div className="flex items-center gap-3 min-w-0">
-                        <Clock className="h-4 w-4 text-muted-foreground shrink-0" />
-                        <div className="min-w-0">
-                          <div className="text-sm font-medium truncate" data-testid={`text-time-desc-${entry.id}`}>
-                            {entry.description || "No description"}
-                          </div>
-                          <div className="text-xs text-muted-foreground flex items-center gap-2 flex-wrap">
-                            <span>{new Date(entry.startAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</span>
-                            {entry.endAt && (
-                              <>
-                                <span>→</span>
-                                <span>{new Date(entry.endAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</span>
-                              </>
-                            )}
-                            {customerName(entry.customerId) && (
-                              <span className="text-muted-foreground/70">• {customerName(entry.customerId)}</span>
-                            )}
+          {Object.entries(groupedByDate).map(([date, dayEntries]) => {
+            const dayTotal = dayEntries.reduce((s, e) => s + (e.durationMinutes || 0), 0);
+            return (
+              <div key={date} className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium text-muted-foreground">{date}</span>
+                  <span className="text-xs text-muted-foreground font-mono" data-testid={`text-day-total-${date}`}>{formatDuration(dayTotal)}</span>
+                </div>
+                {dayEntries.map((entry) => (
+                  <Card key={entry.id} data-testid={`card-time-entry-${entry.id}`}>
+                    <CardContent className="p-4">
+                      <div className="flex items-center justify-between gap-3">
+                        <div className="flex items-center gap-3 min-w-0">
+                          <Clock className="h-4 w-4 text-muted-foreground shrink-0" />
+                          <div className="min-w-0">
+                            <div className="text-sm font-medium truncate" data-testid={`text-time-desc-${entry.id}`}>
+                              {entry.description || "No description"}
+                            </div>
+                            <div className="text-xs text-muted-foreground flex items-center gap-2 flex-wrap">
+                              <span>{new Date(entry.startAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</span>
+                              {entry.endAt && (
+                                <>
+                                  <span>→</span>
+                                  <span>{new Date(entry.endAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</span>
+                                </>
+                              )}
+                              {customerName(entry.customerId) && (
+                                <span className="text-muted-foreground/70">• {customerName(entry.customerId)}</span>
+                              )}
+                            </div>
                           </div>
                         </div>
+                        <div className="flex items-center gap-2 shrink-0">
+                          <span className="font-semibold text-sm">{formatDuration(entry.durationMinutes)}</span>
+                          {entry.billable ? (
+                            <Badge variant="outline" className="border-emerald-400 text-emerald-600 dark:text-emerald-400 text-[10px]">
+                              <DollarSign className="h-3 w-3" />
+                            </Badge>
+                          ) : (
+                            <Badge variant="secondary" className="text-[10px]">Non-bill</Badge>
+                          )}
+                          {entry.hourlyRate && (
+                            <span className="text-xs text-muted-foreground">{formatRate(entry.hourlyRate)}</span>
+                          )}
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-7 w-7 text-red-500 hover:text-red-700"
+                            data-testid={`button-delete-time-${entry.id}`}
+                            disabled={deleteMutation.isPending}
+                            onClick={() => deleteMutation.mutate(entry.id)}
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </Button>
+                        </div>
                       </div>
-                      <div className="flex items-center gap-2 shrink-0">
-                        <span className="font-semibold text-sm">{formatDuration(entry.durationMinutes)}</span>
-                        {entry.billable ? (
-                          <Badge variant="outline" className="border-emerald-400 text-emerald-600 dark:text-emerald-400 text-[10px]">
-                            <DollarSign className="h-3 w-3" />
-                          </Badge>
-                        ) : (
-                          <Badge variant="secondary" className="text-[10px]">Non-bill</Badge>
-                        )}
-                        {entry.hourlyRate && (
-                          <span className="text-xs text-muted-foreground">{formatRate(entry.hourlyRate)}</span>
-                        )}
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-7 w-7 text-red-500 hover:text-red-700"
-                          data-testid={`button-delete-time-${entry.id}`}
-                          disabled={deleteMutation.isPending}
-                          onClick={() => deleteMutation.mutate(entry.id)}
-                        >
-                          <Trash2 className="h-3.5 w-3.5" />
-                        </Button>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          ))}
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            );
+          })}
         </div>
       )}
     </div>

@@ -27,12 +27,15 @@ The platform is built with a multi-tenant architecture, allowing for isolated en
 - **Booking System:** Public booking pages with date/time pickers, timezone selection, and customizable booking forms.
 - **CRM:** Comprehensive customer and lead management, including Kanban boards for lead pipelines, and cross-module linking for a unified customer view.
 - **Support:** Ticket management with priority levels, status workflows, and team assignment.
-- **Finance:** Automated invoice numbering, status tracking, and revenue reporting. Prices are stored in cents.
+- **Finance:** Automated invoice numbering, status tracking, revenue reporting, invoice line items editor (JSON-based), PDF export via pdfkit (`GET /api/admin/invoices/:id/pdf`), and send invoice by email (`POST /api/admin/invoices/:id/send`). Prices stored in cents.
 - **Email System:** Real email sending via nodemailer/SMTP with graceful QUEUED fallback when SMTP not configured. Compose dialog, template-based sending with `{{variable}}` interpolation, test send, and full sent log with status tracking. Backend: `server/email.ts`.
 - **AI Agents:** Real OpenAI-powered agent execution (gpt-4o-mini) with graceful fallback when API key not set. Prompt dialog for interactive runs, webhook endpoint (`POST /api/webhooks/agent/:id`), and rich run history with AI response display. Backend: `server/ai.ts`.
 - **Media Management:** Digital asset library with grid view, previews, folder organization, tag-based search, and real file upload via multer (drag-and-drop + button). Files stored under `uploads/{tenantId}/` with static serving. Backend: `server/uploads.ts`.
 - **Video Conferencing:** Integration with Jitsi Meet (auto-generated rooms) and Zoom (link support) for event types.
 - **Website & Domains:** Custom domain management with DNS setup instructions.
+- **Time Tracking:** Live start/stop timer (localStorage-persisted) with auto-creation on stop, weekly summary stats, grouped-by-date view with day totals, billable tracking, and customer association.
+- **Products:** Category filter tabs (auto-generated from product categories), checkbox-based bulk select with Activate/Deactivate actions, summary cards (total count, active, monthly recurring revenue).
+- **Forms:** Visual field builder with 10 field types (text, email, phone, number, textarea, select, radio, checkbox, date, url), reordering, and Preview tab showing rendered form preview with disabled inputs.
 - **Pages & Funnels:** Block-based page builder and multi-step sales funnel builder with customizable content and public URLs.
 - **Phone System:** Virtual PBX capabilities via Twilio, including phone number management, call forwarding, voicemail, call logs, and SMS messaging.
 - **Documents & Signing:** Block-based document creation with multi-role signer management, signing order, public signing pages, and activity logging.
@@ -59,3 +62,4 @@ The platform is built with a multi-tenant architecture, allowing for isolated en
 - **Email:** nodemailer (SMTP transport)
 - **AI:** OpenAI SDK (gpt-4o-mini)
 - **File Upload:** multer (disk storage)
+- **PDF Generation:** pdfkit (invoice PDF export)
